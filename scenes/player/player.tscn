@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://debnvsr1546h3"]
 
 [ext_resource type="Texture2D" uid="uid://bcs886nb7mhc3" path="res://icon.svg" id="1_8afob"]
+[ext_resource type="Script" uid="uid://kajl1wxsv5wo" path="res://scripts/player/player.gd" id="1_dovo2"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_4k262"]
 size = Vector2(95, 83)
@@ -8,6 +9,7 @@ size = Vector2(95, 83)
 [node name="Player" type="Node" unique_id=575752315]
 
 [node name="CharacterBody2D" type="CharacterBody2D" parent="." unique_id=241237556]
+script = ExtResource("1_dovo2")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D" unique_id=176115697]
 position = Vector2(1, -1)
