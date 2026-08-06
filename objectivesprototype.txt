@@ -1,27 +1,14 @@
 ■
 ☐
 
-■ Jogador anda
-☐ Câmera acompanha
-☐ Animação idle
-☐ Animação andando
-☐ Ataque básico
+■ Jogador se movimenta
+☐ Câmera acompanha o jogador
+☐ Inimigo surge no mapa
+☐ Inimigo segue o jogador
+☐ Sistema de colisão
+☐ Ataque básico do jogador
+☐ Inimigo recebe dano
+☐ Jogador recebe dano
 ☐ Barra de vida
-☐ Inimigo segue jogador
-☐ Inimigo causa dano
 ☐ Morte do jogador
-☐ Tela Game Over
-☐ Sistema de XP
-☐ Evolução genética
-☐ Escolha entre 3 mutações
-☐ Spawn de inimigos
-☐ Cronômetro
-☐ Vitória
-☐ Menu inicial
-☐ Pausa
-☐ Música
-☐ Efeitos sonoros
-☐ Easter Egg JoJo
-☐ NPC Isabelle (cara mentira)
-☐ Easter Egg Minecraft
-☐ Créditos
+☐ Tela de Game Over
