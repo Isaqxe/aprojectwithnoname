@@ -21,19 +21,19 @@ func _ready() -> void:
 
 
 func _find_player() -> void:
-	_player = get_tree().get_first_node_in_group("PlayerCharacter") as Node2D
+	_player = get_tree().get_first_node_in_group("PlayerCharacter") as Node2D ## Aqui é onde o player é encontrado pelo código. Nota-se que essa linha busca o primeiro objeto no grupo PlayerCharacter, como um Node2D
 
-	if _player == null:
+	if _player == null: ## Se player não existe [...]
 		print("PlayerCharacter não encontrado.")
 	else:
-		print("Player encontrado: ", _player.name)
+		print("Player encontrado: ", _player.name) ## Player Encontrado!
 
 
-func spawn_enemy() -> void:
-	if _player == null or not is_instance_valid(_player):
+func spawn_enemy() -> void: ## Spawna o inimigo
+	if _player == null or not is_instance_valid(_player): ##Se o player não for válido, executa _find_player
 		_find_player()
 
-	if _player == null:
+	if _player == null: ## Se realmente não tiver player, só dá return e começa tudo de novo
 		return
 
 	if enemy_scene == null:

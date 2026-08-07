@@ -2,8 +2,8 @@
 ☐
 
 ■ Jogador se movimenta
-☐ Câmera acompanha o jogador
-☐ Inimigo surge no mapa
+■ Câmera acompanha o jogador
+■ Inimigo surge no mapa
 ☐ Inimigo segue o jogador
 ☐ Sistema de colisão
 ☐ Ataque básico do jogador
