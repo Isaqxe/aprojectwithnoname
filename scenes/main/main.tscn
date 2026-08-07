@@ -6,8 +6,8 @@
 
 [node name="Main" type="Node2D" unique_id=101873425]
 
-[node name="Player" parent="." unique_id=575752315 instance=ExtResource("1_hyk8p")]
+[node name="Player" parent="." unique_id=1499481750 instance=ExtResource("1_hyk8p")]
 
-[node name="Enemyspawner" parent="." unique_id=1100431445 instance=ExtResource("2_k2fmo")]
+[node name="Enemyspawner" parent="." unique_id=232024441 instance=ExtResource("2_k2fmo")]
 enemy_scene = ExtResource("3_k2fmo")
-spawn_radius = 1.0
+spawn_radius = 3.0
