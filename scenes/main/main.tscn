@@ -1,11 +1,13 @@
 [gd_scene format=3 uid="uid://b7dayavg2hyrx"]
 
 [ext_resource type="PackedScene" uid="uid://debnvsr1546h3" path="res://scenes/player/player.tscn" id="1_hyk8p"]
+[ext_resource type="PackedScene" uid="uid://dp2stutckeff1" path="res://scenes/enemies/enemyspawner.tscn" id="2_k2fmo"]
+[ext_resource type="PackedScene" uid="uid://cl8wus0io4rvr" path="res://scenes/enemies/Enemy1.tscn" id="3_k2fmo"]
 
 [node name="Main" type="Node2D" unique_id=101873425]
 
 [node name="Player" parent="." unique_id=575752315 instance=ExtResource("1_hyk8p")]
 
-[node name="Camera2D" type="Camera2D" parent="Player" unique_id=337578894]
-limit_enabled = false
-position_smoothing_enabled = true
+[node name="Enemyspawner" parent="." unique_id=1100431445 instance=ExtResource("2_k2fmo")]
+enemy_scene = ExtResource("3_k2fmo")
+spawn_radius = 1.0
