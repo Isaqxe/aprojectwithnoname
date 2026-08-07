@@ -7,4 +7,5 @@
 [node name="Player" parent="." unique_id=575752315 instance=ExtResource("1_hyk8p")]
 
 [node name="Camera2D" type="Camera2D" parent="Player" unique_id=337578894]
+limit_enabled = false
 position_smoothing_enabled = true
