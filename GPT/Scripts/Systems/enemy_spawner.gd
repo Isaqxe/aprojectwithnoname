@@ -3,6 +3,7 @@ extends Node2D
 @export var enemy_scene: PackedScene
 @export var spawn_interval: float = 2.0
 @export var spawn_radius: float = 500.0
+@export var max_spawn_interval: float = 2.0
 
 var _timer := 0.0
 
@@ -11,6 +12,7 @@ func _process(delta: float) -> void:
 	if _timer >= spawn_interval:
 		_timer = 0.0
 		spawn_enemy()
+		spawn_interval = max_spawn_interval
 
 func spawn_enemy() -> void:
 	if enemy_scene == null:
