@@ -4,6 +4,13 @@
 [ext_resource type="PackedScene" uid="uid://dp2stutckeff1" path="res://scenes/enemies/enemyspawner.tscn" id="2_k2fmo"]
 [ext_resource type="PackedScene" uid="uid://cl8wus0io4rvr" path="res://scenes/enemies/Enemy1.tscn" id="3_k2fmo"]
 [ext_resource type="PackedScene" uid="uid://bjjqsca5e1uif" path="res://scenes/main/wall.tscn" id="4_l3cfh"]
+[ext_resource type="Script" path="res://scripts/system/titan_scale_zone.gd" id="5_titan"]
+
+[sub_resource type="RectangleShape2D" id="TitanScaleZoneVertical"]
+size = Vector2(400, 2800)
+
+[sub_resource type="RectangleShape2D" id="TitanScaleZoneHorizontal"]
+size = Vector2(2900, 400)
 
 [node name="Main" type="Node2D" unique_id=101873425]
 
@@ -79,3 +86,31 @@ rotation = -1.5526942
 [node name="Wall13" parent="." unique_id=890493809 instance=ExtResource("4_l3cfh")]
 position = Vector2(-1756.0002, -1568.9999)
 rotation = -1.5526942
+
+[node name="TitanScaleZoneLeft" type="Area2D" parent="."]
+position = Vector2(-2025, -300)
+script = ExtResource("5_titan")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TitanScaleZoneLeft"]
+shape = SubResource("TitanScaleZoneVertical")
+
+[node name="TitanScaleZoneRight" type="Area2D" parent="."]
+position = Vector2(1350, -300)
+script = ExtResource("5_titan")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TitanScaleZoneRight"]
+shape = SubResource("TitanScaleZoneVertical")
+
+[node name="TitanScaleZoneTop" type="Area2D" parent="."]
+position = Vector2(-350, -1725)
+script = ExtResource("5_titan")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TitanScaleZoneTop"]
+shape = SubResource("TitanScaleZoneHorizontal")
+
+[node name="TitanScaleZoneBottom" type="Area2D" parent="."]
+position = Vector2(-350, 1125)
+script = ExtResource("5_titan")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TitanScaleZoneBottom"]
+shape = SubResource("TitanScaleZoneHorizontal")
