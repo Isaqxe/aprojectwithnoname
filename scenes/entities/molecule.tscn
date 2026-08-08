@@ -1,0 +1,35 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/entities/molecule.gd" id="1_molecule"]
+
+[sub_resource type="CircleShape2D" id="CircleShape_molecule"]
+radius = 10.0
+
+[sub_resource type="GradientTexture2D" id="GlowTexture"]
+gradient = SubResource("Gradient_molecule")
+width = 64
+height = 64
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="Gradient" id="Gradient_molecule"]
+colors = PackedColorArray(1, 1, 1, 0.8, 1, 1, 1, 0)
+offsets = PackedFloat32Array(0, 1)
+
+[node name="Molecule" type="Area2D"]
+script = ExtResource("1_molecule")
+collision_layer = 0
+collision_mask = 0
+monitoring = false
+
+[node name="Glow" type="Sprite2D" parent="."]
+texture = SubResource("GlowTexture")
+scale = Vector2(1.8, 1.8)
+
+[node name="Core" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-7, 0, -4.95, -4.95, 0, -7, 4.95, -4.95, 7, 0, 4.95, 4.95, 0, 7, -4.95, 4.95)
+color = Color(0.3, 0.9, 1, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape_molecule")
