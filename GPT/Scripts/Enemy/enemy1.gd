@@ -1,26 +1,19 @@
 extends CharacterBody2D
 
 @export var speed: float = 100.0
-
-var _player: Node2D
-
-
-func _ready() -> void:
-	_find_player.call_deferred()
-
-
-func _find_player() -> void:
-	_player = get_tree().get_first_node_in_group("PlayerCharacter") as Node2D
+@export var player_group: StringName = &"PlayerCharacter"
 
 
 func _physics_process(_delta: float) -> void:
-	if _player == null or not is_instance_valid(_player):
-		_find_player()
+	# Resolve the target from the current scene tree instead of keeping a stale
+	# reference. This is safer when the player is respawned or replaced.
+	var player := get_tree().get_first_node_in_group(player_group) as Node2D
 
-	if _player == null:
+	if player == null or not is_instance_valid(player):
 		velocity = Vector2.ZERO
+		move_and_slide()
 		return
 
-	var direction := global_position.direction_to(_player.global_position)
+	var direction := global_position.direction_to(player.global_position)
 	velocity = direction * speed
 	move_and_slide()
