@@ -7,7 +7,7 @@
 
 [node name="Player" type="Node2D" unique_id=1499481750]
 
-[node name="CharacterBody2D" type="CharacterBody2D" parent="." unique_id=1238182359]
+[node name="CharacterBody2D" type="CharacterBody2D" parent="." unique_id=1238182359 groups=["PlayerCharacter"]]
 script = ExtResource("1_dovo2")
 speed = 150.0
 
