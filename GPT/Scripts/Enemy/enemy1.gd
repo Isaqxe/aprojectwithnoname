@@ -2,6 +2,7 @@ extends CharacterBody2D
 
 @export var speed: float = 100.0
 @export var player_group: StringName = &"PlayerCharacter"
+@export var stop_distance: float = 32.0
 
 
 func _physics_process(_delta: float) -> void:
@@ -12,8 +13,12 @@ func _physics_process(_delta: float) -> void:
 		move_and_slide()
 		return
 
-	print("Player encontrado em: ", player.global_position)
+	var distance_to_player := global_position.distance_to(player.global_position)
 
-	var direction := global_position.direction_to(player.global_position)
-	velocity = direction * speed
+	if distance_to_player > stop_distance:
+		var direction := global_position.direction_to(player.global_position)
+		velocity = direction * speed
+	else:
+		velocity = Vector2.ZERO
+
 	move_and_slide()
