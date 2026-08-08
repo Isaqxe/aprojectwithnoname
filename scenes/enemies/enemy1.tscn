@@ -1,12 +1,14 @@
 [gd_scene format=3 uid="uid://cl8wus0io4rvr"]
 
+[ext_resource type="Script" uid="uid://bkpjexpdlkqou" path="res://GPT/Scripts/Enemy/enemy1.gd" id="1_p3ywg"]
 [ext_resource type="Texture2D" uid="uid://bcs886nb7mhc3" path="res://icon.svg" id="1_taqd5"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_4k262"]
 
 [node name="Enemy1" type="Node2D" unique_id=1034659099]
 
-[node name="CharacterBody2D" type="CharacterBody2D" parent="." unique_id=24468910]
+[node name="CharacterBody2D" type="CharacterBody2D" parent="." unique_id=24468910 groups=["Enemy1Character"]]
+script = ExtResource("1_p3ywg")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D" unique_id=389832747]
 shape = SubResource("RectangleShape2D_4k262")
