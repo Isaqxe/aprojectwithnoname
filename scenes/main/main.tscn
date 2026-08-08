@@ -1,16 +1,24 @@
-[gd_scene format=3 uid="uid://b7dayavg2hyrx"]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="PackedScene" uid="uid://debnvsr1546h3" path="res://scenes/player/player.tscn" id="1_hyk8p"]
 [ext_resource type="PackedScene" uid="uid://dp2stutckeff1" path="res://scenes/enemies/enemyspawner.tscn" id="2_k2fmo"]
 [ext_resource type="PackedScene" uid="uid://cl8wus0io4rvr" path="res://scenes/enemies/Enemy1.tscn" id="3_k2fmo"]
 [ext_resource type="PackedScene" uid="uid://bjjqsca5e1uif" path="res://scenes/main/wall.tscn" id="4_l3cfh"]
 [ext_resource type="Script" uid="uid://dneedbd1cc82j" path="res://scripts/system/titan_scale_zone.gd" id="5_titan"]
+[ext_resource type="PackedScene" path="res://scenes/system/molecule_spawner.tscn" id="6_molecule_spawner"]
 
 [sub_resource type="RectangleShape2D" id="TitanScaleZoneVertical"]
 size = Vector2(400, 2800)
 
 [sub_resource type="RectangleShape2D" id="TitanScaleZoneHorizontal"]
 size = Vector2(2976, 400)
+
+[sub_resource type="Environment" id="Environment_glow"]
+glow_enabled = true
+glow_intensity = 1.2
+glow_strength = 1.0
+glow_bloom = 0.15
+glow_blend_mode = 0
 
 [node name="Main" type="Node2D" unique_id=101873425]
 
@@ -19,6 +27,11 @@ position = Vector2(-37, -13)
 
 [node name="Enemyspawner" parent="." unique_id=232024441 instance=ExtResource("2_k2fmo")]
 enemy_scene = ExtResource("3_k2fmo")
+
+[node name="MoleculeSpawner" parent="." instance=ExtResource("6_molecule_spawner")]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_glow")
 
 [node name="Wall" parent="." unique_id=1710905535 instance=ExtResource("4_l3cfh")]
 position = Vector2(1131, -304)
