@@ -5,14 +5,14 @@ extends CharacterBody2D
 
 
 func _physics_process(_delta: float) -> void:
-	# Resolve the target from the current scene tree instead of keeping a stale
-	# reference. This is safer when the player is respawned or replaced.
 	var player := get_tree().get_first_node_in_group(player_group) as Node2D
 
 	if player == null or not is_instance_valid(player):
 		velocity = Vector2.ZERO
 		move_and_slide()
 		return
+
+	print("Player encontrado em: ", player.global_position)
 
 	var direction := global_position.direction_to(player.global_position)
 	velocity = direction * speed

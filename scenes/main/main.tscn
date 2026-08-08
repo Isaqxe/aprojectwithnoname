@@ -3,13 +3,11 @@
 [ext_resource type="PackedScene" uid="uid://debnvsr1546h3" path="res://scenes/player/player.tscn" id="1_hyk8p"]
 [ext_resource type="PackedScene" uid="uid://dp2stutckeff1" path="res://scenes/enemies/enemyspawner.tscn" id="2_k2fmo"]
 [ext_resource type="PackedScene" uid="uid://cl8wus0io4rvr" path="res://scenes/enemies/Enemy1.tscn" id="3_k2fmo"]
-[ext_resource type="Script" uid="uid://bwr54f0amgfmx" path="res://scripts/system/enemy_spawner.gd" id="3_l3cfh"]
 
 [node name="Main" type="Node2D" unique_id=101873425]
 
-[node name="Player" parent="." unique_id=1499481750 groups=["PlayerCharacter"] instance=ExtResource("1_hyk8p")]
+[node name="Player" parent="." unique_id=1499481750 instance=ExtResource("1_hyk8p")]
 
 [node name="Enemyspawner" parent="." unique_id=232024441 instance=ExtResource("2_k2fmo")]
-script = ExtResource("3_l3cfh")
 enemy_scene = ExtResource("3_k2fmo")
 spawn_radius = 200.0
