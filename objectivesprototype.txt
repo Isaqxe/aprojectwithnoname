@@ -1,14 +1,52 @@
-■
-☐
+# Alive Cells — Objectives Prototype
+
+## Direção do projeto
+
+**Top-down survival simulator**, não mais top-down shooter.
+
+O core loop é:
+
+> **sobreviver → coletar recursos → conseguir recursos suficientes → fazer mitose → escolher uma mutação → continuar a run.**
+
+O tema central é **material genético**. As mutações precisam ter consequências reais no comportamento/características da célula.
+
+## Base já funcionando
 
 ■ Jogador se movimenta
 ■ Câmera acompanha o jogador
 ■ Inimigo surge no mapa
 ■ Inimigo segue o jogador
-☐ Sistema de colisão
-☐ Ataque básico do jogador
-☐ Inimigo recebe dano
-☐ Jogador recebe dano
-☐ Barra de vida
-☐ Morte do jogador
-☐ Tela de Game Over
+■ Sistema básico de colisão
+
+## Transição do protótipo
+
+☐ Titãs que surgem fora das muralhas são reduzidos a 50%
+☐ Recursos surgem no mapa
+☐ Jogador coleta recursos
+☐ Contador de recursos
+☐ Ameaças surgem pelo mapa
+☐ Sistema básico de sobrevivência/dano
+☐ Jogador pode morrer
+☐ Contador de tempo vivo
+
+## Mitose e material genético
+
+☐ Recursos suficientes permitem realizar mitose
+☐ Tela de mutação aparece após a mitose
+☐ Criar conjunto inicial de mutações pré-definidas
+☐ Mutações alteram características reais da célula
+☐ Genoma representado por valores/atributos
+☐ Nova geração herda o genoma da anterior
+
+## Geração procedural — se couber no prazo
+
+☐ Células possuem visual procedural simples
+☐ Forma, cor e tamanho são determinados proceduralmente
+☐ Visual pode refletir características do genoma
+☐ Ameaças também podem usar variações visuais
+
+## Regra de escopo
+
+> **Se não ajuda o core loop ou a demonstração de material genético, fica para depois.**
+
+Primeiro fazemos o jogo pequeno funcionar. Depois deixamos ele bonito e sofisticado.
