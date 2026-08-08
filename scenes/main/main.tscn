@@ -4,21 +4,21 @@
 [ext_resource type="PackedScene" uid="uid://dp2stutckeff1" path="res://scenes/enemies/enemyspawner.tscn" id="2_k2fmo"]
 [ext_resource type="PackedScene" uid="uid://cl8wus0io4rvr" path="res://scenes/enemies/Enemy1.tscn" id="3_k2fmo"]
 [ext_resource type="PackedScene" uid="uid://bjjqsca5e1uif" path="res://scenes/main/wall.tscn" id="4_l3cfh"]
-[ext_resource type="Script" path="res://scripts/system/titan_scale_zone.gd" id="5_titan"]
+[ext_resource type="Script" uid="uid://dneedbd1cc82j" path="res://scripts/system/titan_scale_zone.gd" id="5_titan"]
 
 [sub_resource type="RectangleShape2D" id="TitanScaleZoneVertical"]
 size = Vector2(400, 2800)
 
 [sub_resource type="RectangleShape2D" id="TitanScaleZoneHorizontal"]
-size = Vector2(2900, 400)
+size = Vector2(2976, 400)
 
 [node name="Main" type="Node2D" unique_id=101873425]
 
 [node name="Player" parent="." unique_id=1499481750 instance=ExtResource("1_hyk8p")]
+position = Vector2(-37, -13)
 
 [node name="Enemyspawner" parent="." unique_id=232024441 instance=ExtResource("2_k2fmo")]
 enemy_scene = ExtResource("3_k2fmo")
-spawn_radius = 200.0
 
 [node name="Wall" parent="." unique_id=1710905535 instance=ExtResource("4_l3cfh")]
 position = Vector2(1131, -304)
@@ -30,7 +30,8 @@ position = Vector2(1128, -914)
 position = Vector2(1114, -1530)
 
 [node name="Wall15" parent="." unique_id=1186806241 instance=ExtResource("4_l3cfh")]
-position = Vector2(-1758, -1599)
+position = Vector2(-1779, -1562.0001)
+scale = Vector2(0.6398963, 0.80929345)
 
 [node name="Wall16" parent="." unique_id=1231099437 instance=ExtResource("4_l3cfh")]
 position = Vector2(-1790, -1038)
@@ -72,45 +73,46 @@ position = Vector2(468.00024, -1500.0002)
 rotation = -1.5526942
 
 [node name="Wall10" parent="." unique_id=1794325449 instance=ExtResource("4_l3cfh")]
-position = Vector2(-111.00006, -1523)
+position = Vector2(-108, -1494)
 rotation = -1.5526942
 
 [node name="Wall11" parent="." unique_id=1597248332 instance=ExtResource("4_l3cfh")]
-position = Vector2(-722.00006, -1537)
+position = Vector2(-728, -1505.9999)
 rotation = -1.5526942
 
 [node name="Wall12" parent="." unique_id=445583691 instance=ExtResource("4_l3cfh")]
-position = Vector2(-1365, -1545.9999)
+position = Vector2(-1363.0001, -1524.9999)
 rotation = -1.5526942
 
 [node name="Wall13" parent="." unique_id=890493809 instance=ExtResource("4_l3cfh")]
-position = Vector2(-1756.0002, -1568.9999)
+position = Vector2(-1773.9999, -1529.9998)
 rotation = -1.5526942
 
-[node name="TitanScaleZoneLeft" type="Area2D" parent="."]
+[node name="TitanScaleZoneLeft" type="Area2D" parent="." unique_id=259422480]
 position = Vector2(-2025, -300)
 script = ExtResource("5_titan")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="TitanScaleZoneLeft"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TitanScaleZoneLeft" unique_id=1266453852]
 shape = SubResource("TitanScaleZoneVertical")
 
-[node name="TitanScaleZoneRight" type="Area2D" parent="."]
+[node name="TitanScaleZoneRight" type="Area2D" parent="." unique_id=1555431151]
 position = Vector2(1350, -300)
 script = ExtResource("5_titan")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="TitanScaleZoneRight"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TitanScaleZoneRight" unique_id=2135810986]
 shape = SubResource("TitanScaleZoneVertical")
 
-[node name="TitanScaleZoneTop" type="Area2D" parent="."]
+[node name="TitanScaleZoneTop" type="Area2D" parent="." unique_id=386988791]
 position = Vector2(-350, -1725)
 script = ExtResource("5_titan")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="TitanScaleZoneTop"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TitanScaleZoneTop" unique_id=1426425142]
+position = Vector2(6, -17)
 shape = SubResource("TitanScaleZoneHorizontal")
 
-[node name="TitanScaleZoneBottom" type="Area2D" parent="."]
+[node name="TitanScaleZoneBottom" type="Area2D" parent="." unique_id=1644722097]
 position = Vector2(-350, 1125)
 script = ExtResource("5_titan")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="TitanScaleZoneBottom"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TitanScaleZoneBottom" unique_id=554871993]
 shape = SubResource("TitanScaleZoneHorizontal")

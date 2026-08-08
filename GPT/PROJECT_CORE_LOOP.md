@@ -23,21 +23,21 @@ Assim temos uma relação simples entre:
 ## Loop principal
 
 ```text
-        SOBREVIVER
-             ↓
-      COLETAR RECURSOS
-             ↓
-      RECURSOS SUFICIENTES?
-          ↙       ↘
-        NÃO       SIM
-         ↓         ↓
-      continuar   MITOSE
-                     ↓
-              ESCOLHER MUTAÇÃO
-                     ↓
-              NOVA GERAÇÃO
-                     ↓
-                 SOBREVIVER
+		SOBREVIVER
+			 ↓
+	  COLETAR RECURSOS
+			 ↓
+	  RECURSOS SUFICIENTES?
+		  ↙       ↘
+		NÃO       SIM
+		 ↓         ↓
+	  continuar   MITOSE
+					 ↓
+			  ESCOLHER MUTAÇÃO
+					 ↓
+			  NOVA GERAÇÃO
+					 ↓
+				 SOBREVIVER
 ```
 
 ## Genoma
@@ -71,13 +71,13 @@ Depois da mitose, o jogador pode escolher entre algumas mutações pré-definida
 Algo simples, por exemplo:
 
 ```text
-        MUTAÇÃO
+		MUTAÇÃO
 
 [+] Velocidade
 [+] Resistência
 [+] Absorção
 
-       ESCOLHER
+	   ESCOLHER
 ```
 
 Não precisamos fazer dezenas de mutações. Algumas boas e bem explicadas são melhores do que um sistema gigantesco que não terminaremos.

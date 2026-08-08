@@ -1,6 +1,6 @@
 extends Area2D
 
-@export var titan_scale: float = 0.5
+@export var titan_scale: float = 1.5
 
 
 func _ready() -> void:

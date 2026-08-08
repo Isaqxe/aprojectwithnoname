@@ -20,7 +20,7 @@ O tema central é **material genético**. As mutações precisam ter consequênc
 
 ## Transição do protótipo
 
-☐ Titãs que surgem fora das muralhas são reduzidos a 50%
+■  Titãs que surgem fora das muralhas são aumentados em 50%
 ☐ Recursos surgem no mapa
 ☐ Jogador coleta recursos
 ☐ Contador de recursos
