@@ -10,6 +10,9 @@ func _physics_process(_delta: float) -> void:
 		"move_up",
 		"move_down"
 	).normalized()
+	if Input.is_action_just_pressed("ui_up"):
+		print(resources_collected)
+
 
 	velocity = direction * speed
 
