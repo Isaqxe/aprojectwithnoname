@@ -3,9 +3,18 @@ extends CharacterBody2D
 @export var speed: float = 100.0
 @export var player_group: StringName = &"PlayerCharacter"
 @export var stop_distance: float = 32.0
+@export var lifetime: float = 120.0
+
+var _lifetime_elapsed: float = 0.0
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
+	_lifetime_elapsed += delta
+
+	if _lifetime_elapsed >= lifetime:
+		queue_free()
+		return
+
 	var player := get_tree().get_first_node_in_group(player_group) as Node2D
 
 	if player == null or not is_instance_valid(player):
