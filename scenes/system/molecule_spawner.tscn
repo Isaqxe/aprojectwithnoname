@@ -1,7 +1,7 @@
-[gd_scene format=3]
+[gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" uid="uid://cvwrpcqlstf8p" path="res://scripts/system/molecule_spawner.gd" id="1_spawner"]
-[ext_resource type="PackedScene" path="res://scenes/entities/molecule.tscn" id="2_molecule"]
+[ext_resource type="Script" path="res://scripts/system/molecule_spawner.gd" id="1_spawner"]
+[ext_resource type="PackedScene" path="res://scenes/system/molecule.tscn" id="2_molecule"]
 
 [node name="MoleculeSpawner" type="Node2D"]
 script = ExtResource("1_spawner")
