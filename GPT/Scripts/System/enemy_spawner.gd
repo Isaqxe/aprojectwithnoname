@@ -58,7 +58,7 @@ func spawn_enemy() -> void:
 	if get_tree().get_nodes_in_group("EnemyCharacter").size() >= max_enemies:
 		return
 
-	var is_white_blood_cell := randf() >= common_chance
+	var is_white_blood_cell := randf() <= common_chance
 	var size: float
 	var strength: float
 	var vision_radius: float
