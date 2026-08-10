@@ -23,21 +23,21 @@ Assim temos uma relação simples entre:
 ## Loop principal
 
 ```text
-		SOBREVIVER
-			 ↓
-	  COLETAR RECURSOS
-			 ↓
-	  RECURSOS SUFICIENTES?
-		  ↙       ↘
-		NÃO       SIM
-		 ↓         ↓
-	  continuar   MITOSE
-					 ↓
-			  ESCOLHER MUTAÇÃO
-					 ↓
-			  NOVA GERAÇÃO
-					 ↓
-				 SOBREVIVER
+        SOBREVIVER
+             ↓
+      COLETAR RECURSOS
+             ↓
+      RECURSOS SUFICIENTES?
+          ↙       ↘
+        NÃO       SIM
+         ↓         ↓
+      continuar   MITOSE
+                     ↓
+              ESCOLHER MUTAÇÃO
+                     ↓
+              NOVA GERAÇÃO
+                     ↓
+                 SOBREVIVER
 ```
 
 ## Genoma
@@ -71,13 +71,13 @@ Depois da mitose, o jogador pode escolher entre algumas mutações pré-definida
 Algo simples, por exemplo:
 
 ```text
-		MUTAÇÃO
+        MUTAÇÃO
 
 [+] Velocidade
 [+] Resistência
 [+] Absorção
 
-	   ESCOLHER
+       ESCOLHER
 ```
 
 Não precisamos fazer dezenas de mutações. Algumas boas e bem explicadas são melhores do que um sistema gigantesco que não terminaremos.
@@ -96,21 +96,29 @@ GERAÇÃO: 4
 
 Isso também dá uma maneira simples de comparar runs.
 
-## Células proceduralmente geradas
+## Inimigos / células do ambiente
 
-Essa é uma parte que **PODE** ficar muito ambiciosa, então a ideia é começar pequeno.
+Não teremos inimigos pré-definidos com aparência fixa. O objetivo é que as células sejam geradas proceduralmente a partir de parâmetros.
 
-Todas as células podem receber características visuais geradas a partir de alguns parâmetros:
+Teremos inicialmente **dois tipos**:
 
-```text
-forma
-cor
-tamanho
-núcleo
-padrão
-```
+### Células comuns
 
-A primeira versão pode usar somente:
+- menores;
+- mais fracas;
+- mais numerosas;
+- aparência procedural variável.
+
+### Glóbulos brancos
+
+- obrigatoriamente maiores;
+- obrigatoriamente mais fortes;
+- menos comuns;
+- aparência procedural própria.
+
+A aparência não precisa ser biologicamente realista. O objetivo é criar um visual simples, reconhecível e interessante para o jogo.
+
+A primeira versão do gerador pode variar:
 
 ```text
 forma + cor + tamanho
@@ -121,20 +129,70 @@ Depois, se houver tempo:
 ```text
 + núcleo
 + padrão
++ outras deformações visuais
 ```
 
-A ideia mais interessante é que o visual da célula possa estar relacionado ao seu genoma. Assim, quando uma mutação altera uma característica, a célula pode também apresentar uma diferença visual.
+## Movimento das células
+
+As células não precisam perseguir o Player o tempo inteiro.
+
+A ideia é que elas possam:
+
+```text
+vaguear pelo mapa
+      ↓
+Player entra no raio de visão
+      ↓
+perseguir Player
+      ↓
+Player sai do raio
+      ↓
+voltar a vaguear
+```
+
+Também podemos adicionar aceleração, desaceleração e mudança gradual de direção para evitar movimentos excessivamente rígidos.
+
+## Deformação das células — ideia futura
+
+As células devem, se possível, parecer **moles e orgânicas**, em vez de formas rígidas.
+
+Uma possibilidade futura é fazer a célula se deformar quando submetida a alguma influência externa, especialmente quando for comprimida contra uma parede ou outra célula.
+
+Exemplo conceitual:
+
+```text
+célula livre → forma normal
+
+célula contra parede → forma comprimida
+
+célula liberada → volta gradualmente à forma original
+```
+
+Isso é uma ideia visual e **não faz parte do escopo obrigatório ainda**. Não precisamos simular uma membrana física real para conseguir esse efeito.
+
+## Recursos / moléculas
+
+Os recursos aparecem pelo mapa como pequenos pontos luminosos coloridos com bloom.
+
+O visual é propositalmente simples: eles servem principalmente como elementos coletáveis e para deixar o ambiente mais interessante.
+
+Ao tocar em uma molécula:
+
+```text
+Player toca
+    ↓
++1 recurso
+    ↓
+molécula desaparece
+```
 
 ## Ameaças
 
-O mapa pode possuir ameaças espalhadas aleatoriamente.
+O mapa possui ameaças espalhadas aleatoriamente.
 
-Inicialmente, não precisamos de muitos tipos:
+Inicialmente, não precisamos de muitos tipos. As próprias células comuns e os glóbulos brancos já podem formar a base das ameaças.
 
-- célula hostil;
-- vírus.
-
-A geração procedural das ameaças deve ser simples. Não precisamos criar um ecossistema inteiro.
+Vírus podem ficar para depois caso o prazo não permita.
 
 ## O que NÃO fazer agora
 
@@ -145,6 +203,7 @@ Para não transformar o projeto em algo impossível para uma equipe iniciante e 
 - não criar um sistema genético extremamente complexo;
 - não fazer um mapa procedural gigantesco antes do loop principal funcionar;
 - não criar IA sofisticada sem necessidade;
+- não criar física realista de deformação celular;
 - não adicionar mecânicas só porque parecem legais.
 
 Se uma ideia não ajuda diretamente o loop principal ou a demonstração de material genético, ela pode esperar.
@@ -165,8 +224,10 @@ Se uma ideia não ajuda diretamente o loop principal ou a demonstração de mate
 
 - contador de tempo vivo;
 - geração visual procedural simples das células;
+- dois tipos de células com atributos diferentes;
+- raio de visão das células;
+- comportamento de vaguear/perseguir;
 - genoma representado por valores;
-- diferentes ameaças;
 - herança do genoma entre gerações.
 
 ### Nível 3 — se sobrar tempo
@@ -174,8 +235,9 @@ Se uma ideia não ajuda diretamente o loop principal ou a demonstração de mate
 - DNA visual;
 - mutações mais complexas;
 - geração procedural mais avançada;
-- mais tipos de células/vírus;
-- efeitos visuais ligados ao genoma;
+- vírus;
+- deformação dinâmica das células;
+- efeitos visuais mais avançados, incluindo bloom;
 - sistemas biológicos adicionais.
 
 ## Regra de ouro
