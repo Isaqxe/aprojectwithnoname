@@ -1,9 +1,5 @@
 # A Project With No Name
 
-## Alive Cells
-
-Projeto da Feira de Ciências desenvolvido utilizando Godot Engine 4.7.
-
 ## Engine
 
 - Godot Engine 4.7
@@ -20,11 +16,13 @@ Scenes/
 
 Scripts/
     Código responsável pelo funcionamento dos sistemas.
+GPT/
+    Aqui é onde eu - Isaque Lima Carvalho, vulgo GOAT - utilizo meus escrav- assistentes muito úteis na área experimental do projeto
 ```
 
-## Objetivo inicial
-
-Criar um protótipo funcional de um roguelike 2D envolvendo conceitos de biologia, DNA e evolução celular.
+## Objetivo
+O objetivo é atingir o objetivo.
+Cheque o arquivo de escopo, gerado pelo meu caro colega GEEPEETEE, e o objectivesprototype.txt
 
 ## Estado atual
 
