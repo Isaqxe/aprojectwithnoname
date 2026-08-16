@@ -17,7 +17,7 @@ Scenes/
 Scripts/
     Código responsável pelo funcionamento dos sistemas.
 GPT/
-    Aqui é onde eu - Isaque Lima Carvalho, vulgo GOAT - utilizo meus escrav- assistentes muito úteis na área experimental do projeto
+    Aqui é onde eu - Isaque, vulgo GOAT - utilizo meus escrav- assistentes muito úteis na área experimental do projeto
 ```
 
 ## Objetivo
