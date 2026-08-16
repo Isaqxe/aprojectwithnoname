@@ -4,11 +4,10 @@
 
 **Top-down survival simulator**, não mais top-down shooter.
 
-O core loop é:
+Core loop:
+> sobreviver → coletar recursos → conseguir recursos suficientes → fazer mitose → escolher uma mutação → continuar a run.
 
-> **sobreviver → coletar recursos → conseguir recursos suficientes → fazer mitose → escolher uma mutação → continuar a run.**
-
-O tema central é **material genético**. As mutações precisam ter consequências reais no comportamento/características da célula.
+Tema central: **material genético**.
 
 ## Base já funcionando
 
@@ -20,11 +19,11 @@ O tema central é **material genético**. As mutações precisam ter consequênc
 
 ## Transição do protótipo
 
-■  Titãs que surgem fora das muralhas são aumentados em 50%
+■ Titãs que surgem fora das muralhas são aumentados em 50%
 ■ Recursos surgem no mapa
 ■ Jogador coleta recursos
 ■ Contador de recursos
-☐ Ameaças surgem pelo mapa
+■ Ameaças surgem pelo mapa — protótipo experimental funcional na Workspace `GPT/`; migração para a versão principal ainda pendente
 ☐ Sistema básico de sobrevivência/dano
 ☐ Jogador pode morrer
 ☐ Contador de tempo vivo
@@ -47,6 +46,6 @@ O tema central é **material genético**. As mutações precisam ter consequênc
 
 ## Regra de escopo
 
-> **Se não ajuda o core loop ou a demonstração de material genético, fica para depois.**
+> Se não ajuda o core loop ou a demonstração de material genético, fica para depois.
 
 Primeiro fazemos o jogo pequeno funcionar. Depois deixamos ele bonito e sofisticado.
