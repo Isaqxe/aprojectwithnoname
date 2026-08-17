@@ -1,4 +1,4 @@
-# CORE LOOP — Alive Cells
+# CORE LOOP — AProjectWithNoName
 
 Bom, agora vamos limitar esse negócio antes que ele vire um monstro. 😭
 
