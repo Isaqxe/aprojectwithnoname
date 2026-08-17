@@ -126,3 +126,5 @@ script = ExtResource("6_dweey")
 shape = SubResource("TitanScaleZoneHorizontal")
 
 [node name="EnemySpawner2" parent="." unique_id=1607282045 instance=ExtResource("5_axctc")]
+common_vision_radius = 200.0
+white_blood_vision_radius = 300.0
