@@ -23,7 +23,7 @@ Tema central: **material genético**.
 ■ Recursos surgem no mapa
 ■ Jogador coleta recursos
 ■ Contador de recursos
-■ Ameaças surgem pelo mapa — protótipo experimental funcional na Workspace `GPT/`; migração para a versão principal ainda pendente
+■ Ameaças surgem pelo mapa — protótipo procedural integrado à cena principal
 ☐ Sistema básico de sobrevivência/dano
 ☐ Jogador pode morrer
 ☐ Contador de tempo vivo
@@ -39,10 +39,11 @@ Tema central: **material genético**.
 
 ## Geração procedural — se couber no prazo
 
-☐ Células possuem visual procedural simples
-☐ Forma, cor e tamanho são determinados proceduralmente
+■ Células possuem visual procedural simples
+■ Forma, cor e tamanho são determinados proceduralmente
 ☐ Visual pode refletir características do genoma
-☐ Ameaças também podem usar variações visuais
+■ Ameaças também usam variações visuais
+☐ Tela de personalização do Player reutiliza o sistema visual procedural
 
 ## Regra de escopo
 
