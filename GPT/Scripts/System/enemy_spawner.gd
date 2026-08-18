@@ -10,7 +10,7 @@ extends Node2D
 @export var enemy_lifetime: float = 120.0
 
 @export_category("Common Cell")
-@export_range(0.0, 1.0) var common_chance: float = 0.8
+@export_range(0.0, 1.0) var white_blood_chance: float = 0.0833333
 @export var common_min_size: float = 12.0
 @export var common_max_size: float = 22.0
 @export var common_min_strength: float = 1.0
@@ -58,7 +58,7 @@ func spawn_enemy() -> void:
 	if get_tree().get_nodes_in_group("EnemyCharacter").size() >= max_enemies:
 		return
 
-	var is_white_blood_cell := randf() <= common_chance
+	var is_white_blood_cell := randf() <= white_blood_chance
 	var size: float
 	var strength: float
 	var vision_radius: float
