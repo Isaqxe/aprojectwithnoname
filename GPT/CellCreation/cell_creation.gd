@@ -111,10 +111,11 @@ func _select_type(type: String) -> void:
 	selected_type = type
 	_update_preview()
 
-func _set_size(value: float) -> void:
-	if is_equal_approx(cell_size, value):
+func _set_size(value: Vector2) -> void:
+	var new_size := value.x
+	if is_equal_approx(cell_size, new_size):
 		return
-	cell_size = value
+	cell_size = new_size
 	if preview != null:
 		preview.radius = cell_size
 		preview.queue_redraw()
@@ -158,7 +159,8 @@ class CellPreview extends Node2D:
 			var variation := rng.randf_range(0.84, 1.16)
 			points.append(Vector2.from_angle(angle) * radius * variation)
 
-		draw_colored_polygon(points, DEFAULT_CELL_COLOR)
+		var base_color := DEFAULT_CELL_COLOR
+		draw_colored_polygon(points, base_color)
 		draw_arc(Vector2.ZERO, radius * 0.98, 0.0, TAU, 48, Color(0.7, 0.95, 1.0), 3.0)
 
 		if cell_type == "eukaryote":
