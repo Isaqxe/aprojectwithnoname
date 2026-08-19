@@ -111,7 +111,7 @@ func _select_type(type: String) -> void:
 	selected_type = type
 	_update_preview()
 
-func _set_size(value: Vector2) -> void:
+func _update_cell_size(value: Vector2) -> void:
 	var new_size := value.x
 	if is_equal_approx(cell_size, new_size):
 		return
@@ -133,10 +133,10 @@ func _update_preview() -> void:
 		return
 
 	if selected_type == "prokaryote":
-		type_label.text = "PROCARIOTE"
+		type_label.text = "PROCARIONTE"
 		description_label.text = "Estrutura mais simples, sem núcleo delimitado."
 	else:
-		type_label.text = "EUCARIOTE"
+		type_label.text = "EUCARIONTE"
 		description_label.text = "Estrutura mais complexa, com núcleo delimitado."
 
 	size_label.text = "Tamanho: %.0f" % cell_size
