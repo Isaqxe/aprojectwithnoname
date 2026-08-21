@@ -10,8 +10,7 @@ radius = 24.0
 [node name="CharacterBody2D" type="CharacterBody2D" parent="." unique_id=1238182359 groups=["PlayerCharacter"]]
 script = ExtResource("1_dovo2")
 speed = 150.0
-cell_type = "eukaryote"
-cell_size = 24.0
+visual_seed = 3331
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D" unique_id=706334261]
 shape = SubResource("CircleShape2D_player")
