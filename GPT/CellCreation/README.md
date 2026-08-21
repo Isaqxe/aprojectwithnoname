@@ -1,3 +1,6 @@
+##OBSOLETO##
+
+
 # Cell Creation — estrutura modular
 
 Estrutura planejada para a tela de criação da célula do Alive Cells.
