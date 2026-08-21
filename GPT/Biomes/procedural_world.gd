@@ -8,11 +8,16 @@ extends Node2D
 @export var chunk_size: int = 512
 @export_range(0, 8) var load_radius: int = 2
 @export_range(0, 12) var unload_radius: int = 3
-@export var noise_scale: float = 0.0018
+@export var noise_scale: float = 0.0007
 
 @export_category("Biome Thresholds")
-@export_range(0.0, 1.0) var cold_threshold: float = 0.33
-@export_range(0.0, 1.0) var hot_threshold: float = 0.66
+@export_range(0.0, 1.0) var void_threshold: float = 0.48
+@export_range(0.0, 1.0) var cold_threshold: float = 0.38
+@export_range(0.0, 1.0) var hot_threshold: float = 0.76
+
+@export_category("Chunk Visual")
+@export var samples_per_chunk: int = 24
+@export var show_chunk_borders: bool = false
 
 var _player: Node2D
 var _loaded_chunks: Dictionary = {}
@@ -75,12 +80,14 @@ func _generate_chunk(coord: Vector2i) -> void:
 	add_child(chunk)
 
 	var visual := ChunkVisual.new()
-	visual.chunk_size = float(chunk_size)
+	visual.chunk_size = float(chunk_size) + 0.5
 	visual.chunk_coord = coord
 	visual.biome_noise = _biome_noise
+	visual.void_threshold = void_threshold
 	visual.cold_threshold = cold_threshold
 	visual.hot_threshold = hot_threshold
-	visual.world_seed = world_seed
+	visual.samples_per_chunk = samples_per_chunk
+	visual.show_chunk_borders = show_chunk_borders
 	chunk.add_child(visual)
 
 	_loaded_chunks[coord] = chunk
@@ -97,15 +104,17 @@ class ChunkVisual extends Node2D:
 	var chunk_size: float = 512.0
 	var chunk_coord := Vector2i.ZERO
 	var biome_noise: FastNoiseLite
-	var cold_threshold: float = 0.33
-	var hot_threshold: float = 0.66
-	var world_seed: int = 123456
+	var void_threshold: float = 0.48
+	var cold_threshold: float = 0.38
+	var hot_threshold: float = 0.76
+	var samples_per_chunk: int = 24
+	var show_chunk_borders: bool = false
 
 	func _ready() -> void:
 		queue_redraw()
 
 	func _draw() -> void:
-		var samples := 18
+		var samples := max(samples_per_chunk, 1)
 		var cell_size := chunk_size / float(samples)
 
 		for y in range(samples):
@@ -114,12 +123,15 @@ class ChunkVisual extends Node2D:
 				var global_position := Vector2(chunk_coord * chunk_size) + center
 				var sample := (biome_noise.get_noise_2d(global_position.x, global_position.y) + 1.0) * 0.5
 				var biome_color := _get_biome_color(sample)
-				draw_rect(Rect2(Vector2(x, y) * cell_size, Vector2.ONE * cell_size), biome_color)
+				draw_rect(Rect2(Vector2(x, y) * cell_size, Vector2.ONE * (cell_size + 0.5)), biome_color)
 
-		# Debug border so chunk boundaries are obvious during the prototype.
-		draw_rect(Rect2(Vector2.ZERO, Vector2.ONE * chunk_size), Color(0.08, 0.08, 0.08, 0.35), false, 2.0)
+		if show_chunk_borders:
+			draw_rect(Rect2(Vector2.ZERO, Vector2.ONE * chunk_size), Color(0.08, 0.08, 0.08, 0.35), false, 2.0)
 
 	func _get_biome_color(sample: float) -> Color:
+		# The void is the dominant macroregion. The remaining values form rarer biome bands.
+		if sample < void_threshold:
+			return Color(0.42, 0.42, 0.42, 1.0)
 		if sample < cold_threshold:
 			return Color(0.48, 0.72, 0.95, 1.0)
 		if sample > hot_threshold:
