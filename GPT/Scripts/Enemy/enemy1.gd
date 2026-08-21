@@ -4,8 +4,13 @@ extends CharacterBody2D
 @export var player_group: StringName = &"PlayerCharacter"
 @export var stop_distance: float = 32.0
 @export var lifetime: float = 120.0
+@export var damage: float = 4.0
 
 var _lifetime_elapsed: float = 0.0
+
+
+func _ready() -> void:
+	add_to_group("EnemyCharacter")
 
 
 func _physics_process(delta: float) -> void:
