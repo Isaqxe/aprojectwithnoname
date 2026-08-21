@@ -118,3 +118,40 @@ O sistema deveria ser acionado **somente quando o Player entra no campo de visã
 Isso evita transformar a comparação de estatísticas em uma operação contínua quando o Player está fora da percepção da célula.
 
 > Ideia de design — não implementar ainda.
+
+## Melhoria gráfica das células — deformação e maleabilidade
+
+Ideia para uma futura evolução visual do sistema procedural de células: fazer com que as células deixem de parecer formas rígidas e passem a ter uma aparência muito mais orgânica, maleável e deformável.
+
+A direção visual desejada inclui:
+
+- alta deformação da forma;
+- membrana aparentemente maleável;
+- mudanças suaves e contínuas de contorno;
+- sensação de massa mole e orgânica;
+- deformação relacionada ao movimento e/ou a influências externas;
+- recuperação gradual da forma original após uma deformação.
+
+Exemplo conceitual:
+
+```text
+célula livre
+    ↓
+forma orgânica
+    ↓
+pressionada contra uma parede/outro corpo
+    ↓
+forma se comprime e se adapta ao obstáculo
+    ↓
+obstáculo deixa de pressionar
+    ↓
+forma retorna gradualmente
+```
+
+A intenção é priorizar a **aparência de uma célula biologicamente maleável**, sem exigir uma simulação física real de membrana.
+
+Possíveis técnicas futuras incluem deformação procedural dos vértices, shaders ou outras soluções visuais. A técnica concreta ainda não está decidida.
+
+O bloom pode ser aplicado posteriormente sobre essa base para reforçar a aparência orgânica/luminosa.
+
+> Ideia visual — não implementar ainda.
