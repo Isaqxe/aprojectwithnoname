@@ -1,43 +1,44 @@
-# Cell Creation Prototype
+# Cell Creation — estrutura modular
 
-Protótipo conceitual da tela de criação da célula do **Alive Cells**.
-
-## Fluxo
-
-1. O jogador escolhe o tipo celular:
-   - **Procarionte** — estrutura mais simples.
-   - **Eucarionte** — estrutura mais complexa, com núcleo.
-2. A célula selecionada é exibida usando o mesmo princípio de geração visual procedural usado pelas ameaças.
-3. A personalização visual poderá futuramente controlar parâmetros como forma, cor e tamanho.
-4. A definição de atributos genéticos (HP, velocidade etc.) fica separada desta etapa e será integrada posteriormente.
-
-## Protótipo de interface
+Estrutura planejada para a tela de criação da célula do Alive Cells.
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│                 CRIE SUA CÉLULA                         │
-│                                                         │
-│          TIPO CELULAR                                   │
-│                                                         │
-│       ┌─────────────┐       ┌─────────────┐             │
-│       │ PROCARIOTE  │       │ EUCARIOTE   │             │
-│       │     ●       │       │    ◉        │             │
-│       │  simples    │       │  com núcleo │             │
-│       └─────────────┘       └─────────────┘             │
-│                                                         │
-│                  SUA CÉLULA                             │
-│                    ◉                                    │
-│                                                         │
-│       Forma       ◄────────●────────►                   │
-│       Cor         ◄────────●────────►                   │
-│       Tamanho     ◄────────●────────►                   │
-│                                                         │
-│                   [ CONFIRMAR ]                         │
-└─────────────────────────────────────────────────────────┘
+CellCreation
+├── Background
+├── MainPanel
+│   ├── Title
+│   ├── TypeSelection
+│   │   ├── ProkaryoteButton
+│   │   └── EukaryoteButton
+│   ├── CellInfo
+│   │   ├── TypeLabel
+│   │   └── DescriptionLabel
+│   ├── Appearance
+│   │   ├── Size
+│   │   │   ├── Label
+│   │   │   └── Slider
+│   │   ├── Color
+│   │   │   ├── Label
+│   │   │   └── ColorPicker
+│   │   └── Shape
+│   │       ├── Label
+│   │       └── Button
+│   └── ConfirmButton
+└── CellPreview
 ```
 
-> Este arquivo é um protótipo de design. Não representa ainda uma implementação funcional no Godot.
+## Princípio
 
-## Direção de design
+A cena deve conter os elementos da interface. O script deve apenas controlar comportamento e estado.
 
-A aparência do Player deve compartilhar o mesmo sistema visual procedural das células inimigas, evitando que o protagonista pareça pertencer a outro jogo. As diferenças entre tipos celulares devem ser representadas por regras do gerador, não por sprites completamente independentes.
+A estrutura foi preparada para que cada seção possa ser alterada no editor do Godot sem reconstruir a UI por código.
+
+## Responsabilidades
+
+- `CellCreation`: coordena seleção e confirmação.
+- `TypeSelection`: controla o tipo celular.
+- `Appearance`: controla parâmetros visuais.
+- `CellPreview`: exibe a célula proceduralmente.
+- Futuramente, `CellData`: concentrará os dados da célula, incluindo características genéticas.
+
+Esta estrutura é provisória e não implementa ainda genética, mutações ou hereditariedade.
