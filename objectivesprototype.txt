@@ -24,8 +24,8 @@ Tema central: **material genético**.
 ■ Jogador coleta recursos
 ■ Contador de recursos
 ■ Ameaças surgem pelo mapa — protótipo procedural integrado à cena principal
-☐ Sistema básico de sobrevivência/dano
-☐ Jogador pode morrer
+■ Sistema básico de sobrevivência/dano
+■ Jogador pode morrer
 ☐ Contador de tempo vivo
 
 ## Mitose e material genético
