@@ -3,7 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://debnvsr1546h3" path="res://scenes/player/player.tscn" id="1_xsj7g"]
 [ext_resource type="PackedScene" uid="uid://dp2stutckeff1" path="res://scenes/enemies/enemyspawner.tscn" id="2_kikly"]
 [ext_resource type="PackedScene" path="res://scenes/system/molecule_spawner.tscn" id="3_070jt"]
-[ext_resource type="PackedScene" uid="uid://dl7ko3uwhhpo4" path="res://GPT/Biomes/procedural_biomes.tscn" id="4_kikly"]
+[ext_resource type="PackedScene" path="res://GPT/Biomes/procedural_world.tscn" id="4_kikly"]
 
 [sub_resource type="Environment" id="Environment_glow"]
 glow_enabled = true
@@ -23,4 +23,6 @@ position = Vector2(-37, -13)
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1205433911]
 environment = SubResource("Environment_glow")
 
-[node name="ProceduralBiomes" parent="." unique_id=2016065413 instance=ExtResource("4_kikly")]
+[node name="ProceduralWorld" parent="." unique_id=1748639512 instance=ExtResource("4_kikly")]
+world_seed = 122532
+noise_scale = 0.001
