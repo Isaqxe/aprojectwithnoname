@@ -10,10 +10,12 @@ extends CharacterBody2D
 @export var base_health: float = 100.0
 @export var base_damage: float = 10.0
 @export var base_speed: float = 150.0
+@export var damage_cooldown: float = 0.5
 
 var health: float
 var damage: float
 var speed: float
+var _damage_cooldown_timer: float = 0.0
 
 var _visual: ProceduralCellVisual
 
@@ -54,6 +56,9 @@ func _create_visual() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _damage_cooldown_timer > 0.0:
+		_damage_cooldown_timer -= delta
+
 	var direction := Input.get_vector(
 		"move_left",
 		"move_right",
@@ -66,9 +71,42 @@ func _physics_process(delta: float) -> void:
 
 	velocity = direction * speed
 	move_and_slide()
+	_check_enemy_collisions()
 
 	if _visual != null:
 		_visual.set_motion(velocity, delta)
+
+
+func _check_enemy_collisions() -> void:
+	if _damage_cooldown_timer > 0.0:
+		return
+
+	for i in range(get_slide_collision_count()):
+		var collision := get_slide_collision(i)
+		var collider := collision.get_collider()
+
+		if collider is Node and collider.is_in_group("EnemyCharacter"):
+			var incoming_damage: float = collider.get("damage") if "damage" in collider else 1.0
+			take_damage(incoming_damage)
+			return
+
+
+func take_damage(amount: float) -> void:
+	if amount <= 0.0:
+		return
+
+	health = maxf(health - amount, 0.0)
+	_damage_cooldown_timer = damage_cooldown
+
+	print("Player recebeu ", amount, " de dano. HP restante: ", health)
+
+	if health <= 0.0:
+		_die()
+
+
+func _die() -> void:
+	print("Player morreu.")
+	set_physics_process(false)
 
 
 class ProceduralCellVisual extends Node2D:
