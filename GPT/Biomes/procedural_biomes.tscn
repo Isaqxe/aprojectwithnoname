@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://GPT/Biomes/procedural_biomes.gd" id="1_biomes"]
+
+[node name="ProceduralBiomes" type="Node2D"]
+script = ExtResource("1_biomes")
