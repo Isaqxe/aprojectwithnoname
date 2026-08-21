@@ -1,20 +1,57 @@
 extends CharacterBody2D
 
-@export var speed: float = 200.0
+@export_category("Base")
 @export var resources_collected: int = 0
-@export_category("Procedural Cell")
+@export var visual_seed: int = 12345
 @export var cell_type: String = "eukaryote"
 @export var cell_size: float = 24.0
-@export var visual_seed: int = 12345
+
+@export_category("Stats")
+@export var base_health: float = 100.0
+@export var base_damage: float = 10.0
+@export var base_speed: float = 150.0
+
+var health: float
+var damage: float
+var speed: float
 
 var _visual: ProceduralCellVisual
 
+
 func _ready() -> void:
+	_generate_stats_from_seed()
+	_create_visual()
+
+
+func _generate_stats_from_seed() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = visual_seed
+
+	var health_factor := rng.randf_range(0.90, 1.10)
+	var damage_factor := rng.randf_range(0.90, 1.10)
+	var speed_factor := rng.randf_range(0.90, 1.10)
+
+	if cell_type == "prokaryote":
+		health_factor *= 0.90
+		damage_factor *= 0.95
+		speed_factor *= 1.10
+	else:
+		health_factor *= 1.10
+		damage_factor *= 1.05
+		speed_factor *= 0.95
+
+	health = base_health * health_factor
+	damage = base_damage * damage_factor
+	speed = base_speed * speed_factor
+
+
+func _create_visual() -> void:
 	_visual = ProceduralCellVisual.new()
 	_visual.radius = cell_size
 	_visual.cell_type = cell_type
 	_visual.visual_seed = visual_seed
 	add_child(_visual)
+
 
 func _physics_process(delta: float) -> void:
 	var direction := Input.get_vector(
@@ -25,7 +62,7 @@ func _physics_process(delta: float) -> void:
 	).normalized()
 
 	if Input.is_action_just_pressed("ui_up"):
-		print(resources_collected)
+		print("HP: ", health, " | Dano: ", damage, " | Velocidade: ", speed, " | Recursos: ", resources_collected)
 
 	velocity = direction * speed
 	move_and_slide()
@@ -69,7 +106,6 @@ class ProceduralCellVisual extends Node2D:
 
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2(pulse, pulse))
 		draw_colored_polygon(_points, base_color)
-		draw_arc(Vector2.ZERO, radius * 0.98, 0.0, TAU, 48, Color(0.7, 0.95, 1.0, 1.0), 2.0)
 
 		if cell_type == "eukaryote":
 			draw_circle(Vector2.ZERO, radius * 0.34, Color(0.15, 0.28, 0.55, 1.0))
