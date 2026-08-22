@@ -8,16 +8,23 @@ extends Node2D
 @export var chunk_size: int = 512
 @export_range(0, 8) var load_radius: int = 2
 @export_range(0, 12) var unload_radius: int = 3
+
+@export_category("Noise Scale")
 @export var noise_scale: float = 0.0004
-
-@export_category("Biome Thresholds")
-@export_range(0.0, 1.0) var void_threshold: float = 0.60
-@export_range(0.0, 1.0) var cold_threshold: float = 0.72
-@export_range(0.0, 1.0) var hot_threshold: float = 0.84
-
-@export_category("Border Shape")
+@export var climate_noise_scale: float = 0.0007
+@export var humidity_noise_scale: float = 0.0009
+@export var fertility_noise_scale: float = 0.0011
 @export var warp_scale: float = 0.0012
 @export var warp_strength: float = 150.0
+
+@export_category("Macroregion")
+@export_range(0.0, 1.0) var void_threshold: float = 0.60
+
+@export_category("Climate")
+@export_range(0.0, 1.0) var cold_temperature: float = 0.34
+@export_range(0.0, 1.0) var hot_temperature: float = 0.68
+@export_range(0.0, 1.0) var green_humidity: float = 0.45
+@export_range(0.0, 1.0) var lush_fertility: float = 0.60
 
 @export_category("Chunk Visual")
 @export var samples_per_chunk: int = 64
@@ -25,7 +32,11 @@ extends Node2D
 
 var _player: Node2D
 var _loaded_chunks: Dictionary = {}
+
 var _biome_noise := FastNoiseLite.new()
+var _temperature_noise := FastNoiseLite.new()
+var _humidity_noise := FastNoiseLite.new()
+var _fertility_noise := FastNoiseLite.new()
 var _warp_x_noise := FastNoiseLite.new()
 var _warp_y_noise := FastNoiseLite.new()
 
@@ -44,17 +55,18 @@ func _process(_delta: float) -> void:
 
 
 func _setup_noise() -> void:
-	_biome_noise.seed = world_seed
-	_biome_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-	_biome_noise.frequency = noise_scale
+	_setup_noise_layer(_biome_noise, world_seed, noise_scale)
+	_setup_noise_layer(_temperature_noise, world_seed + 101, climate_noise_scale)
+	_setup_noise_layer(_humidity_noise, world_seed + 202, humidity_noise_scale)
+	_setup_noise_layer(_fertility_noise, world_seed + 303, fertility_noise_scale)
+	_setup_noise_layer(_warp_x_noise, world_seed + 404, warp_scale)
+	_setup_noise_layer(_warp_y_noise, world_seed + 505, warp_scale)
 
-	_warp_x_noise.seed = world_seed + 101
-	_warp_x_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-	_warp_x_noise.frequency = warp_scale
 
-	_warp_y_noise.seed = world_seed + 202
-	_warp_y_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-	_warp_y_noise.frequency = warp_scale
+func _setup_noise_layer(noise: FastNoiseLite, seed_value: int, frequency: float) -> void:
+	noise.seed = seed_value
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	noise.frequency = frequency
 
 
 func _find_player() -> void:
@@ -97,12 +109,18 @@ func _generate_chunk(coord: Vector2i) -> void:
 	var visual := ChunkVisual.new()
 	visual.chunk_size = float(chunk_size) + 0.5
 	visual.chunk_coord = coord
+	visual.world_seed = world_seed
 	visual.biome_noise = _biome_noise
+	visual.temperature_noise = _temperature_noise
+	visual.humidity_noise = _humidity_noise
+	visual.fertility_noise = _fertility_noise
 	visual.warp_x_noise = _warp_x_noise
 	visual.warp_y_noise = _warp_y_noise
 	visual.void_threshold = void_threshold
-	visual.cold_threshold = cold_threshold
-	visual.hot_threshold = hot_threshold
+	visual.cold_temperature = cold_temperature
+	visual.hot_temperature = hot_temperature
+	visual.green_humidity = green_humidity
+	visual.lush_fertility = lush_fertility
 	visual.warp_strength = warp_strength
 	visual.samples_per_chunk = samples_per_chunk
 	visual.show_chunk_borders = show_chunk_borders
@@ -121,12 +139,20 @@ func _unload_chunk(coord: Vector2i) -> void:
 class ChunkVisual extends Node2D:
 	var chunk_size: float = 512.0
 	var chunk_coord := Vector2i.ZERO
+	var world_seed: int = 123456
+
 	var biome_noise: FastNoiseLite
+	var temperature_noise: FastNoiseLite
+	var humidity_noise: FastNoiseLite
+	var fertility_noise: FastNoiseLite
 	var warp_x_noise: FastNoiseLite
 	var warp_y_noise: FastNoiseLite
+
 	var void_threshold: float = 0.60
-	var cold_threshold: float = 0.72
-	var hot_threshold: float = 0.84
+	var cold_temperature: float = 0.34
+	var hot_temperature: float = 0.68
+	var green_humidity: float = 0.45
+	var lush_fertility: float = 0.60
 	var warp_strength: float = 150.0
 	var samples_per_chunk: int = 64
 	var show_chunk_borders: bool = false
@@ -136,34 +162,74 @@ class ChunkVisual extends Node2D:
 
 	func _draw() -> void:
 		var samples: int = maxi(samples_per_chunk, 1)
-		var cell_size := chunk_size / float(samples)
+		var cell_size: float = chunk_size / float(samples)
 
 		for y in range(samples):
 			for x in range(samples):
 				var center := Vector2((x + 0.5) * cell_size, (y + 0.5) * cell_size)
-				var global_position := Vector2(chunk_coord * 512) + center
+				var global_position: Vector2 = Vector2(chunk_coord) * (chunk_size - 0.5) + center
 
-				# Domain warping distorts the sampling coordinates before the biome
-				# lookup. This keeps borders continuous while making them irregular.
+				# Domain warping mantém a continuidade entre chunks, mas quebra
+				# bordas excessivamente uniformes.
 				var warp_offset := Vector2(
 					warp_x_noise.get_noise_2d(global_position.x, global_position.y),
 					warp_y_noise.get_noise_2d(global_position.x, global_position.y)
 				) * warp_strength
-				var warped_position := global_position + warp_offset
+				var warped_position: Vector2 = global_position + warp_offset
 
-				var sample := (biome_noise.get_noise_2d(warped_position.x, warped_position.y) + 1.0) * 0.5
-				var biome_color: Color = _get_biome_color(sample)
-				draw_rect(Rect2(Vector2(x, y) * cell_size, Vector2.ONE * (cell_size + 0.5)), biome_color)
+				var macro_value: float = _sample_noise(biome_noise, warped_position)
+				var temperature: float = _sample_noise(temperature_noise, warped_position)
+				var humidity: float = _sample_noise(humidity_noise, warped_position)
+				var fertility: float = _sample_noise(fertility_noise, warped_position)
+				var biome_color: Color = _get_biome_color(macro_value, temperature, humidity, fertility)
+
+				draw_rect(
+					Rect2(Vector2(x, y) * cell_size, Vector2.ONE * (cell_size + 0.5)),
+					biome_color
+				)
 
 		if show_chunk_borders:
-			draw_rect(Rect2(Vector2.ZERO, Vector2.ONE * 512), Color(0.08, 0.08, 0.08, 0.35), false, 2.0)
+			draw_rect(
+				Rect2(Vector2.ZERO, Vector2.ONE * 512),
+				Color(0.08, 0.08, 0.08, 0.35),
+				false,
+				2.0
+			)
 
-	func _get_biome_color(sample: float) -> Color:
-		# The void remains dominant, while the three biome bands are more evenly sampled.
-		if sample < void_threshold:
+	func _sample_noise(noise: FastNoiseLite, position: Vector2) -> float:
+		return (noise.get_noise_2d(position.x, position.y) + 1.0) * 0.5
+
+	func _get_biome_color(macro_value: float, temperature: float, humidity: float, fertility: float) -> Color:
+		# A macro noise decides where substantial regions exist.
+		if macro_value < void_threshold:
 			return Color(0.42, 0.42, 0.42, 1.0)
-		if sample < cold_threshold:
-			return Color(0.48, 0.72, 0.95, 1.0)
-		if sample < hot_threshold:
-			return Color(0.42, 0.82, 0.46, 1.0)
-		return Color(0.95, 0.55, 0.28, 1.0)
+
+		# Temperature establishes the broad climatic family.
+		if temperature < cold_temperature:
+			var cold_light: float = 0.88 + humidity * 0.12
+			return Color(0.48 * cold_light, 0.72 * cold_light, 0.95 * cold_light, 1.0)
+
+		if temperature > hot_temperature:
+			var hot_light: float = 0.88 + (1.0 - humidity) * 0.12
+			return Color(0.95 * hot_light, 0.55 * hot_light, 0.28 * hot_light, 1.0)
+
+		# Within the temperate band, humidity and fertility now matter.
+		if humidity >= green_humidity:
+			var green_light: float = 0.88 + fertility * 0.12
+			if fertility >= lush_fertility:
+				return Color(0.30 * green_light, 0.92 * green_light, 0.38 * green_light, 1.0)
+			return Color(0.42 * green_light, 0.82 * green_light, 0.46 * green_light, 1.0)
+
+		# Dry temperate zones become a transitional biome tone.
+		var transition_factor: float = clamp(
+			(temperature - cold_temperature) / max(hot_temperature - cold_temperature, 0.001),
+			0.0,
+			1.0
+		)
+		var dry_factor: float = 1.0 - humidity
+		return Color(
+			0.50 + dry_factor * 0.08,
+			0.68 - dry_factor * 0.08 + transition_factor * 0.04,
+			0.45 - transition_factor * 0.08,
+			1.0
+		)
