@@ -67,7 +67,7 @@ func _physics_process(delta: float) -> void:
 	).normalized()
 
 	if Input.is_action_just_pressed("ui_up"):
-		print("HP: ", health, " | Dano: ", damage, " | Velocidade: ", speed, " | Recursos: ", resources_collected)
+		print("HP: ", health, " | Dano: ", damage, " | Velocidade: ", speed, " | Recursos: ", resources_collected, " | Posição: ", global_position)
 
 	velocity = direction * speed
 	move_and_slide()

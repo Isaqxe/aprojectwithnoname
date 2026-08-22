@@ -17,6 +17,7 @@ glow_blend_mode = 0
 position = Vector2(-37, -13)
 
 [node name="Enemyspawner" parent="." unique_id=232024441 instance=ExtResource("2_kikly")]
+seed_stat_variation = 0.4
 
 [node name="MoleculeSpawner" parent="." unique_id=727660626 instance=ExtResource("3_070jt")]
 
@@ -24,3 +25,8 @@ position = Vector2(-37, -13)
 environment = SubResource("Environment_glow")
 
 [node name="ProceduralWorld" parent="." unique_id=1748639512 instance=ExtResource("4_kikly")]
+position = Vector2(-1, 0)
+world_seed = 116792
+noise_scale = 0.001
+void_threshold = 0.573
+show_chunk_borders = true
