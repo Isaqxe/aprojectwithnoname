@@ -48,7 +48,7 @@ func _find_player() -> void:
 
 
 func _update_chunks() -> void:
-	var player_chunk := world_to_chunk(_player.global_position)
+	var player_chunk: Vector2i = world_to_chunk(_player.global_position)
 
 	for y in range(player_chunk.y - load_radius, player_chunk.y + load_radius + 1):
 		for x in range(player_chunk.x - load_radius, player_chunk.x + load_radius + 1):
@@ -57,7 +57,8 @@ func _update_chunks() -> void:
 				_generate_chunk(coord)
 
 	var chunks_to_remove: Array[Vector2i] = []
-	for coord: Vector2i in _loaded_chunks.keys():
+	for key in _loaded_chunks.keys():
+		var coord: Vector2i = key
 		if abs(coord.x - player_chunk.x) > unload_radius or abs(coord.y - player_chunk.y) > unload_radius:
 			chunks_to_remove.append(coord)
 
@@ -114,7 +115,7 @@ class ChunkVisual extends Node2D:
 		queue_redraw()
 
 	func _draw() -> void:
-		var samples := max(samples_per_chunk, 1)
+		var samples: int = maxi(samples_per_chunk, 1)
 		var cell_size := chunk_size / float(samples)
 
 		for y in range(samples):
@@ -122,7 +123,7 @@ class ChunkVisual extends Node2D:
 				var center := Vector2((x + 0.5) * cell_size, (y + 0.5) * cell_size)
 				var global_position := Vector2(chunk_coord * 512) + center
 				var sample := (biome_noise.get_noise_2d(global_position.x, global_position.y) + 1.0) * 0.5
-				var biome_color := _get_biome_color(sample)
+				var biome_color: Color = _get_biome_color(sample)
 				draw_rect(Rect2(Vector2(x, y) * cell_size, Vector2.ONE * (cell_size + 0.5)), biome_color)
 
 		if show_chunk_borders:
