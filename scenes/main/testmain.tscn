@@ -24,5 +24,10 @@ position = Vector2(-37, -13)
 environment = SubResource("Environment_glow")
 
 [node name="ProceduralWorld" parent="." unique_id=1748639512 instance=ExtResource("4_kikly")]
-world_seed = 122532
-noise_scale = 0.001
+world_seed = null
+chunk_size = null
+load_radius = null
+unload_radius = null
+noise_scale = null
+cold_threshold = null
+hot_threshold = null
