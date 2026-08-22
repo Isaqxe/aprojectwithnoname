@@ -24,6 +24,3 @@ position = Vector2(-37, -13)
 environment = SubResource("Environment_glow")
 
 [node name="ProceduralWorld" parent="." unique_id=1748639512 instance=ExtResource("4_kikly")]
-noise_scale = 1.0
-samples_per_chunk = 64
-show_chunk_borders = true
