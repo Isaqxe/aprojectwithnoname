@@ -8,20 +8,26 @@ extends Node2D
 @export var chunk_size: int = 512
 @export_range(0, 8) var load_radius: int = 2
 @export_range(0, 12) var unload_radius: int = 3
-@export var noise_scale: float = 0.0007
+@export var noise_scale: float = 0.0004
 
 @export_category("Biome Thresholds")
-@export_range(0.0, 1.0) var void_threshold: float = 0.62
-@export_range(0.0, 1.0) var cold_threshold: float = 0.75
-@export_range(0.0, 1.0) var hot_threshold: float = 0.90
+@export_range(0.0, 1.0) var void_threshold: float = 0.60
+@export_range(0.0, 1.0) var cold_threshold: float = 0.72
+@export_range(0.0, 1.0) var hot_threshold: float = 0.84
+
+@export_category("Border Shape")
+@export var warp_scale: float = 0.0012
+@export var warp_strength: float = 150.0
 
 @export_category("Chunk Visual")
-@export var samples_per_chunk: int = 24
+@export var samples_per_chunk: int = 64
 @export var show_chunk_borders: bool = false
 
 var _player: Node2D
 var _loaded_chunks: Dictionary = {}
 var _biome_noise := FastNoiseLite.new()
+var _warp_x_noise := FastNoiseLite.new()
+var _warp_y_noise := FastNoiseLite.new()
 
 
 func _ready() -> void:
@@ -41,6 +47,14 @@ func _setup_noise() -> void:
 	_biome_noise.seed = world_seed
 	_biome_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 	_biome_noise.frequency = noise_scale
+
+	_warp_x_noise.seed = world_seed + 101
+	_warp_x_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	_warp_x_noise.frequency = warp_scale
+
+	_warp_y_noise.seed = world_seed + 202
+	_warp_y_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	_warp_y_noise.frequency = warp_scale
 
 
 func _find_player() -> void:
@@ -84,9 +98,12 @@ func _generate_chunk(coord: Vector2i) -> void:
 	visual.chunk_size = float(chunk_size) + 0.5
 	visual.chunk_coord = coord
 	visual.biome_noise = _biome_noise
+	visual.warp_x_noise = _warp_x_noise
+	visual.warp_y_noise = _warp_y_noise
 	visual.void_threshold = void_threshold
 	visual.cold_threshold = cold_threshold
 	visual.hot_threshold = hot_threshold
+	visual.warp_strength = warp_strength
 	visual.samples_per_chunk = samples_per_chunk
 	visual.show_chunk_borders = show_chunk_borders
 	chunk.add_child(visual)
@@ -105,10 +122,13 @@ class ChunkVisual extends Node2D:
 	var chunk_size: float = 512.0
 	var chunk_coord := Vector2i.ZERO
 	var biome_noise: FastNoiseLite
-	var void_threshold: float = 0.62
-	var cold_threshold: float = 0.75
-	var hot_threshold: float = 0.90
-	var samples_per_chunk: int = 24
+	var warp_x_noise: FastNoiseLite
+	var warp_y_noise: FastNoiseLite
+	var void_threshold: float = 0.60
+	var cold_threshold: float = 0.72
+	var hot_threshold: float = 0.84
+	var warp_strength: float = 150.0
+	var samples_per_chunk: int = 64
 	var show_chunk_borders: bool = false
 
 	func _ready() -> void:
@@ -122,7 +142,16 @@ class ChunkVisual extends Node2D:
 			for x in range(samples):
 				var center := Vector2((x + 0.5) * cell_size, (y + 0.5) * cell_size)
 				var global_position := Vector2(chunk_coord * 512) + center
-				var sample := (biome_noise.get_noise_2d(global_position.x, global_position.y) + 1.0) * 0.5
+
+				# Domain warping distorts the sampling coordinates before the biome
+				# lookup. This keeps borders continuous while making them irregular.
+				var warp_offset := Vector2(
+					warp_x_noise.get_noise_2d(global_position.x, global_position.y),
+					warp_y_noise.get_noise_2d(global_position.x, global_position.y)
+				) * warp_strength
+				var warped_position := global_position + warp_offset
+
+				var sample := (biome_noise.get_noise_2d(warped_position.x, warped_position.y) + 1.0) * 0.5
 				var biome_color: Color = _get_biome_color(sample)
 				draw_rect(Rect2(Vector2(x, y) * cell_size, Vector2.ONE * (cell_size + 0.5)), biome_color)
 
@@ -130,11 +159,11 @@ class ChunkVisual extends Node2D:
 			draw_rect(Rect2(Vector2.ZERO, Vector2.ONE * 512), Color(0.08, 0.08, 0.08, 0.35), false, 2.0)
 
 	func _get_biome_color(sample: float) -> Color:
-		# The void is the dominant macroregion. The remaining values form rarer biome bands.
+		# The void remains dominant, while the three biome bands are more evenly sampled.
 		if sample < void_threshold:
 			return Color(0.42, 0.42, 0.42, 1.0)
 		if sample < cold_threshold:
 			return Color(0.48, 0.72, 0.95, 1.0)
-		if sample > hot_threshold:
-			return Color(0.95, 0.55, 0.28, 1.0)
-		return Color(0.42, 0.82, 0.46, 1.0)
+		if sample < hot_threshold:
+			return Color(0.42, 0.82, 0.46, 1.0)
+		return Color(0.95, 0.55, 0.28, 1.0)
