@@ -24,9 +24,5 @@ seed_stat_variation = 0.4
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1205433911]
 environment = SubResource("Environment_glow")
 
-[node name="ProceduralWorld" parent="." unique_id=1748639512 instance=ExtResource("4_kikly")]
-position = Vector2(-1, 0)
-world_seed = 116791
-noise_scale = 0.001
-void_threshold = 0.516
-show_chunk_borders = true
+[node name="ProceduralWorld" parent="." unique_id=1471222498 instance=ExtResource("4_kikly")]
+samples_per_chunk = 600
