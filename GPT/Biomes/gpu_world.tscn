@@ -1,0 +1,23 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://GPT/Biomes/gpu_world.gd" id="1_gpu"]
+
+[node name="GPUProceduralWorld" type="Node2D"]
+script = ExtResource("1_gpu")
+world_seed = 123456
+chunk_size = 512
+load_radius = 2
+unload_radius = 3
+visual_scale = 1.0
+samples_hint = 256
+void_threshold = 0.60
+macro_frequency = 0.0004
+temperature_frequency = 0.0007
+humidity_frequency = 0.0009
+cold_temperature = 0.34
+hot_temperature = 0.68
+green_humidity = 0.45
+warp_frequency = 0.0012
+warp_strength = 150.0
+border_detail_frequency = 0.0025
+border_detail_strength = 0.18
