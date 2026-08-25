@@ -8,6 +8,7 @@ extends Node2D
 @export var chunk_size: int = 512
 @export_range(0, 6) var load_radius: int = 2
 @export_range(0, 8) var unload_radius: int = 3
+@export var generate_without_player: bool = true
 
 @export_category("GPU Resolution")
 @export var visual_scale: float = 1.0
@@ -34,16 +35,21 @@ var _player: Node2D
 var _loaded_chunks: Dictionary = {}
 var _shader: Shader
 var _shader_template: ShaderMaterial
+var _last_generation_center := Vector2i(999999, 999999)
 
 func _ready() -> void:
 	_setup_material()
 	_find_player.call_deferred()
+	if generate_without_player:
+		_update_chunks(Vector2i.ZERO)
 
 func _process(_delta: float) -> void:
 	if _player == null or not is_instance_valid(_player):
 		_find_player()
+		if not generate_without_player:
+			return
 		return
-	_update_chunks()
+	_update_chunks(_world_to_chunk(_player.global_position))
 
 func _setup_material() -> void:
 	var shader_source := load("res://GPT/Biomes/gpu_biome.gdshader") as Shader
@@ -69,10 +75,13 @@ func _setup_material() -> void:
 func _find_player() -> void:
 	_player = get_tree().get_first_node_in_group("PlayerCharacter") as Node2D
 
-func _update_chunks() -> void:
-	var player_chunk: Vector2i = _world_to_chunk(_player.global_position)
-	for y in range(player_chunk.y - load_radius, player_chunk.y + load_radius + 1):
-		for x in range(player_chunk.x - load_radius, player_chunk.x + load_radius + 1):
+func _update_chunks(center_chunk: Vector2i) -> void:
+	if center_chunk == _last_generation_center and not _loaded_chunks.is_empty():
+		return
+	_last_generation_center = center_chunk
+
+	for y in range(center_chunk.y - load_radius, center_chunk.y + load_radius + 1):
+		for x in range(center_chunk.x - load_radius, center_chunk.x + load_radius + 1):
 			var coord := Vector2i(x, y)
 			if not _loaded_chunks.has(coord):
 				_generate_chunk(coord)
@@ -80,8 +89,9 @@ func _update_chunks() -> void:
 	var chunks_to_remove: Array[Vector2i] = []
 	for key in _loaded_chunks.keys():
 		var coord: Vector2i = key
-		if abs(coord.x - player_chunk.x) > unload_radius or abs(coord.y - player_chunk.y) > unload_radius:
+		if abs(coord.x - center_chunk.x) > unload_radius or abs(coord.y - center_chunk.y) > unload_radius:
 			chunks_to_remove.append(coord)
+
 	for coord in chunks_to_remove:
 		_unload_chunk(coord)
 
@@ -94,6 +104,7 @@ func _world_to_chunk(world_position: Vector2) -> Vector2i:
 func _generate_chunk(coord: Vector2i) -> void:
 	if _shader_template == null:
 		return
+
 	var chunk := ColorRect.new()
 	chunk.name = "Chunk_%d_%d" % [coord.x, coord.y]
 	chunk.position = Vector2(coord) * float(chunk_size)
