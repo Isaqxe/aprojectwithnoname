@@ -1,8 +1,9 @@
-[gd_scene format=3 uid="uid://b7dayavg2hyrx"]
+[gd_scene format=3 uid="uid://c8yxhjmfhm2kn"]
 
-[ext_resource type="PackedScene" uid="uid://debnvsr1546h3" path="res://scenes/player/player.tscn" id="1_hyk8p"]
-[ext_resource type="PackedScene" uid="uid://dp2stutckeff1" path="res://scenes/enemies/enemyspawner.tscn" id="2_k2fmo"]
-[ext_resource type="PackedScene" path="res://scenes/system/molecule_spawner.tscn" id="6_molecule_spawner"]
+[ext_resource type="PackedScene" uid="uid://debnvsr1546h3" path="res://scenes/player/player.tscn" id="1_wevd1"]
+[ext_resource type="PackedScene" uid="uid://dp2stutckeff1" path="res://scenes/enemies/enemyspawner.tscn" id="2_66nph"]
+[ext_resource type="PackedScene" path="res://scenes/system/molecule_spawner.tscn" id="3_tnmdv"]
+[ext_resource type="PackedScene" path="res://GPT/Biomes/gpu_world.tscn" id="4_xgfh2"]
 
 [sub_resource type="Environment" id="Environment_glow"]
 glow_enabled = true
@@ -12,12 +13,18 @@ glow_blend_mode = 0
 
 [node name="Main" type="Node2D" unique_id=101873425]
 
-[node name="Player" parent="." unique_id=1499481750 instance=ExtResource("1_hyk8p")]
+[node name="Player" parent="." unique_id=1499481750 instance=ExtResource("1_wevd1")]
 position = Vector2(-37, -13)
 
-[node name="Enemyspawner" parent="." unique_id=232024441 instance=ExtResource("2_k2fmo")]
+[node name="Enemyspawner" parent="." unique_id=232024441 instance=ExtResource("2_66nph")]
+seed_stat_variation = 0.4
 
-[node name="MoleculeSpawner" parent="." unique_id=727660626 instance=ExtResource("6_molecule_spawner")]
+[node name="MoleculeSpawner" parent="." unique_id=727660626 instance=ExtResource("3_tnmdv")]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1205433911]
 environment = SubResource("Environment_glow")
+
+[node name="GPUProceduralWorld" parent="." unique_id=852626813 instance=ExtResource("4_xgfh2")]
+world_seed = 111936
+samples_hint = 300
+void_threshold = 0.75
