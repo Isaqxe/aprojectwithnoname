@@ -3,19 +3,19 @@ extends CharacterBody2D
 ## Cópia experimental do Player dedicada ao sistema de Mitose e Mutação.
 ## A versão principal do Player não é alterada por este protótipo.
 ##
-## Arquitetura inicial:
-## NORMAL -> MITOSIS -> NORMAL
+## Arquitetura atual:
+## NORMAL -> MITOSIS -> cria descendente -> NORMAL
 ##
-## A primeira versão da mitose é propositalmente simples: ao atingir o
-## requisito de recursos, o Player entra em estado de mitose, interrompe
-## temporariamente sua movimentação e emite partículas. A divisão real e a
-## mutação genética serão integradas em etapas posteriores.
+## A descendente herda o tipo celular, tamanho e cor, mas recebe uma nova
+## visual_seed para representar variação entre gerações.
 
 @export_category("Base")
 @export var resources_collected: int = 0
 @export var visual_seed: int = 12345
 @export var cell_type: String = "eukaryote"
 @export var cell_size: float = 24.0
+@export var cell_color: Color = Color(0.35, 0.8, 1.0, 1.0)
+@export var is_primary_player: bool = true
 
 @export_category("Stats")
 @export var base_health: float = 100.0
@@ -27,6 +27,7 @@ extends CharacterBody2D
 @export var mitosis_resource_cost: int = 50
 @export var mitosis_pause_duration: float = 1.5
 @export var can_mitosis: bool = true
+@export var child_offset_distance: float = 48.0
 
 @export_category("Mitosis Visual")
 @export var emit_mitosis_particles: bool = true
@@ -45,6 +46,7 @@ var _damage_cooldown_timer: float = 0.0
 var _mitosis_timer: float = 0.0
 var _mitosis_particles: GPUParticles2D
 var _visual: ProceduralCellVisual
+var _last_child: CharacterBody2D
 
 var _mitosis_state: MitosisState = MitosisState.NORMAL
 
@@ -58,6 +60,9 @@ func _ready() -> void:
 	_generate_stats_from_seed()
 	_create_visual()
 	_create_mitosis_particles()
+
+	if is_primary_player:
+		add_to_group("PlayerCharacter")
 
 
 func _generate_stats_from_seed() -> void:
@@ -87,6 +92,7 @@ func _create_visual() -> void:
 	_visual.radius = cell_size
 	_visual.cell_type = cell_type
 	_visual.visual_seed = visual_seed
+	_visual.cell_color = cell_color
 	add_child(_visual)
 
 
@@ -109,7 +115,7 @@ func _create_mitosis_particles() -> void:
 	material.gravity = Vector3.ZERO
 	material.scale_min = 0.5
 	material.scale_max = 1.2
-	material.color = Color(0.35, 0.8, 1.0, 0.9)
+	material.color = cell_color
 
 	_mitosis_particles.process_material = material
 	add_child(_mitosis_particles)
@@ -124,7 +130,7 @@ func _create_mitosis_particles() -> void:
 	var gradient := Gradient.new()
 	gradient.colors = PackedColorArray([
 		Color(1.0, 1.0, 1.0, 1.0),
-		Color(0.35, 0.8, 1.0, 0.0)
+		Color(cell_color.r, cell_color.g, cell_color.b, 0.0)
 	])
 	particle_texture.gradient = gradient
 	_mitosis_particles.texture = particle_texture
@@ -138,6 +144,10 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector2.ZERO
 		if _visual != null:
 			_visual.set_mitosis_state(true, delta)
+		return
+
+	if not is_primary_player:
+		velocity = Vector2.ZERO
 		return
 
 	var direction := Input.get_vector(
@@ -154,6 +164,8 @@ func _physics_process(delta: float) -> void:
 			" | Velocidade: ", speed,
 			" | Recursos: ", resources_collected,
 			" | Geração: ", generation,
+			" | Seed: ", visual_seed,
+			" | Cor: ", cell_color,
 			" | Posição: ", global_position
 		)
 
@@ -208,6 +220,8 @@ func _start_mitosis() -> void:
 
 
 func _finish_mitosis() -> void:
+	_spawn_daughter_cell()
+
 	_mitosis_state = MitosisState.NORMAL
 	generation += 1
 
@@ -218,6 +232,42 @@ func _finish_mitosis() -> void:
 		_visual.set_mitosis_state(false, 0.0)
 
 	print("Mitose concluída. Nova geração: ", generation)
+
+
+func _spawn_daughter_cell() -> void:
+	var daughter := CharacterBody2D.new()
+	daughter.set_script(get_script())
+	daughter.name = "DaughterCell_G%d" % (generation + 1)
+	daughter.global_position = global_position + Vector2.RIGHT * child_offset_distance
+
+	# Herança: identidade biológica, tamanho e cor são mantidos.
+	daughter.cell_type = cell_type
+	daughter.cell_size = cell_size
+	daughter.cell_color = cell_color
+	daughter.base_health = base_health
+	daughter.base_damage = base_damage
+	daughter.base_speed = base_speed
+	daughter.damage_cooldown = damage_cooldown
+
+	# Variação entre gerações: a descendente recebe uma nova seed visual.
+	# A cor permanece a mesma, representando a característica herdada.
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	daughter.visual_seed = rng.randi()
+
+	daughter.resources_collected = 0
+	daughter.generation = generation + 1
+	daughter.can_mitosis = false
+	daughter.is_primary_player = false
+
+	get_parent().add_child(daughter)
+	_last_child = daughter
+
+	print(
+		"Descendente criada | geração: ", daughter.generation,
+		" | seed: ", daughter.visual_seed,
+		" | cor herdada: ", daughter.cell_color
+	)
 
 
 func _check_enemy_collisions() -> void:
@@ -256,6 +306,7 @@ class ProceduralCellVisual extends Node2D:
 	var radius: float = 24.0
 	var cell_type: String = "eukaryote"
 	var visual_seed: int = 12345
+	var cell_color: Color = Color(0.35, 0.8, 1.0, 1.0)
 	var _points := PackedVector2Array()
 	var _pulse: float = 0.0
 	var _in_mitosis: bool = false
@@ -289,19 +340,18 @@ class ProceduralCellVisual extends Node2D:
 		if _points.is_empty():
 			return
 
-		var base_color := Color(0.35, 0.8, 1.0, 1.0)
 		var pulse := 1.0 + sin(_pulse * (6.0 if _in_mitosis else 3.0)) * (0.05 if _in_mitosis else 0.025)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2(pulse, pulse))
-		draw_colored_polygon(_points, base_color)
+		draw_colored_polygon(_points, cell_color)
 
 		if cell_type == "eukaryote":
-			draw_circle(Vector2.ZERO, radius * 0.34, Color(0.15, 0.28, 0.55, 1.0))
-			draw_circle(Vector2.ZERO, radius * 0.18, Color(0.25, 0.45, 0.8, 1.0))
+			draw_circle(Vector2.ZERO, radius * 0.34, cell_color.darkened(0.55))
+			draw_circle(Vector2.ZERO, radius * 0.18, cell_color.darkened(0.30))
 		else:
 			var rng := RandomNumberGenerator.new()
 			rng.seed = visual_seed + 1
 			for i in range(4):
 				var p := Vector2.from_angle(rng.randf_range(0.0, TAU)) * rng.randf_range(radius * 0.25, radius * 0.55)
-				draw_circle(p, radius * 0.045, Color(0.2, 0.35, 0.6, 1.0))
+				draw_circle(p, radius * 0.045, cell_color.darkened(0.45))
 
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
