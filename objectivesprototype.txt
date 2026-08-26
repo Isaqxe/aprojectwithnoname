@@ -29,12 +29,12 @@ Tema central: **material genético**.
 
 ## Mitose e material genético
 
-☐ Recursos suficientes permitem realizar mitose
+■ Recursos suficientes permitem realizar mitose
 ☐ Tela de mutação aparece após a mitose
 ☐ Criar conjunto inicial de mutações pré-definidas
 ☐ Mutações alteram características reais da célula
 ☐ Genoma representado por valores/atributos
-☐ Nova geração herda o genoma da anterior
+■ Nova geração herda o genoma da anterior
 
 ## Geração procedural — se couber no prazo
 
