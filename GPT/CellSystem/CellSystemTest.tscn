@@ -1,0 +1,10 @@
+[gd_scene load_steps=1 format=3]
+
+[node name="CellSystemTest" type="Node2D"]
+
+[node name="CellManager" type="Node" parent="."]
+
+[node name="Cells" type="Node2D" parent="."]
+
+[node name="Debug" type="Label" parent="."]
+text = "CellSystem Prototype Test"
