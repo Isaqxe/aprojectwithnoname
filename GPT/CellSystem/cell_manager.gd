@@ -4,6 +4,8 @@ extends Node
 ## Controls the existence and lifecycle of cells.
 ## Does not control individual cell behavior.
 
+@export var cell_factory: Node
+
 var registered_cells: Array[Node] = []
 
 
@@ -24,13 +26,16 @@ func get_cell_count() -> int:
 
 
 func create_cell(position: Vector2, is_player: bool = false):
-	## Future integration point for CellFactory.
-	## Will eventually:
-	## - instantiate a Cell
-	## - apply genetics
-	## - assign behavior
-	## - register the organism
-	return null
+	if cell_factory == null:
+		return null
+
+	var new_cell = cell_factory.create_cell(position, is_player)
+
+	if new_cell != null:
+		add_child(new_cell)
+		register_cell(new_cell)
+
+	return new_cell
 
 
 func get_population() -> int:
