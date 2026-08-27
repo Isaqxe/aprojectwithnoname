@@ -14,6 +14,7 @@ extends CharacterBody2D
 @export var size: float = 24.0
 
 var health: float
+var alive: bool = true
 
 
 func _ready() -> void:
@@ -21,7 +22,7 @@ func _ready() -> void:
 
 
 func take_damage(amount: float) -> void:
-	if amount <= 0.0:
+	if not alive or amount <= 0.0:
 		return
 
 	health -= amount
@@ -31,9 +32,13 @@ func take_damage(amount: float) -> void:
 
 
 func attack(target: Node) -> void:
+	if not alive:
+		return
+
 	if target != null and target.has_method("take_damage"):
 		target.take_damage(damage)
 
 
 func die() -> void:
+	alive = false
 	queue_free()
