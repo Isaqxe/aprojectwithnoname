@@ -1,8 +1,8 @@
 extends Node
 
-## Protótipo inicial do CellManager.
-## Este node será responsável pela existência das células no mundo.
-## Não controla comportamento individual.
+## CellManager prototype.
+## Controls the existence and lifecycle of cells.
+## Does not control individual cell behavior.
 
 var registered_cells: Array[Node] = []
 
@@ -23,14 +23,18 @@ func get_cell_count() -> int:
 	return registered_cells.size()
 
 
-func create_cell(position: Vector2) -> void:
-	## Placeholder.
-	## Futuramente:
-	## - instanciar cena Cell
-	## - aplicar genética
-	## - definir tipo/comportamento
-	## - registrar automaticamente
-	pass
+func create_cell(position: Vector2, is_player: bool = false):
+	## Future integration point for CellFactory.
+	## Will eventually:
+	## - instantiate a Cell
+	## - apply genetics
+	## - assign behavior
+	## - register the organism
+	return null
+
+
+func get_population() -> int:
+	return registered_cells.size()
 
 
 func _process(_delta: float) -> void:
