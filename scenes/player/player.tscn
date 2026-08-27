@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://debnvsr1546h3"]
 
-[ext_resource type="Script" uid="uid://btn2kwfkc0dxo" path="res://GPT/Scripts/Player/player.gd" id="1_dovo2"]
+[ext_resource type="Script" uid="uid://c5hiq1ve4f3io" path="res://GPT/MitosisMutation/player_mitosis.gd" id="1_8afob"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_player"]
 radius = 24.0
@@ -8,8 +8,9 @@ radius = 24.0
 [node name="Player" type="Node2D" unique_id=1499481750]
 
 [node name="CharacterBody2D" type="CharacterBody2D" parent="." unique_id=1238182359 groups=["PlayerCharacter"]]
-script = ExtResource("1_dovo2")
-visual_seed = 6767
+script = ExtResource("1_8afob")
+cell_color = Color(0.6776195, 0.0024916327, 0.90477914, 1)
+mitosis_resource_cost = 3
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D" unique_id=706334261]
 shape = SubResource("CircleShape2D_player")

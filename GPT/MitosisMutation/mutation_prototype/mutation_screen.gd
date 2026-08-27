@@ -4,7 +4,9 @@ extends Control
 ## The DNA is drawn as pixel-style geometry rather than imported artwork.
 ## This is intentionally self-contained so it can later be replaced by proper UI scenes.
 
-const VIRTUAL_SIZE := Vector2(160, 90)
+var ui_scale: float:
+	get:
+		return min(size.x / 640.0, size.y / 360.0)
 const PIXEL := 2.0
 const DNA_CENTER := Vector2(80, 43)
 const PAIR_COUNT := 10

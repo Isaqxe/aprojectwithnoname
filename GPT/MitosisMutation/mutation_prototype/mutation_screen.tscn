@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://cfe0vjikbb3h7"]
 
-[ext_resource path="res://GPT/MitosisMutation/mutation_prototype/mutation_screen.gd" type="Script" id="1_mutation"]
+[ext_resource type="Script" uid="uid://d3swnrfkw0htc" path="res://GPT/MitosisMutation/mutation_prototype/mutation_screen.gd" id="1_mutation"]
 
-[node name="MutationScreenPrototype" type="Control"]
+[node name="MutationScreenPrototype" type="Control" unique_id=501599742]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -11,6 +11,11 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_mutation")
 
-[node name="PrototypeInfo" type="Label" parent="."]
+[node name="PrototypeInfo" type="Label" parent="." unique_id=611533239]
 visible = false
+layout_mode = 0
+offset_left = 496.0
+offset_top = 253.0
+offset_right = 696.0
+offset_bottom = 276.0
 text = "Experimental mutation UI"
