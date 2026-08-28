@@ -1,25 +1,28 @@
 [gd_scene format=3 uid="uid://dsyrxh21qpnf0"]
 
-[ext_resource type="Script" uid="uid://cul072bghcrj7" path="res://GPT/CellSystem/test_simulation.gd" id="1_test"]
-[ext_resource type="Script" uid="uid://fch6nykcxs7k7k" path="res://GPT/CellSystem/cell_manager.gd" id="2_manager"]
-[ext_resource type="Script" uid="uid://klbwx252ofns" path="res://GPT/CellSystem/cell_factory.gd" id="3_factory"]
+[ext_resource type="Script" path="res://GPT/CellSystem/test_simulation.gd" id="1_test"]
+[ext_resource type="Script" path="res://GPT/CellSystem/cell_manager.gd" id="2_manager"]
+[ext_resource type="Script" path="res://GPT/CellSystem/cell_factory.gd" id="3_factory"]
 [ext_resource type="PackedScene" path="res://GPT/CellSystem/Cell.tscn" id="4_cell"]
 
-[node name="CellSystemTest" type="Node2D" unique_id=1228149406]
+[node name="CellSystemTest" type="Node2D"]
 script = ExtResource("1_test")
 
-[node name="CellManager" type="Node" parent="." unique_id=1438331837]
+[node name="CellManager" type="Node" parent="."]
 script = ExtResource("2_manager")
 cell_factory = NodePath("CellFactory")
 cell_container = NodePath("../Cells")
+initial_population = 12
+max_population = 30
+spawn_interval = 2.0
 
-[node name="CellFactory" type="Node" parent="CellManager" unique_id=1655337343]
+[node name="CellFactory" type="Node" parent="CellManager"]
 script = ExtResource("3_factory")
 cell_scene = ExtResource("4_cell")
 
-[node name="Cells" type="Node2D" parent="." unique_id=1672212354]
+[node name="Cells" type="Node2D" parent="."]
 
-[node name="Debug" type="Label" parent="." unique_id=1320979623]
+[node name="Debug" type="Label" parent="."]
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 500.0
