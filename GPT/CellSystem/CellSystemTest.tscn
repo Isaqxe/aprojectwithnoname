@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dsyrxh21qpnf0"]
 
 [ext_resource type="Script" uid="uid://cul072bghcrj7" path="res://GPT/CellSystem/test_simulation.gd" id="1_test"]
-[ext_resource type="Script" uid="uid://fch6nykcxs7k" path="res://GPT/CellSystem/cell_manager.gd" id="2_manager"]
+[ext_resource type="Script" uid="uid://fch6nykcxs7k7k" path="res://GPT/CellSystem/cell_manager.gd" id="2_manager"]
 [ext_resource type="Script" uid="uid://klbwx252ofns" path="res://GPT/CellSystem/cell_factory.gd" id="3_factory"]
 [ext_resource type="PackedScene" path="res://GPT/CellSystem/Cell.tscn" id="4_cell"]
 
@@ -22,6 +22,6 @@ cell_scene = ExtResource("4_cell")
 [node name="Debug" type="Label" parent="." unique_id=1320979623]
 offset_left = 20.0
 offset_top = 20.0
-offset_right = 20.0
-offset_bottom = 20.0
+offset_right = 400.0
+offset_bottom = 60.0
 text = "CellSystem Simulation"
