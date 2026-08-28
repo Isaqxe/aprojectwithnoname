@@ -5,6 +5,7 @@ extends CharacterBody2D
 
 @export_category("Identity")
 @export var cell_id: String = "cell"
+@export var species_id: String = "default"
 @export var is_player_controlled: bool = false
 
 @export_category("Biology")
@@ -13,13 +14,15 @@ extends CharacterBody2D
 @export var speed: float = 100.0
 @export var size: float = 24.0
 
+@export_category("Resources")
+@export var resource_capacity: float = 100.0
+var resources: float = 0.0
+
 var health: float
 var alive: bool = true
 
-
 func _ready() -> void:
 	health = max_health
-
 
 func take_damage(amount: float) -> void:
 	if not alive or amount <= 0.0:
@@ -30,7 +33,6 @@ func take_damage(amount: float) -> void:
 	if health <= 0.0:
 		die()
 
-
 func attack(target: Node) -> void:
 	if not alive:
 		return
@@ -38,6 +40,16 @@ func attack(target: Node) -> void:
 	if target != null and target.has_method("take_damage"):
 		target.take_damage(damage)
 
+func add_resources(amount: float) -> void:
+	if not alive or amount <= 0.0:
+		return
+	resources = minf(resources + amount, resource_capacity)
+
+func consume_resources(amount: float) -> bool:
+	if not alive or amount <= 0.0 or resources < amount:
+		return false
+	resources -= amount
+	return true
 
 func die() -> void:
 	alive = false
