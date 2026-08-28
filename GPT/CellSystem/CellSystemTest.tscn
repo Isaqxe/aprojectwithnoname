@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dsyrxh21qpnf0"]
 
 [ext_resource type="Script" uid="uid://cul072bghcrj7" path="res://GPT/CellSystem/test_simulation.gd" id="1_test"]
-[ext_resource type="Script" uid="uid://fch6nykcxs7k7k" path="res://GPT/CellSystem/cell_manager.gd" id="2_manager"]
+[ext_resource type="Script" uid="uid://fch6nykcxs7k" path="res://GPT/CellSystem/cell_manager.gd" id="2_manager"]
 [ext_resource type="Script" uid="uid://klbwx252ofns" path="res://GPT/CellSystem/cell_factory.gd" id="3_factory"]
 [ext_resource type="PackedScene" path="res://GPT/CellSystem/Cell.tscn" id="4_cell"]
 
