@@ -1,10 +1,24 @@
-[gd_scene load_steps=1 format=3]
+[gd_scene load_steps=4 format=3]
+
+[ext_resource path="res://GPT/CellSystem/test_simulation.gd" type="Script" id="1_test"]
+[ext_resource path="res://GPT/CellSystem/cell_manager.gd" type="Script" id="2_manager"]
+[ext_resource path="res://GPT/CellSystem/cell_factory.gd" type="Script" id="3_factory"]
+[ext_resource path="res://GPT/CellSystem/Cell.tscn" type="PackedScene" id="4_cell"]
 
 [node name="CellSystemTest" type="Node2D"]
+script = ExtResource("1_test")
 
 [node name="CellManager" type="Node" parent="."]
+script = ExtResource("2_manager")
+cell_factory = NodePath("CellFactory")
+cell_container = NodePath("../Cells")
+
+[node name="CellFactory" type="Node" parent="CellManager"]
+script = ExtResource("3_factory")
+cell_scene = ExtResource("4_cell")
 
 [node name="Cells" type="Node2D" parent="."]
 
 [node name="Debug" type="Label" parent="."]
-text = "CellSystem Prototype Test"
+position = Vector2(20, 20)
+text = "CellSystem Simulation"
