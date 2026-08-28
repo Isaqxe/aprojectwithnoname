@@ -1,14 +1,22 @@
 extends Node
 
-## CellManager coordinates cell creation, registration and cleanup.
+## CellManager coordinates cell creation, registration, spawning and cleanup.
 ## It does not make individual behavioral or combat decisions.
 
 @export var cell_factory: Node
 @export var cell_container: Node2D
-@export var spawn_timer: float = 5.0
-var random_position: Vector2 = randf_range(Vector2(0, 0), Vector2(200, 200))
 
+@export_category("Spawning")
+@export var auto_spawn: bool = true
+@export var spawn_interval: float = 2.0
+@export var max_population: int = 30
+@export var spawn_area := Rect2(60.0, 60.0, 900.0, 500.0)
+
+var spawn_timer: float = 0.0
 var registered_cells: Array[Node] = []
+
+func _ready() -> void:
+	spawn_timer = spawn_interval
 
 func register_cell(cell: Node) -> void:
 	if cell == null or not is_instance_valid(cell):
@@ -39,11 +47,27 @@ func create_cell(position: Vector2, is_player: bool = false) -> Node:
 	register_cell(new_cell)
 	return new_cell
 
-func _process(_delta: float) -> void:
+func spawn_cell(is_player: bool = false) -> Node:
+	if get_population() >= max_population:
+		return null
+
+	var position: Vector2 = Vector2(
+		randf_range(spawn_area.position.x, spawn_area.end.x),
+		randf_range(spawn_area.position.y, spawn_area.end.y)
+	)
+
+	return create_cell(position, is_player)
+
+func _process(delta: float) -> void:
 	_cleanup_invalid_cells()
-	spawn_timer -= 1
-	if spawn_timer <= 0:
-		create_cell(random_position, false)
+
+	if not auto_spawn:
+		return
+
+	spawn_timer -= delta
+	if spawn_timer <= 0.0:
+		spawn_cell()
+		spawn_timer = spawn_interval
 
 func _cleanup_invalid_cells() -> void:
 	for cell in registered_cells.duplicate():
