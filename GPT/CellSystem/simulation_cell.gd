@@ -10,6 +10,7 @@ const COMBAT_SCRIPT := preload("res://GPT/CellSystem/cell_combat.gd")
 
 @export var is_player_controlled: bool = false
 @export var species_id: String = "default"
+@export var elimination_resource_reward: float = 35.0
 @export var wander_speed_factor: float = 0.35
 @export var perception_radius: float = 180.0
 @export var resource_perception_radius: float = 220.0
@@ -142,7 +143,7 @@ func _find_nearest_resource() -> Area2D:
 func get_cell_power() -> float:
 	if cell_data == null:
 		return 0.0
-	return cell_data.health + cell_data.damage + cell_data.speed + cell_data.size
+	return fear_system.get_cell_power(cell_data)
 
 func _process_contacts() -> void:
 	for candidate in get_tree().get_nodes_in_group("SimCells"):
@@ -158,8 +159,10 @@ func _process_contacts() -> void:
 		var contact_distance: float = cell_data.size + other_data.size + contact_margin
 		if global_position.distance_to(candidate.global_position) <= contact_distance:
 			if get_cell_power() >= candidate.get_cell_power():
+				var was_alive: bool = other_data.alive
 				combat.attack(candidate)
-				if not other_data.alive:
+				if was_alive and not other_data.alive:
+					cell_data.add_resources(elimination_resource_reward)
 					_target = null
 				candidate.queue_redraw()
 
