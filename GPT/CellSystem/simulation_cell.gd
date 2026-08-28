@@ -66,7 +66,7 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 func _process_player() -> void:
-	var input_direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	var input_direction: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	_direction = input_direction.normalized()
 
 func _process_ai() -> void:
@@ -83,7 +83,7 @@ func _process_ai() -> void:
 		_target = null
 		return
 
-	var decision := fear_system.evaluate(cell_data, target_data)
+	var decision: String = fear_system.evaluate(cell_data, target_data)
 	behavior.evaluate_cell(cell_data, target_data)
 
 	if decision == "FLEE":
@@ -93,7 +93,7 @@ func _process_ai() -> void:
 
 func _find_best_target() -> CharacterBody2D:
 	var best: CharacterBody2D = null
-	var best_distance := perception_radius
+	var best_distance: float = perception_radius
 
 	for candidate in get_tree().get_nodes_in_group("SimCells"):
 		if candidate == self or not is_instance_valid(candidate):
@@ -101,7 +101,7 @@ func _find_best_target() -> CharacterBody2D:
 		if not candidate.has_method("get_cell_power"):
 			continue
 
-		var distance := global_position.distance_to(candidate.global_position)
+		var distance: float = global_position.distance_to(candidate.global_position)
 		if distance < best_distance:
 			best = candidate
 			best_distance = distance
@@ -122,7 +122,7 @@ func _process_contacts() -> void:
 		if other_data == null or not other_data.alive:
 			continue
 
-		var contact_distance := cell_data.size + other_data.size + contact_margin
+		var contact_distance: float = cell_data.size + other_data.size + contact_margin
 		if global_position.distance_to(candidate.global_position) <= contact_distance:
 			if get_cell_power() >= candidate.get_cell_power():
 				combat.attack(candidate)
@@ -150,7 +150,7 @@ func _draw() -> void:
 	if cell_data == null:
 		return
 
-	var radius := cell_data.size
+	var radius: float = cell_data.size
 	var color := Color.WHITE if _flash_timer > 0.0 else _base_color
 	draw_circle(Vector2.ZERO, radius, color)
 	draw_circle(Vector2.ZERO, radius * 0.35, color.darkened(0.55))
