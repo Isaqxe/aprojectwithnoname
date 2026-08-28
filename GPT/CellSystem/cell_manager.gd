@@ -47,7 +47,8 @@ func register_cell(cell: Node) -> void:
 		registered_cells.append(cell)
 
 func unregister_cell(cell: Node) -> void:
-	registered_cells.erase(cell)
+	if is_instance_valid(cell):
+		registered_cells.erase(cell)
 
 func get_cell_count() -> int:
 	_cleanup_invalid_cells()
@@ -64,8 +65,7 @@ func create_cell(position: Vector2, is_player: bool = false) -> Node:
 	if new_cell == null:
 		return null
 
-	var parent_node: Node2D = cell_container
-	parent_node.add_child(new_cell)
+	cell_container.add_child(new_cell)
 	register_cell(new_cell)
 	return new_cell
 
@@ -92,6 +92,10 @@ func _process(delta: float) -> void:
 		spawn_timer = spawn_interval
 
 func _cleanup_invalid_cells() -> void:
-	for cell in registered_cells.duplicate():
-		if not is_instance_valid(cell):
-			registered_cells.erase(cell)
+	var valid_cells: Array[Node] = []
+
+	for cell in registered_cells:
+		if is_instance_valid(cell):
+			valid_cells.append(cell)
+
+	registered_cells = valid_cells
