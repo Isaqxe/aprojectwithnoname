@@ -18,7 +18,25 @@ var registered_cells: Array[Node] = []
 
 func _ready() -> void:
 	randomize()
+
+	if cell_factory == null:
+		cell_factory = get_node_or_null("CellFactory")
+
+	if cell_container == null:
+		var parent_node: Node = get_parent()
+		if parent_node != null:
+			cell_container = parent_node.get_node_or_null("Cells") as Node2D
+
 	spawn_timer = spawn_interval
+
+	if cell_factory == null:
+		push_error("CellManager: CellFactory not found. Cells cannot spawn.")
+		return
+
+	if cell_container == null:
+		push_error("CellManager: Cells container not found. Cells cannot spawn.")
+		return
+
 	for _i in range(initial_population):
 		spawn_cell()
 
@@ -39,14 +57,14 @@ func get_population() -> int:
 	return get_cell_count()
 
 func create_cell(position: Vector2, is_player: bool = false) -> Node:
-	if cell_factory == null:
+	if cell_factory == null or not is_instance_valid(cell_factory):
 		return null
 
 	var new_cell: Node = cell_factory.create_cell(position, is_player)
 	if new_cell == null:
 		return null
 
-	var parent_node: Node = cell_container if cell_container != null else self
+	var parent_node: Node2D = cell_container
 	parent_node.add_child(new_cell)
 	register_cell(new_cell)
 	return new_cell
@@ -65,7 +83,7 @@ func spawn_cell(is_player: bool = false) -> Node:
 func _process(delta: float) -> void:
 	_cleanup_invalid_cells()
 
-	if not auto_spawn:
+	if not auto_spawn or cell_factory == null or cell_container == null:
 		return
 
 	spawn_timer -= delta
