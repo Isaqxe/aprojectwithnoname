@@ -73,6 +73,7 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 func _process_player() -> void:
+	behavior.set_state(CellBehavior.BehaviorState.WANDER)
 	var input_direction: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	_direction = input_direction.normalized()
 
@@ -86,6 +87,7 @@ func _process_ai() -> void:
 		var target_data = _target.get("cell_data")
 		if target_data == null or not target_data.alive:
 			_target = null
+			behavior.set_state(CellBehavior.BehaviorState.WANDER)
 			return
 
 		var decision: String = fear_system.evaluate(cell_data, target_data)
@@ -97,9 +99,12 @@ func _process_ai() -> void:
 			_direction = global_position.direction_to(_target.global_position)
 		return
 
-	if is_instance_valid(_resource_target):
+	if is_instance_valid(_resource_target) and cell_data.resources < cell_data.resource_capacity:
+		behavior.evaluate_resource(cell_data)
 		_direction = global_position.direction_to(_resource_target.global_position)
 	else:
+		_resource_target = null
+		behavior.set_state(CellBehavior.BehaviorState.WANDER)
 		_wander()
 
 func _find_best_target() -> CharacterBody2D:
