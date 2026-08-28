@@ -1,24 +1,23 @@
 extends Node2D
 
 ## Integrated CellSystem validation scene.
-## Spawns organisms through CellManager and lets them hunt, flee and fight.
+## Uses CellManager for both initial population and continuous spawning.
 
-@export var cell_count: int = 12
+@export var initial_cell_count: int = 12
 @export var spawn_area := Rect2(60.0, 60.0, 900.0, 500.0)
 
-@onready var cell_manager = $CellManager
+@onready var cell_manager: Node = $CellManager
+@onready var debug_label: Label = $Debug
 
 func _ready() -> void:
 	randomize()
-	for _i in range(cell_count):
-		cell_manager.create_cell(_random_spawn_position())
+	cell_manager.spawn_area = spawn_area
 
-func _random_spawn_position() -> Vector2:
-	return Vector2(
-		randf_range(spawn_area.position.x, spawn_area.end.x),
-		randf_range(spawn_area.position.y, spawn_area.end.y)
-	)
+	for _i in range(initial_cell_count):
+		cell_manager.spawn_cell()
 
-func _process(_delta):
+func _process(_delta: float) -> void:
+	debug_label.text = "CellSystem Simulation\nPopulation: %d" % cell_manager.get_population()
+
 	if Input.is_action_just_pressed("ui_mitosis"):
-		print(cell_manager.registered_cells)
+		print("Registered cells: ", cell_manager.registered_cells.size())
