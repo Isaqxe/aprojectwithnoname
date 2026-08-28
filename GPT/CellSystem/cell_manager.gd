@@ -20,6 +20,7 @@ extends Node
 var spawn_timer: float = 0.0
 var registered_cells: Array[Node] = []
 var player_cell: Node = null
+var known_species: Dictionary = {}
 
 func _ready() -> void:
 	randomize()
@@ -61,6 +62,17 @@ func unregister_cell(cell: Node) -> void:
 	if player_cell == cell:
 		player_cell = null
 
+func register_species(species_id: String) -> void:
+	if species_id.is_empty():
+		return
+	known_species[species_id] = true
+
+func get_species_ids() -> Array[String]:
+	var species_ids: Array[String] = []
+	for species_id in known_species.keys():
+		species_ids.append(String(species_id))
+	return species_ids
+
 func get_cell_count() -> int:
 	_cleanup_invalid_cells()
 	return registered_cells.size()
@@ -83,6 +95,11 @@ func create_cell(position: Vector2, is_player: bool = false) -> Node:
 
 	cell_container.add_child(new_cell)
 	register_cell(new_cell)
+
+	var species_id: String = String(new_cell.get("species_id"))
+	if species_id.is_empty():
+		species_id = "default"
+	register_species(species_id)
 
 	if is_player:
 		player_cell = new_cell
