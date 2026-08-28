@@ -1,7 +1,7 @@
 extends CharacterBody2D
 
 ## Integrated organism used by the CellSystem simulation.
-## Combines the generic cell data, behavior and combat prototypes.
+## Combines generic cell data, behavior, fear and combat prototypes.
 
 const CELL_SCRIPT := preload("res://GPT/CellSystem/cell.gd")
 const BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior.gd")
@@ -9,9 +9,11 @@ const FEAR_SCRIPT := preload("res://GPT/CellSystem/cell_fear.gd")
 const COMBAT_SCRIPT := preload("res://GPT/CellSystem/cell_combat.gd")
 
 @export var is_player_controlled: bool = false
+@export var species_id: String = "default"
 @export var wander_speed_factor: float = 0.35
 @export var perception_radius: float = 180.0
 @export var contact_margin: float = 2.0
+@export var resource_collect_radius: float = 18.0
 
 var cell_data: CharacterBody2D
 var behavior: CellBehavior
@@ -29,6 +31,8 @@ func _ready() -> void:
 	cell_data.damage = randf_range(5.0, 25.0)
 	cell_data.speed = randf_range(45.0, 100.0)
 	cell_data.size = randf_range(10.0, 24.0)
+	cell_data.species_id = species_id
+	cell_data.is_player_controlled = is_player_controlled
 	cell_data.health = cell_data.max_health
 	add_child(cell_data)
 
@@ -63,6 +67,7 @@ func _physics_process(delta: float) -> void:
 	velocity = _direction * cell_data.speed
 	move_and_slide()
 	_process_contacts()
+	_process_resources()
 	queue_redraw()
 
 func _process_player() -> void:
@@ -109,6 +114,8 @@ func _find_best_target() -> CharacterBody2D:
 	return best
 
 func get_cell_power() -> float:
+	if cell_data == null:
+		return 0.0
 	return cell_data.health + cell_data.damage + cell_data.speed + cell_data.size
 
 func _process_contacts() -> void:
@@ -129,6 +136,20 @@ func _process_contacts() -> void:
 				if not other_data.alive:
 					_target = null
 				candidate.queue_redraw()
+
+func _process_resources() -> void:
+	for resource_node in get_tree().get_nodes_in_group("WorldResources"):
+		if not is_instance_valid(resource_node):
+			continue
+
+		var distance: float = global_position.distance_to(resource_node.global_position)
+		if distance > resource_collect_radius + cell_data.size:
+			continue
+		if not resource_node.has_method("collect"):
+			continue
+
+		var collected: float = resource_node.collect()
+		cell_data.add_resources(collected)
 
 func take_damage(amount: float) -> void:
 	if cell_data == null:
