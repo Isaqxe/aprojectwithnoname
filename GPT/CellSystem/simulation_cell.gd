@@ -56,20 +56,20 @@ func _physics_process(delta: float) -> void:
 	_retarget_timer -= delta
 
 	if is_player_controlled:
-		_process_player(delta)
+		_process_player()
 	else:
-		_process_ai(delta)
+		_process_ai()
 
 	velocity = _direction * cell_data.speed
 	move_and_slide()
 	_process_contacts()
 	queue_redraw()
 
-func _process_player(_delta: float) -> void:
+func _process_player() -> void:
 	var input_direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	_direction = input_direction.normalized()
 
-func _process_ai(_delta: float) -> void:
+func _process_ai() -> void:
 	if _retarget_timer <= 0.0 or not is_instance_valid(_target):
 		_target = _find_best_target()
 		_retarget_timer = 0.15
@@ -125,7 +125,7 @@ func _process_contacts() -> void:
 		var contact_distance := cell_data.size + other_data.size + contact_margin
 		if global_position.distance_to(candidate.global_position) <= contact_distance:
 			if get_cell_power() >= candidate.get_cell_power():
-				combat.attack(other_data)
+				combat.attack(candidate)
 				if not other_data.alive:
 					_target = null
 				candidate.queue_redraw()
