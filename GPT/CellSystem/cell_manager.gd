@@ -9,14 +9,18 @@ extends Node
 @export_category("Spawning")
 @export var auto_spawn: bool = true
 @export var spawn_interval: float = 2.0
+@export var initial_population: int = 12
 @export var max_population: int = 30
-@export var spawn_area := Rect2(60.0, 60.0, 900.0, 500.0)
+@export var spawn_area: Rect2 = Rect2(60.0, 60.0, 900.0, 500.0)
 
 var spawn_timer: float = 0.0
 var registered_cells: Array[Node] = []
 
 func _ready() -> void:
+	randomize()
 	spawn_timer = spawn_interval
+	for _i in range(initial_population):
+		spawn_cell()
 
 func register_cell(cell: Node) -> void:
 	if cell == null or not is_instance_valid(cell):
@@ -51,12 +55,12 @@ func spawn_cell(is_player: bool = false) -> Node:
 	if get_population() >= max_population:
 		return null
 
-	var position: Vector2 = Vector2(
+	var spawn_position: Vector2 = Vector2(
 		randf_range(spawn_area.position.x, spawn_area.end.x),
 		randf_range(spawn_area.position.y, spawn_area.end.y)
 	)
 
-	return create_cell(position, is_player)
+	return create_cell(spawn_position, is_player)
 
 func _process(delta: float) -> void:
 	_cleanup_invalid_cells()
