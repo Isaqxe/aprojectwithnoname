@@ -28,7 +28,7 @@ func create_cell(position: Vector2, is_player: bool = false) -> Node:
 	if cell_factory == null:
 		return null
 
-	var new_cell = cell_factory.create_cell(position, is_player)
+	var new_cell: Node = cell_factory.create_cell(position, is_player)
 	if new_cell == null:
 		return null
 
