@@ -6,6 +6,7 @@ extends Area2D
 @export var radius: float = 6.0
 
 func _ready() -> void:
+	add_to_group("WorldResources")
 	queue_redraw()
 
 func collect() -> float:
