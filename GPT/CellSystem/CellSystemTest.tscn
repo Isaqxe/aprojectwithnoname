@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource path="res://GPT/CellSystem/test_simulation.gd" type="Script" id="1_test"]
 [ext_resource path="res://GPT/CellSystem/cell_manager.gd" type="Script" id="2_manager"]
