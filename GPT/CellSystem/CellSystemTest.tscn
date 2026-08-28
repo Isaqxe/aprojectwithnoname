@@ -1,9 +1,11 @@
-[gd_scene format=3 uid="uid://dsyrxh21qpnf0"]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://GPT/CellSystem/test_simulation.gd" id="1_test"]
 [ext_resource type="Script" path="res://GPT/CellSystem/cell_manager.gd" id="2_manager"]
 [ext_resource type="Script" path="res://GPT/CellSystem/cell_factory.gd" id="3_factory"]
 [ext_resource type="PackedScene" path="res://GPT/CellSystem/Cell.tscn" id="4_cell"]
+[ext_resource type="Script" path="res://GPT/CellSystem/world_resource_spawner.gd" id="5_resource_spawner"]
+[ext_resource type="PackedScene" path="res://GPT/CellSystem/world_resource.tscn" id="6_resource"]
 
 [node name="CellSystemTest" type="Node2D"]
 script = ExtResource("1_test")
@@ -21,6 +23,14 @@ script = ExtResource("3_factory")
 cell_scene = ExtResource("4_cell")
 
 [node name="Cells" type="Node2D" parent="."]
+
+[node name="ResourceSpawner" type="Node2D" parent="."]
+script = ExtResource("5_resource_spawner")
+resource_scene = ExtResource("6_resource")
+spawn_area = Rect2(60, 60, 900, 500)
+initial_resources = 50
+max_resources = 80
+spawn_interval = 1.5
 
 [node name="Debug" type="Label" parent="."]
 offset_left = 20.0
