@@ -21,5 +21,4 @@ func _random_spawn_position() -> Vector2:
 
 func _process(_delta):
 	if Input.is_action_just_pressed("ui_mitosis"):
-		for i in range(cell_count):
-			print(cell_count)
+		print(cell_manager.registered_cells)

@@ -10,8 +10,7 @@ script = ExtResource("1_test")
 
 [node name="CellManager" type="Node" parent="." unique_id=1438331837]
 script = ExtResource("2_manager")
-cell_factory = NodePath("CellFactory")
-cell_container = NodePath("../Cells")
+spawn_timer = null
 
 [node name="CellFactory" type="Node" parent="CellManager" unique_id=1655337343]
 script = ExtResource("3_factory")

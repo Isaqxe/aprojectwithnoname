@@ -5,6 +5,8 @@ extends Node
 
 @export var cell_factory: Node
 @export var cell_container: Node2D
+@export var spawn_timer: float = 5.0
+var random_position: Vector2 = randf_range(Vector2(0, 0), Vector2(200, 200))
 
 var registered_cells: Array[Node] = []
 
@@ -39,6 +41,9 @@ func create_cell(position: Vector2, is_player: bool = false) -> Node:
 
 func _process(_delta: float) -> void:
 	_cleanup_invalid_cells()
+	spawn_timer -= 1
+	if spawn_timer <= 0:
+		create_cell(random_position, false)
 
 func _cleanup_invalid_cells() -> void:
 	for cell in registered_cells.duplicate():
