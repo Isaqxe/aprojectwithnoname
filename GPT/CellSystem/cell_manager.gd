@@ -1,10 +1,14 @@
 extends Node
 
-## CellManager coordinates cell creation, registration, spawning and cleanup.
-## It does not make individual behavioral or combat decisions.
+## CellManager coordinates all cell creation, registration, spawning and cleanup.
+## The player is still a normal cell; this manager only keeps a reference to it.
 
 @export var cell_factory: Node
 @export var cell_container: Node2D
+
+@export_category("Player")
+@export var spawn_player_on_ready: bool = false
+@export var player_spawn_position: Vector2 = Vector2(500.0, 300.0)
 
 @export_category("Spawning")
 @export var auto_spawn: bool = true
@@ -15,6 +19,7 @@ extends Node
 
 var spawn_timer: float = 0.0
 var registered_cells: Array[Node] = []
+var player_cell: Node = null
 
 func _ready() -> void:
 	randomize()
@@ -40,6 +45,9 @@ func _ready() -> void:
 	for _i in range(initial_population):
 		spawn_cell()
 
+	if spawn_player_on_ready:
+		spawn_player(player_spawn_position)
+
 func register_cell(cell: Node) -> void:
 	if cell == null or not is_instance_valid(cell):
 		return
@@ -50,12 +58,20 @@ func unregister_cell(cell: Node) -> void:
 	if is_instance_valid(cell):
 		registered_cells.erase(cell)
 
+	if player_cell == cell:
+		player_cell = null
+
 func get_cell_count() -> int:
 	_cleanup_invalid_cells()
 	return registered_cells.size()
 
 func get_population() -> int:
 	return get_cell_count()
+
+func get_player() -> Node:
+	if not is_instance_valid(player_cell):
+		player_cell = null
+	return player_cell
 
 func create_cell(position: Vector2, is_player: bool = false) -> Node:
 	if cell_factory == null or not is_instance_valid(cell_factory):
@@ -67,6 +83,10 @@ func create_cell(position: Vector2, is_player: bool = false) -> Node:
 
 	cell_container.add_child(new_cell)
 	register_cell(new_cell)
+
+	if is_player:
+		player_cell = new_cell
+
 	return new_cell
 
 func spawn_cell(is_player: bool = false) -> Node:
@@ -79,6 +99,15 @@ func spawn_cell(is_player: bool = false) -> Node:
 	)
 
 	return create_cell(spawn_position, is_player)
+
+func spawn_player(position: Vector2) -> Node:
+	if is_instance_valid(player_cell):
+		return player_cell
+
+	if get_population() >= max_population:
+		return null
+
+	return create_cell(position, true)
 
 func _process(delta: float) -> void:
 	_cleanup_invalid_cells()
@@ -97,5 +126,7 @@ func _cleanup_invalid_cells() -> void:
 	for cell in registered_cells:
 		if is_instance_valid(cell):
 			valid_cells.append(cell)
+		elif cell == player_cell:
+			player_cell = null
 
 	registered_cells = valid_cells
