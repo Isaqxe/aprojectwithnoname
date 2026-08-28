@@ -12,14 +12,16 @@ const COMBAT_SCRIPT := preload("res://GPT/CellSystem/cell_combat.gd")
 @export var species_id: String = "default"
 @export var wander_speed_factor: float = 0.35
 @export var perception_radius: float = 180.0
-@export var contact_margin: float = 2.0
+@export var resource_perception_radius: float = 220.0
 @export var resource_collect_radius: float = 18.0
+@export var contact_margin: float = 2.0
 
 var cell_data: CharacterBody2D
 var behavior: CellBehavior
 var fear_system: Node
 var combat: Node
 var _target: CharacterBody2D
+var _resource_target: Area2D
 var _direction := Vector2.ZERO
 var _retarget_timer := 0.0
 var _base_color := Color.WHITE
@@ -77,24 +79,28 @@ func _process_player() -> void:
 func _process_ai() -> void:
 	if _retarget_timer <= 0.0 or not is_instance_valid(_target):
 		_target = _find_best_target()
+		_resource_target = _find_nearest_resource() if not is_instance_valid(_target) else null
 		_retarget_timer = 0.15
 
-	if not is_instance_valid(_target):
-		_wander()
+	if is_instance_valid(_target):
+		var target_data = _target.get("cell_data")
+		if target_data == null or not target_data.alive:
+			_target = null
+			return
+
+		var decision: String = fear_system.evaluate(cell_data, target_data)
+		behavior.evaluate_cell(cell_data, target_data)
+
+		if decision == "FLEE":
+			_direction = _target.global_position.direction_to(global_position)
+		else:
+			_direction = global_position.direction_to(_target.global_position)
 		return
 
-	var target_data = _target.get("cell_data")
-	if target_data == null or not target_data.alive:
-		_target = null
-		return
-
-	var decision: String = fear_system.evaluate(cell_data, target_data)
-	behavior.evaluate_cell(cell_data, target_data)
-
-	if decision == "FLEE":
-		_direction = _target.global_position.direction_to(global_position)
+	if is_instance_valid(_resource_target):
+		_direction = global_position.direction_to(_resource_target.global_position)
 	else:
-		_direction = global_position.direction_to(_target.global_position)
+		_wander()
 
 func _find_best_target() -> CharacterBody2D:
 	var best: CharacterBody2D = null
@@ -112,6 +118,21 @@ func _find_best_target() -> CharacterBody2D:
 			best_distance = distance
 
 	return best
+
+func _find_nearest_resource() -> Area2D:
+	var nearest: Area2D = null
+	var nearest_distance: float = resource_perception_radius
+
+	for candidate in get_tree().get_nodes_in_group("WorldResources"):
+		if not is_instance_valid(candidate) or not candidate is Area2D:
+			continue
+
+		var distance: float = global_position.distance_to(candidate.global_position)
+		if distance < nearest_distance:
+			nearest = candidate
+			nearest_distance = distance
+
+	return nearest
 
 func get_cell_power() -> float:
 	if cell_data == null:
@@ -138,18 +159,36 @@ func _process_contacts() -> void:
 				candidate.queue_redraw()
 
 func _process_resources() -> void:
-	for resource_node in get_tree().get_nodes_in_group("WorldResources"):
-		if not is_instance_valid(resource_node):
-			continue
+	if cell_data.resources >= cell_data.resource_capacity:
+		_resource_target = null
+		return
 
-		var distance: float = global_position.distance_to(resource_node.global_position)
-		if distance > resource_collect_radius + cell_data.size:
-			continue
-		if not resource_node.has_method("collect"):
-			continue
+	if is_player_controlled:
+		_collect_nearby_resource()
+		return
 
-		var collected: float = resource_node.collect()
+	if not is_instance_valid(_resource_target):
+		return
+
+	if global_position.distance_to(_resource_target.global_position) <= cell_data.size + resource_collect_radius:
+		_collect_resource(_resource_target)
+
+func _collect_nearby_resource() -> void:
+	for candidate in get_tree().get_nodes_in_group("WorldResources"):
+		if not is_instance_valid(candidate) or not candidate is Area2D:
+			continue
+		if global_position.distance_to(candidate.global_position) <= cell_data.size + resource_collect_radius:
+			_collect_resource(candidate)
+			return
+
+func _collect_resource(resource_node: Area2D) -> void:
+	if not resource_node.has_method("collect"):
+		return
+
+	var collected: float = resource_node.collect()
+	if collected > 0.0:
 		cell_data.add_resources(collected)
+	_resource_target = null
 
 func take_damage(amount: float) -> void:
 	if cell_data == null:
