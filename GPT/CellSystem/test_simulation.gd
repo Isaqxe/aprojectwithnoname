@@ -18,3 +18,8 @@ func _random_spawn_position() -> Vector2:
 		randf_range(spawn_area.position.x, spawn_area.end.x),
 		randf_range(spawn_area.position.y, spawn_area.end.y)
 	)
+
+func _process(_delta):
+	if Input.is_action_just_pressed("ui_mitosis"):
+		for i in range(cell_count):
+			print(cell_count)

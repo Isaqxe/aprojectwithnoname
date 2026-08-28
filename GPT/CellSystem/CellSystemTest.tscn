@@ -1,24 +1,27 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3 uid="uid://dsyrxh21qpnf0"]
 
-[ext_resource path="res://GPT/CellSystem/test_simulation.gd" type="Script" id="1_test"]
-[ext_resource path="res://GPT/CellSystem/cell_manager.gd" type="Script" id="2_manager"]
-[ext_resource path="res://GPT/CellSystem/cell_factory.gd" type="Script" id="3_factory"]
-[ext_resource path="res://GPT/CellSystem/Cell.tscn" type="PackedScene" id="4_cell"]
+[ext_resource type="Script" uid="uid://cul072bghcrj7" path="res://GPT/CellSystem/test_simulation.gd" id="1_test"]
+[ext_resource type="Script" uid="uid://fch6nykcxs7k" path="res://GPT/CellSystem/cell_manager.gd" id="2_manager"]
+[ext_resource type="Script" uid="uid://klbwx252ofns" path="res://GPT/CellSystem/cell_factory.gd" id="3_factory"]
+[ext_resource type="PackedScene" path="res://GPT/CellSystem/Cell.tscn" id="4_cell"]
 
-[node name="CellSystemTest" type="Node2D"]
+[node name="CellSystemTest" type="Node2D" unique_id=1228149406]
 script = ExtResource("1_test")
 
-[node name="CellManager" type="Node" parent="."]
+[node name="CellManager" type="Node" parent="." unique_id=1438331837]
 script = ExtResource("2_manager")
 cell_factory = NodePath("CellFactory")
 cell_container = NodePath("../Cells")
 
-[node name="CellFactory" type="Node" parent="CellManager"]
+[node name="CellFactory" type="Node" parent="CellManager" unique_id=1655337343]
 script = ExtResource("3_factory")
 cell_scene = ExtResource("4_cell")
 
-[node name="Cells" type="Node2D" parent="."]
+[node name="Cells" type="Node2D" parent="." unique_id=1672212354]
 
-[node name="Debug" type="Label" parent="."]
-position = Vector2(20, 20)
+[node name="Debug" type="Label" parent="." unique_id=1320979623]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 20.0
+offset_bottom = 20.0
 text = "CellSystem Simulation"
