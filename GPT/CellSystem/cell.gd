@@ -26,14 +26,21 @@ var alive: bool = true
 func _ready() -> void:
 	health = max_health
 
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, attacker: Node = null) -> bool:
 	if not alive or amount <= 0.0:
-		return
+		return false
+
+	if attacker != null and is_instance_valid(attacker):
+		var attacker_species: String = String(attacker.get("species_id"))
+		if not species_id.is_empty() and species_id == attacker_species:
+			return false
 
 	health -= amount
 
 	if health <= 0.0:
 		die()
+
+	return true
 
 func regenerate(delta: float) -> void:
 	if not alive or delta <= 0.0 or regeneration_rate <= 0.0:
@@ -45,7 +52,7 @@ func attack(target: Node) -> void:
 		return
 
 	if target != null and target.has_method("take_damage"):
-		target.take_damage(damage)
+		target.take_damage(damage, self)
 
 func add_resources(amount: float) -> void:
 	if not alive or amount <= 0.0:
