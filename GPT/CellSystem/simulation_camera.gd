@@ -1,7 +1,7 @@
 extends Camera2D
 
 ## Central spatial controller for the CellSystem simulation.
-## Follows the player by default and exposes streaming radii to other systems.
+## Follows the Player through CellManager or a selected cell.
 
 @export_category("Following")
 @export var follow_player: bool = true
@@ -67,6 +67,8 @@ func _set_target(target: Node2D) -> void:
 	follow_target = target
 
 func _find_player() -> void:
-	var player: Node2D = get_tree().get_first_node_in_group("PlayerCharacter") as Node2D
-	if player != null and is_instance_valid(player):
-		_set_target(player)
+	var manager: Node = get_tree().get_first_node_in_group("CellManagers")
+	if manager != null and is_instance_valid(manager) and manager.has_method("get_player"):
+		var player: Node = manager.get_player()
+		if player is Node2D and is_instance_valid(player):
+			_set_target(player as Node2D)
