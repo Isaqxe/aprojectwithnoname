@@ -1,7 +1,7 @@
 extends CharacterBody2D
 
 ## Integrated organism used by the CellSystem simulation.
-## Combines generic cell data, behavior, fear, combat and mitosis prototypes.
+## Combines generic cell data, behavior, fear, combat, mitosis and genetics.
 
 const CELL_SCRIPT := preload("res://GPT/CellSystem/cell.gd")
 const BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior.gd")
@@ -47,11 +47,6 @@ func _ready() -> void:
 	fear_system = FEAR_SCRIPT.new()
 	add_child(fear_system)
 
-	combat = COMBAT_SCRIPT.new()
-	combat.damage = cell_data.damage
-	combat.cooldown = randf_range(0.35, 0.65)
-	add_child(combat)
-
 	mitosis = MITOSIS_SCRIPT.new()
 	if inherited_data.has("mitosis_count"):
 		mitosis.mitosis_count = int(inherited_data["mitosis_count"])
@@ -78,7 +73,16 @@ func _ready() -> void:
 			genetics.set_gene("speed", cell_data.speed)
 			genetics.set_gene("size", cell_data.size)
 			genetics.set_gene("regeneration_rate", cell_data.regeneration_rate)
+		else:
+			genetics.mutate_genes()
+			_apply_genes_to_biology()
+
 	add_child(genetics)
+
+	combat = COMBAT_SCRIPT.new()
+	combat.damage = cell_data.damage
+	combat.cooldown = randf_range(0.35, 0.65)
+	add_child(combat)
 
 	_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
 	_update_collision_shape()
@@ -139,6 +143,14 @@ func _apply_initial_biology() -> void:
 	cell_data.is_player_controlled = is_player_controlled
 	cell_data.health = cell_data.max_health
 	cell_data.resources = 0.0
+
+func _apply_genes_to_biology() -> void:
+	cell_data.max_health = maxf(genetics.get_gene("health", cell_data.max_health), 1.0)
+	cell_data.damage = maxf(genetics.get_gene("damage", cell_data.damage), 0.1)
+	cell_data.speed = maxf(genetics.get_gene("speed", cell_data.speed), 1.0)
+	cell_data.size = clampf(genetics.get_gene("size", cell_data.size), 4.0, 80.0)
+	cell_data.regeneration_rate = maxf(genetics.get_gene("regeneration_rate", cell_data.regeneration_rate), 0.0)
+	cell_data.health = cell_data.max_health
 
 func _process_player(delta: float) -> void:
 	behavior.set_state(CellBehavior.BehaviorState.WANDER)
