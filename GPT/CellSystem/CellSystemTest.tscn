@@ -19,6 +19,8 @@ script = ExtResource("1_test")
 script = ExtResource("2_manager")
 cell_factory = NodePath("CellFactory")
 cell_container = NodePath("../Cells")
+initial_population = 30
+max_population = 200
 
 [node name="CellFactory" type="Node" parent="CellManager" unique_id=680687788]
 script = ExtResource("3_factory")
@@ -31,6 +33,8 @@ script = ExtResource("5_resource_spawner")
 resource_scene = ExtResource("6_resource")
 allow_void_resources = true
 void_spawn_multiplier = 1.0
+initial_resources = 50
+max_resources = 200
 
 [node name="CellInspector" type="Node" parent="." unique_id=2036286133]
 script = ExtResource("7_inspector")
