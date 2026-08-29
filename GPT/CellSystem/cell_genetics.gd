@@ -19,6 +19,12 @@ func initialize_random() -> void:
 	cell_id = _generate_id()
 	generation = 0
 	parent_id = ""
+	genes = {
+		"cold_adaptation": randf_range(0.25, 0.75),
+		"temperate_adaptation": randf_range(0.25, 0.75),
+		"heat_adaptation": randf_range(0.25, 0.75),
+		"void_adaptation": randf_range(0.25, 0.75)
+	}
 
 func initialize_from_parent(parent_genetics: Node, inherited_genes: Dictionary) -> void:
 	cell_id = _generate_id()
