@@ -24,6 +24,7 @@ var known_species: Dictionary = {}
 
 func _ready() -> void:
 	randomize()
+	add_to_group("CellManagers")
 
 	if cell_factory == null:
 		cell_factory = get_node_or_null("CellFactory")
