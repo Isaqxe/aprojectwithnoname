@@ -24,7 +24,7 @@ func inspect_at_mouse() -> void:
 	query.collide_with_areas = false
 	query.collide_with_bodies = true
 
-	var hits: Array[Dictionary] = get_world_2d().direct_space_state.intersect_point(query, 16)
+	var hits: Array[Dictionary] = viewport.get_world_2d().direct_space_state.intersect_point(query, 16)
 	var selected_cell: Node = null
 
 	for hit in hits:
