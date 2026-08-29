@@ -28,11 +28,11 @@ func initialize_from_parent(parent_genetics: Node, inherited_genes: Dictionary) 
 		species_id = String(parent_genetics.get("species_id"))
 	genes = inherited_genes.duplicate(true)
 
-func set_gene(name: String, value: float) -> void:
-	genes[name] = value
+func set_gene(gene_name: String, value: float) -> void:
+	genes[gene_name] = value
 
-func get_gene(name: String, fallback: float = 0.0) -> float:
-	return float(genes.get(name, fallback))
+func get_gene(gene_name: String, fallback: float = 0.0) -> float:
+	return float(genes.get(gene_name, fallback))
 
 func mutate_genes() -> Array[String]:
 	var mutated_genes: Array[String] = []
