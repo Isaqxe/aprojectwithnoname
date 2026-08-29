@@ -2,6 +2,7 @@ extends Node
 
 ## Debug inspector for the CellSystem test scene.
 ## Uses a physics point query so cells do not need to process mouse events themselves.
+## Also hands the selected cell to SimulationCamera for focused inspection.
 
 @export var collision_mask: int = 1
 
@@ -40,6 +41,14 @@ func inspect_at_mouse() -> void:
 		return
 
 	_print_information(selected_cell.get_inspection_data())
+	_focus_camera(selected_cell as Node2D)
+
+func _focus_camera(selected_cell: Node2D) -> void:
+	if selected_cell == null:
+		return
+	var camera: Node = get_tree().get_first_node_in_group("SimulationCameras")
+	if camera != null and is_instance_valid(camera) and camera.has_method("set_follow_target"):
+		camera.set_follow_target(selected_cell)
 
 func _print_information(data: Dictionary) -> void:
 	print("========== CELL INFORMATION ==========")
