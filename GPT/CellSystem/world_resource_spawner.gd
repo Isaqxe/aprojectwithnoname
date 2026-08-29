@@ -1,9 +1,10 @@
 extends Node2D
 
-## Spawns collectible resources for the CellSystem test ecosystem.
-## Keeps resources spatially distributed instead of allowing dense piles.
+## Spawns collectible resources according to the procedural world's biome.
+## This remains a test/sandbox spawner; the procedural world decides the environment.
 
 @export var resource_scene: PackedScene
+@export var world_provider: Node
 @export var spawn_area: Rect2 = Rect2(60.0, 60.0, 900.0, 500.0)
 @export var initial_resources: int = 25
 @export var max_resources: int = 50
@@ -11,11 +12,21 @@ extends Node2D
 @export var minimum_spacing: float = 28.0
 @export var max_spawn_attempts: int = 12
 
+@export_category("Biome Distribution")
+@export var allow_void_resources: bool = false
+@export var cold_spawn_multiplier: float = 0.75
+@export var green_spawn_multiplier: float = 1.50
+@export var hot_spawn_multiplier: float = 1.00
+@export var void_spawn_multiplier: float = 0.0
+@export var default_spawn_multiplier: float = 1.0
+
 var spawn_timer: float = 0.0
 var resources: Array[Node] = []
 
 func _ready() -> void:
 	randomize()
+	if world_provider == null:
+		world_provider = _find_world_provider(get_parent())
 	spawn_timer = spawn_interval
 	for _i in range(initial_resources):
 		spawn_resource()
@@ -36,8 +47,22 @@ func spawn_resource() -> Node:
 	if spawn_position == Vector2.INF:
 		return null
 
+	var biome: String = _get_biome(spawn_position)
+	if biome == "void" and not allow_void_resources:
+		return null
+
+	var spawn_multiplier: float = _get_biome_spawn_multiplier(biome)
+	if spawn_multiplier <= 0.0 or randf() > minf(spawn_multiplier, 1.0):
+		return null
+
 	var resource_node: Node = resource_scene.instantiate()
 	resource_node.global_position = spawn_position
+
+	if resource_node.has_method("set_amount_multiplier"):
+		resource_node.set_amount_multiplier(spawn_multiplier)
+	elif resource_node.get("amount") != null:
+		resource_node.amount = float(resource_node.get("amount")) * spawn_multiplier
+
 	add_child(resource_node)
 	resources.append(resource_node)
 	return resource_node
@@ -45,6 +70,39 @@ func spawn_resource() -> Node:
 func get_resource_count() -> int:
 	_cleanup()
 	return resources.size()
+
+func _get_biome(spawn_position: Vector2) -> String:
+	if world_provider == null or not is_instance_valid(world_provider):
+		world_provider = _find_world_provider(get_parent())
+	if world_provider == null or not world_provider.has_method("get_biome_at"):
+		return "default"
+	return String(world_provider.get_biome_at(spawn_position))
+
+func _get_biome_spawn_multiplier(biome: String) -> float:
+	match biome:
+		"cold":
+			return maxf(cold_spawn_multiplier, 0.0)
+		"green":
+			return maxf(green_spawn_multiplier, 0.0)
+		"hot":
+			return maxf(hot_spawn_multiplier, 0.0)
+		"void":
+			return maxf(void_spawn_multiplier, 0.0)
+		_:
+			return maxf(default_spawn_multiplier, 0.0)
+
+func _find_world_provider(start_node: Node) -> Node:
+	if start_node == null:
+		return null
+	if start_node.has_method("get_biome_at"):
+		return start_node
+
+	for child in start_node.get_children():
+		var provider: Node = _find_world_provider(child)
+		if provider != null:
+			return provider
+
+	return null
 
 func _find_spawn_position() -> Vector2:
 	for _attempt in range(max_spawn_attempts):
