@@ -8,6 +8,7 @@ const BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior.gd")
 const FEAR_SCRIPT := preload("res://GPT/CellSystem/cell_fear.gd")
 const COMBAT_SCRIPT := preload("res://GPT/CellSystem/cell_combat.gd")
 const MITOSIS_SCRIPT := preload("res://GPT/CellSystem/cell_mitosis.gd")
+const GENETICS_SCRIPT := preload("res://GPT/CellSystem/cell_genetics.gd")
 
 @export var is_player_controlled: bool = false
 @export var species_id: String = "default"
@@ -24,6 +25,7 @@ var behavior: CellBehavior
 var fear_system: Node
 var combat: Node
 var mitosis: Node
+var genetics: Node
 var _target: CharacterBody2D
 var _resource_target: Area2D
 var _direction := Vector2.ZERO
@@ -54,6 +56,27 @@ func _ready() -> void:
 	if inherited_data.has("mitosis_count"):
 		mitosis.mitosis_count = int(inherited_data["mitosis_count"])
 	add_child(mitosis)
+
+	genetics = GENETICS_SCRIPT.new()
+	if inherited_data.is_empty():
+		genetics.species_id = cell_data.species_id
+		genetics.initialize_random()
+		genetics.set_gene("health", cell_data.max_health)
+		genetics.set_gene("damage", cell_data.damage)
+		genetics.set_gene("speed", cell_data.speed)
+		genetics.set_gene("size", cell_data.size)
+	else:
+		genetics.species_id = cell_data.species_id
+		var inherited_genes: Dictionary = inherited_data.get("genes", {})
+		genetics.initialize_from_parent(null, inherited_genes)
+		genetics.parent_id = String(inherited_data.get("parent_id", ""))
+		genetics.generation = int(inherited_data.get("generation", 0))
+		if genetics.genes.is_empty():
+			genetics.set_gene("health", cell_data.max_health)
+			genetics.set_gene("damage", cell_data.damage)
+			genetics.set_gene("speed", cell_data.speed)
+			genetics.set_gene("size", cell_data.size)
+	add_child(genetics)
 
 	_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
 	_update_collision_shape()
@@ -89,6 +112,10 @@ func _physics_process(delta: float) -> void:
 	_process_collisions()
 	_process_resources()
 	_process_mitosis()
+
+	if behavior.state == CellBehavior.BehaviorState.WANDER:
+		cell_data.regenerate(delta)
+
 	queue_redraw()
 
 func _apply_initial_biology() -> void:
@@ -97,12 +124,14 @@ func _apply_initial_biology() -> void:
 		cell_data.damage = randf_range(5.0, 25.0)
 		cell_data.speed = randf_range(45.0, 100.0)
 		cell_data.size = randf_range(10.0, 24.0)
+		cell_data.regeneration_rate = randf_range(2.0, 6.0)
 		cell_data.species_id = species_id
 	else:
 		cell_data.max_health = float(inherited_data.get("max_health", 100.0))
 		cell_data.damage = float(inherited_data.get("damage", 10.0))
 		cell_data.speed = float(inherited_data.get("speed", 75.0))
 		cell_data.size = float(inherited_data.get("size", 16.0))
+		cell_data.regeneration_rate = float(inherited_data.get("regeneration_rate", 4.0))
 		cell_data.species_id = String(inherited_data.get("species_id", species_id))
 
 	cell_data.is_player_controlled = is_player_controlled
@@ -188,7 +217,7 @@ func get_cell_power() -> float:
 	return fear_system.get_cell_power(cell_data)
 
 func get_heredity_data() -> Dictionary:
-	if cell_data == null:
+	if cell_data == null or genetics == null:
 		return {}
 
 	return {
@@ -196,7 +225,11 @@ func get_heredity_data() -> Dictionary:
 		"damage": cell_data.damage,
 		"speed": cell_data.speed,
 		"size": cell_data.size,
-		"species_id": cell_data.species_id,
+		"regeneration_rate": cell_data.regeneration_rate,
+		"species_id": genetics.species_id,
+		"genes": genetics.genes.duplicate(true),
+		"parent_id": genetics.cell_id,
+		"generation": genetics.generation + 1,
 		"mitosis_count": mitosis.mitosis_count + 1
 	}
 
