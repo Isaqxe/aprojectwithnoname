@@ -51,6 +51,8 @@ func _ready() -> void:
 	add_child(combat)
 
 	mitosis = MITOSIS_SCRIPT.new()
+	if inherited_data.has("mitosis_count"):
+		mitosis.mitosis_count = int(inherited_data["mitosis_count"])
 	add_child(mitosis)
 
 	_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
@@ -194,7 +196,8 @@ func get_heredity_data() -> Dictionary:
 		"damage": cell_data.damage,
 		"speed": cell_data.speed,
 		"size": cell_data.size,
-		"species_id": cell_data.species_id
+		"species_id": cell_data.species_id,
+		"mitosis_count": mitosis.mitosis_count + 1
 	}
 
 func _process_collisions() -> void:
@@ -254,12 +257,11 @@ func _collect_resource(resource_node: Area2D) -> void:
 func _process_mitosis() -> void:
 	if mitosis.active:
 		return
-
 	if behavior.state != CellBehavior.BehaviorState.WANDER:
 		return
 	if _wander_time < mitosis.required_wander_time:
 		return
-	if cell_data.resources < mitosis.required_resources:
+	if cell_data.resources < mitosis.get_resource_cost():
 		return
 	if _cell_manager == null or not is_instance_valid(_cell_manager):
 		_cell_manager = get_tree().get_first_node_in_group("CellManagers")
@@ -271,7 +273,10 @@ func _process_mitosis() -> void:
 	_start_mitosis()
 
 func _start_mitosis() -> void:
-	if mitosis.active or not cell_data.consume_resources(mitosis.resource_cost):
+	if mitosis.active:
+		return
+	var cost: float = mitosis.get_resource_cost()
+	if not cell_data.consume_resources(cost):
 		return
 
 	_wander_time = 0.0
@@ -280,8 +285,15 @@ func _start_mitosis() -> void:
 	mitosis.start()
 
 func _finish_mitosis() -> void:
+	var child: Node = null
 	if _cell_manager != null and is_instance_valid(_cell_manager):
-		_cell_manager.spawn_mitosis_child(self)
+		child = _cell_manager.spawn_mitosis_child(self)
+
+	if child != null:
+		mitosis.complete_generation()
+	else:
+		cell_data.add_resources(mitosis.get_resource_cost())
+
 	behavior.set_state(CellBehavior.BehaviorState.WANDER)
 	_wander_time = 0.0
 	mitosis.reset()
