@@ -98,7 +98,11 @@ func _ready() -> void:
 	add_to_group("SimCells")
 	if is_player_controlled:
 		add_to_group("PlayerCharacter")
-	_base_color = Color.from_hsv(randf(), 0.55, 0.95)
+	_base_color = Color.WHITE
+	queue_redraw()
+
+func set_species_color(color: Color) -> void:
+	_base_color = color
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
