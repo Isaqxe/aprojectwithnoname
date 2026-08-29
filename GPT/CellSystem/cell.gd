@@ -13,6 +13,7 @@ extends CharacterBody2D
 @export var damage: float = 10.0
 @export var speed: float = 100.0
 @export var size: float = 24.0
+@export var regeneration_rate: float = 4.0
 
 @export_category("Resources")
 @export var resource_capacity: float = 100.0
@@ -32,6 +33,11 @@ func take_damage(amount: float) -> void:
 
 	if health <= 0.0:
 		die()
+
+func regenerate(delta: float) -> void:
+	if not alive or delta <= 0.0 or regeneration_rate <= 0.0:
+		return
+	health = minf(health + regeneration_rate * delta, max_health)
 
 func attack(target: Node) -> void:
 	if not alive:
