@@ -15,7 +15,7 @@ const COMBAT_SCRIPT := preload("res://GPT/CellSystem/cell_combat.gd")
 @export var perception_radius: float = 180.0
 @export var resource_perception_radius: float = 220.0
 @export var resource_collect_radius: float = 18.0
-@export var contact_margin: float = 2.0
+@export var combat_contact_margin: float = 2.0
 
 var cell_data: CharacterBody2D
 var behavior: CellBehavior
@@ -27,6 +27,7 @@ var _direction := Vector2.ZERO
 var _retarget_timer := 0.0
 var _base_color := Color.WHITE
 var _flash_timer := 0.0
+var _collision_shape: CollisionShape2D
 
 func _ready() -> void:
 	cell_data = CELL_SCRIPT.new()
@@ -50,6 +51,9 @@ func _ready() -> void:
 	combat.cooldown = randf_range(0.35, 0.65)
 	add_child(combat)
 
+	_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
+	_update_collision_shape()
+
 	add_to_group("SimCells")
 	_base_color = Color.from_hsv(randf(), 0.55, 0.95)
 	queue_redraw()
@@ -69,7 +73,7 @@ func _physics_process(delta: float) -> void:
 
 	velocity = _direction * cell_data.speed
 	move_and_slide()
-	_process_contacts()
+	_process_collisions()
 	_process_resources()
 	queue_redraw()
 
@@ -145,26 +149,30 @@ func get_cell_power() -> float:
 		return 0.0
 	return fear_system.get_cell_power(cell_data)
 
-func _process_contacts() -> void:
-	for candidate in get_tree().get_nodes_in_group("SimCells"):
-		if candidate == self or not is_instance_valid(candidate):
+func _process_collisions() -> void:
+	for index in range(get_slide_collision_count()):
+		var collision: KinematicCollision2D = get_slide_collision(index)
+		var collider: Object = collision.get_collider()
+		if collider == null or collider == self:
 			continue
-		if not candidate.has_method("get_cell_power"):
+		if not collider is CharacterBody2D:
+			continue
+		if not collider.is_in_group("SimCells"):
+			continue
+		if not collider.has_method("take_damage"):
 			continue
 
-		var other_data = candidate.get("cell_data")
-		if other_data == null or not other_data.alive:
-			continue
+		var was_alive: bool = true
+		var target_data = collider.get("cell_data")
+		if target_data != null:
+			was_alive = target_data.alive
 
-		var contact_distance: float = cell_data.size + other_data.size + contact_margin
-		if global_position.distance_to(candidate.global_position) <= contact_distance:
-			if get_cell_power() >= candidate.get_cell_power():
-				var was_alive: bool = other_data.alive
-				combat.attack(candidate)
-				if was_alive and not other_data.alive:
-					cell_data.add_resources(elimination_resource_reward)
-					_target = null
-				candidate.queue_redraw()
+		combat.attack(collider)
+
+		if was_alive and target_data != null and not target_data.alive:
+			cell_data.add_resources(elimination_resource_reward)
+			if _target == collider:
+				_target = null
 
 func _process_resources() -> void:
 	if cell_data.resources >= cell_data.resource_capacity:
@@ -205,6 +213,14 @@ func take_damage(amount: float) -> void:
 	_flash_timer = 0.08
 	if not cell_data.alive:
 		queue_free()
+
+func _update_collision_shape() -> void:
+	if _collision_shape == null or _collision_shape.shape == null or cell_data == null:
+		return
+	var circle_shape: CircleShape2D = _collision_shape.shape as CircleShape2D
+	if circle_shape == null:
+		return
+	circle_shape.radius = cell_data.size + combat_contact_margin
 
 func _wander() -> void:
 	if _retarget_timer <= -0.5 or _direction.length_squared() < 0.01:
