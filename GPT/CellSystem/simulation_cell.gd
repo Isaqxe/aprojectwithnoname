@@ -90,6 +90,8 @@ func _ready() -> void:
 	_cell_manager = get_tree().get_first_node_in_group("CellManagers")
 
 	add_to_group("SimCells")
+	if is_player_controlled:
+		add_to_group("PlayerCharacter")
 	_base_color = Color.from_hsv(randf(), 0.55, 0.95)
 	queue_redraw()
 
@@ -291,9 +293,9 @@ func _process_collisions() -> void:
 
 		var target_data = collider.get("cell_data")
 		var was_alive: bool = target_data != null and target_data.alive
-		combat.attack(collider)
+		var attack_succeeded: bool = combat.attack(collider)
 
-		if was_alive and target_data != null and not target_data.alive:
+		if attack_succeeded and was_alive and target_data != null and not target_data.alive:
 			cell_data.add_resources(elimination_resource_reward)
 			if _target == collider:
 				_target = null
@@ -374,13 +376,23 @@ func _finish_mitosis() -> void:
 	_wander_time = 0.0
 	mitosis.reset()
 
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, attacker: Node = null) -> bool:
 	if cell_data == null:
-		return
-	cell_data.take_damage(amount)
-	_flash_timer = 0.08
-	if not cell_data.alive:
-		queue_free()
+		return false
+
+	if attacker != null and is_instance_valid(attacker):
+		var attacker_species: String = String(attacker.get("species_id"))
+		if not species_id.is_empty() and species_id == attacker_species:
+			return false
+
+	var was_alive: bool = cell_data.alive
+	cell_data.take_damage(amount, attacker)
+	if not was_alive or cell_data.alive:
+		_flash_timer = 0.08
+		return was_alive
+
+	queue_free()
+	return true
 
 func _update_collision_shape() -> void:
 	if _collision_shape == null or _collision_shape.shape == null or cell_data == null:
@@ -396,13 +408,9 @@ func _wander() -> void:
 		_retarget_timer = 0.5
 	else:
 		_direction = _direction.lerp(Vector2.from_angle(randf_range(0.0, TAU)), 0.03).normalized()
-	_direction *= wander_speed_factor
 
 func _draw() -> void:
-	if cell_data == null:
-		return
-
-	var radius: float = cell_data.size
-	var color := Color.WHITE if _flash_timer > 0.0 else _base_color
-	draw_circle(Vector2.ZERO, radius, color)
-	draw_circle(Vector2.ZERO, radius * 0.35, color.darkened(0.55))
+	var visible_color: Color = _base_color
+	if _flash_timer > 0.0:
+		visible_color = Color(0.9, 0.95, 1.0, 1.0)
+	draw_circle(Vector2.ZERO, cell_data.size if cell_data != null else 16.0, visible_color)
