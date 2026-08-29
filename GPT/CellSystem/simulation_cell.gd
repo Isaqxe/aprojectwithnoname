@@ -21,6 +21,7 @@ const ADAPTATION_SCRIPT := preload("res://GPT/CellSystem/cell_adaptation.gd")
 @export var combat_contact_margin: float = 2.0
 
 var inherited_data: Dictionary = {}
+var species_color: Color = Color.WHITE
 var cell_data: CharacterBody2D
 var behavior: CellBehavior
 var fear_system: Node
@@ -98,10 +99,15 @@ func _ready() -> void:
 	add_to_group("SimCells")
 	if is_player_controlled:
 		add_to_group("PlayerCharacter")
-	_base_color = Color.WHITE
+
+	if _cell_manager != null and _cell_manager.has_method("get_species_color"):
+		set_species_color(_cell_manager.get_species_color(String(species_id)))
+	else:
+		_base_color = Color.from_hsv(randf(), 0.55, 0.95)
 	queue_redraw()
 
 func set_species_color(color: Color) -> void:
+	species_color = color
 	_base_color = color
 	queue_redraw()
 
@@ -404,10 +410,12 @@ func take_damage(amount: float, attacker: Node = null) -> bool:
 			return false
 
 	var was_alive: bool = cell_data.alive
-	cell_data.take_damage(amount, attacker)
-	if not was_alive or cell_data.alive:
+	var damage_applied: bool = cell_data.take_damage(amount, attacker)
+	if not damage_applied:
+		return false
+	if cell_data.alive:
 		_flash_timer = 0.08
-		return was_alive
+		return true
 
 	queue_free()
 	return true
