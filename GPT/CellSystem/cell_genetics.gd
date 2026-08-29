@@ -1,9 +1,12 @@
 extends Node
 
 ## Genetic identity and lineage data for a single cell.
-## Mutation is intentionally not implemented here yet.
+## Mutations happen during reproduction and alter inherited genes slightly.
 
 @export var species_id: String = "default"
+@export_range(0.0, 1.0) var mutation_chance: float = 0.10
+@export_range(0.0, 1.0) var mutation_strength: float = 0.05
+
 var cell_id: String = ""
 var parent_id: String = ""
 var generation: int = 0
@@ -30,6 +33,20 @@ func set_gene(name: String, value: float) -> void:
 
 func get_gene(name: String, fallback: float = 0.0) -> float:
 	return float(genes.get(name, fallback))
+
+func mutate_genes() -> Array[String]:
+	var mutated_genes: Array[String] = []
+
+	for gene_name in genes.keys():
+		if randf() > mutation_chance:
+			continue
+
+		var current_value: float = float(genes[gene_name])
+		var variation: float = randf_range(-mutation_strength, mutation_strength)
+		genes[gene_name] = maxf(0.0, current_value * (1.0 + variation))
+		mutated_genes.append(String(gene_name))
+
+	return mutated_genes
 
 func get_lineage_data() -> Dictionary:
 	return {
