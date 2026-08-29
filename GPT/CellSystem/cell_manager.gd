@@ -1,7 +1,7 @@
 extends Node
 
-## CellManager coordinates cell creation, registration, spawning, cleanup and spatial streaming.
-## The player remains a normal cell. SimulationCamera defines the active simulation area.
+## CellManager coordinates cell creation, registration, cleanup and spatial streaming.
+## Species also own a shared visual color so members are visually related.
 
 @export var cell_factory: Node
 @export var cell_container: Node2D
@@ -15,7 +15,7 @@ extends Node
 @export var spawn_interval: float = 2.0
 @export var initial_population: int = 12
 @export var max_population: int = 30
-@export var initial_species_count: int = 3
+@export var initial_species_count: int = 6
 @export var spawn_area: Rect2 = Rect2(-425.0, -425.0, 850.0, 850.0)
 
 @export_category("Simulation Streaming")
@@ -26,6 +26,7 @@ var spawn_timer: float = 0.0
 var registered_cells: Array[Node] = []
 var player_cell: Node = null
 var known_species: Dictionary = {}
+var species_colors: Dictionary = {}
 
 const SPECIES_PREFIXES: Array[String] = [
 	"Vel", "Zor", "Kry", "Ari", "Nex", "Vor", "Syl", "Lum", "Drav", "Qor", "Myr", "Tav"
@@ -92,20 +93,31 @@ func register_cell(cell: Node) -> void:
 func unregister_cell(cell: Node) -> void:
 	if is_instance_valid(cell):
 		registered_cells.erase(cell)
-
 	if player_cell == cell:
 		player_cell = null
 
 func register_species(species_id: String) -> void:
 	if species_id.is_empty():
 		return
-	known_species[species_id] = true
+	if not known_species.has(species_id):
+		known_species[species_id] = true
+		species_colors[species_id] = _generate_species_color()
 
 func get_species_ids() -> Array[String]:
 	var species_ids: Array[String] = []
 	for species_id in known_species.keys():
 		species_ids.append(String(species_id))
 	return species_ids
+
+func get_species_color(species_id: String) -> Color:
+	if species_id.is_empty():
+		return Color.WHITE
+	if not species_colors.has(species_id):
+		register_species(species_id)
+	return species_colors.get(species_id, Color.WHITE)
+
+func _generate_species_color() -> Color:
+	return Color.from_hsv(randf(), 0.60, 0.95)
 
 func _initialize_species() -> void:
 	var desired_count: int = max(initial_species_count, 1)
@@ -157,11 +169,14 @@ func create_cell(position: Vector2, is_player: bool = false, species_id_override
 	cell_container.add_child(new_cell)
 	register_cell(new_cell)
 
-	var species_id: String = String(new_cell.get("species_id"))
-	if species_id.is_empty() or species_id == "default":
-		species_id = _get_random_species_id()
-		new_cell.species_id = species_id
-	register_species(species_id)
+	var resolved_species_id: String = String(new_cell.get("species_id"))
+	if resolved_species_id.is_empty() or resolved_species_id == "default":
+		resolved_species_id = _get_random_species_id()
+		new_cell.species_id = resolved_species_id
+	register_species(resolved_species_id)
+
+	if new_cell.has_method("set_species_color"):
+		new_cell.set_species_color(get_species_color(resolved_species_id))
 
 	if is_player:
 		player_cell = new_cell
@@ -190,6 +205,9 @@ func create_cell_from_parent(parent_cell: Node, position: Vector2 = Vector2.ZERO
 		new_cell.species_id = child_species_id
 	register_species(child_species_id)
 
+	if new_cell.has_method("set_species_color"):
+		new_cell.set_species_color(get_species_color(child_species_id))
+
 	return new_cell
 
 func spawn_cell(is_player: bool = false) -> Node:
@@ -210,10 +228,8 @@ func spawn_cell(is_player: bool = false) -> Node:
 func spawn_player(position: Vector2) -> Node:
 	if is_instance_valid(player_cell):
 		return player_cell
-
 	if get_population() >= max_population:
 		return null
-
 	return create_cell(position, true, _get_random_species_id())
 
 func spawn_mitosis_child(parent_cell: Node) -> Node:
