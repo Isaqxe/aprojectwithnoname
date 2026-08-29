@@ -60,6 +60,13 @@ func evaluate_resource(my_cell) -> BehaviorState:
 		state = BehaviorState.WANDER
 		return state
 
+	if my_cell.has_method("can_accept_resources"):
+		if my_cell.can_accept_resources():
+			state = BehaviorState.SEEK_RESOURCE
+		else:
+			state = BehaviorState.WANDER
+		return state
+
 	var current_resources: float = float(my_cell.resources)
 	var capacity: float = maxf(float(my_cell.resource_capacity), 0.001)
 
