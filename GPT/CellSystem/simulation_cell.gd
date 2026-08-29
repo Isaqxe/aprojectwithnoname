@@ -37,8 +37,6 @@ var _collision_shape: CollisionShape2D
 var _cell_manager: Node
 
 func _ready() -> void:
-	input_pickable = true
-
 	cell_data = CELL_SCRIPT.new()
 	_apply_initial_biology()
 	add_child(cell_data)
@@ -78,6 +76,7 @@ func _ready() -> void:
 		else:
 			genetics.mutate_genes()
 			_apply_genes_to_biology()
+
 	add_child(genetics)
 
 	combat = COMBAT_SCRIPT.new()
@@ -124,35 +123,6 @@ func _physics_process(delta: float) -> void:
 		cell_data.regenerate(delta)
 
 	queue_redraw()
-
-func _input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		print_cell_information()
-		event.accept()
-
-func print_cell_information() -> void:
-	if cell_data == null or genetics == null:
-		return
-
-	var lineage: Dictionary = genetics.get_lineage_data()
-	var current_state: String = CellBehavior.BehaviorState.keys()[behavior.state]
-	print("========== CELL INFORMATION ==========")
-	print("ID: ", lineage.get("cell_id", "unknown"))
-	print("Species: ", lineage.get("species_id", "unknown"))
-	print("Generation: ", lineage.get("generation", 0))
-	print("Parent ID: ", lineage.get("parent_id", "none"))
-	print("Player: ", is_player_controlled)
-	print("State: ", current_state)
-	print("Health: %.2f / %.2f" % [cell_data.health, cell_data.max_health])
-	print("Damage: %.2f" % cell_data.damage)
-	print("Speed: %.2f" % cell_data.speed)
-	print("Size: %.2f" % cell_data.size)
-	print("Regeneration: %.2f" % cell_data.regeneration_rate)
-	print("Resources: %.2f / %.2f" % [cell_data.resources, cell_data.resource_capacity])
-	print("Mitosis count: ", mitosis.mitosis_count)
-	print("Next mitosis cost: %.2f" % mitosis.get_resource_cost())
-	print("Genes: ", genetics.genes)
-	print("======================================")
 
 func _apply_initial_biology() -> void:
 	if inherited_data.is_empty():
@@ -232,9 +202,7 @@ func _find_best_target() -> CharacterBody2D:
 			continue
 		if not candidate.has_method("get_cell_power"):
 			continue
-
-		var candidate_species: String = String(candidate.get("species_id"))
-		if candidate_species == species_id:
+		if String(candidate.get("species_id")) == cell_data.species_id:
 			continue
 
 		var distance: float = global_position.distance_to(candidate.global_position)
@@ -293,9 +261,7 @@ func _process_collisions() -> void:
 			continue
 		if not collider.has_method("take_damage"):
 			continue
-
-		var other_species: String = String(collider.get("species_id"))
-		if other_species == species_id:
+		if String(collider.get("species_id")) == cell_data.species_id:
 			continue
 
 		var target_data = collider.get("cell_data")
@@ -382,6 +348,34 @@ func _finish_mitosis() -> void:
 	behavior.set_state(CellBehavior.BehaviorState.WANDER)
 	_wander_time = 0.0
 	mitosis.reset()
+
+func _input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		print_cell_information()
+
+func print_cell_information() -> void:
+	if cell_data == null or genetics == null:
+		return
+
+	var lineage: Dictionary = genetics.get_lineage_data()
+	var current_state: String = CellBehavior.BehaviorState.keys()[behavior.state]
+	print("========== CELL INFORMATION ==========")
+	print("ID: ", lineage.get("cell_id", "unknown"))
+	print("Species: ", lineage.get("species_id", "unknown"))
+	print("Generation: ", lineage.get("generation", 0))
+	print("Parent ID: ", lineage.get("parent_id", "none"))
+	print("Player: ", is_player_controlled)
+	print("State: ", current_state)
+	print("Health: %.2f / %.2f" % [cell_data.health, cell_data.max_health])
+	print("Damage: %.2f" % cell_data.damage)
+	print("Speed: %.2f" % cell_data.speed)
+	print("Size: %.2f" % cell_data.size)
+	print("Regeneration: %.2f" % cell_data.regeneration_rate)
+	print("Resources: %.2f / %.2f" % [cell_data.resources, cell_data.resource_capacity])
+	print("Mitosis count: ", mitosis.mitosis_count)
+	print("Next mitosis cost: %.2f" % mitosis.get_resource_cost())
+	print("Genes: ", lineage.get("genes", {}))
+	print("=====================================")
 
 func take_damage(amount: float) -> void:
 	if cell_data == null:
