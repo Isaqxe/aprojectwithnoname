@@ -34,7 +34,6 @@ class_name ProceduralWorld
 @export var enable_cpu_readback: bool = true
 
 var _environment_viewport: SubViewport
-var _environment_map: Sprite2D
 var _cached_image: Image
 var _readback_timer: float = 0.0
 var _last_center := Vector2(0.0, 0.0)
@@ -191,6 +190,17 @@ func get_environment_at(world_position: Vector2) -> Dictionary:
 
 func get_biome_at(world_position: Vector2) -> String:
 	return String(get_environment_at(world_position).get("biome", "unknown"))
+
+func get_environment_texture() -> Texture2D:
+	if _environment_viewport == null:
+		return null
+	return _environment_viewport.get_texture()
+
+func get_environment_center() -> Vector2:
+	return _last_center
+
+func get_environment_extent() -> Vector2:
+	return Vector2(load_radius * 2.0, load_radius * 2.0)
 
 func _decode_biome(code: int) -> String:
 	match code:
