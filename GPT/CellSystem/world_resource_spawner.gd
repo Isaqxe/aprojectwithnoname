@@ -58,12 +58,12 @@ func _find_spawn_position() -> Vector2:
 
 	return Vector2.INF
 
-func _is_position_clear(position: Vector2) -> bool:
+func _is_position_clear(spawn_position: Vector2) -> bool:
 	for resource_node in resources:
 		if not is_instance_valid(resource_node):
 			continue
 
-		if position.distance_to(resource_node.global_position) < minimum_spacing:
+		if spawn_position.distance_to(resource_node.global_position) < minimum_spacing:
 			return false
 
 	return true
