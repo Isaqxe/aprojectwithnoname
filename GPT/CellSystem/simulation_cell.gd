@@ -249,6 +249,31 @@ func get_heredity_data() -> Dictionary:
 		"mitosis_count": mitosis.mitosis_count + 1
 	}
 
+func get_inspection_data() -> Dictionary:
+	if cell_data == null or genetics == null or mitosis == null or behavior == null:
+		return {}
+
+	var lineage: Dictionary = genetics.get_lineage_data()
+	return {
+		"cell_id": lineage.get("cell_id", "unknown"),
+		"species_id": lineage.get("species_id", "unknown"),
+		"generation": lineage.get("generation", 0),
+		"parent_id": lineage.get("parent_id", "none"),
+		"player": is_player_controlled,
+		"state": CellBehavior.BehaviorState.keys()[behavior.state],
+		"health": cell_data.health,
+		"max_health": cell_data.max_health,
+		"damage": cell_data.damage,
+		"speed": cell_data.speed,
+		"size": cell_data.size,
+		"regeneration_rate": cell_data.regeneration_rate,
+		"resources": cell_data.resources,
+		"resource_capacity": cell_data.resource_capacity,
+		"mitosis_count": mitosis.mitosis_count,
+		"next_mitosis_cost": mitosis.get_resource_cost(),
+		"genes": lineage.get("genes", {})
+	}
+
 func _process_collisions() -> void:
 	for index in range(get_slide_collision_count()):
 		var collision: KinematicCollision2D = get_slide_collision(index)
@@ -348,34 +373,6 @@ func _finish_mitosis() -> void:
 	behavior.set_state(CellBehavior.BehaviorState.WANDER)
 	_wander_time = 0.0
 	mitosis.reset()
-
-func _input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		print_cell_information()
-
-func print_cell_information() -> void:
-	if cell_data == null or genetics == null:
-		return
-
-	var lineage: Dictionary = genetics.get_lineage_data()
-	var current_state: String = CellBehavior.BehaviorState.keys()[behavior.state]
-	print("========== CELL INFORMATION ==========")
-	print("ID: ", lineage.get("cell_id", "unknown"))
-	print("Species: ", lineage.get("species_id", "unknown"))
-	print("Generation: ", lineage.get("generation", 0))
-	print("Parent ID: ", lineage.get("parent_id", "none"))
-	print("Player: ", is_player_controlled)
-	print("State: ", current_state)
-	print("Health: %.2f / %.2f" % [cell_data.health, cell_data.max_health])
-	print("Damage: %.2f" % cell_data.damage)
-	print("Speed: %.2f" % cell_data.speed)
-	print("Size: %.2f" % cell_data.size)
-	print("Regeneration: %.2f" % cell_data.regeneration_rate)
-	print("Resources: %.2f / %.2f" % [cell_data.resources, cell_data.resource_capacity])
-	print("Mitosis count: ", mitosis.mitosis_count)
-	print("Next mitosis cost: %.2f" % mitosis.get_resource_cost())
-	print("Genes: ", lineage.get("genes", {}))
-	print("=====================================")
 
 func take_damage(amount: float) -> void:
 	if cell_data == null:
