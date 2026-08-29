@@ -2,6 +2,7 @@ extends Node2D
 
 ## Mundo procedural experimental renderizado por GPU.
 ## A CPU mantém somente os chunks; a aparência de cada chunk é produzida por shader.
+## A classificação do bioma também pode ser consultada pela CPU para sistemas de gameplay.
 
 @export_category("World")
 @export var world_seed: int = 123456
@@ -50,6 +51,89 @@ func _process(_delta: float) -> void:
 			return
 		return
 	_update_chunks(_world_to_chunk(_player.global_position))
+
+## Returns the gameplay biome at a world position using the same noise model
+## and thresholds as gpu_biome.gdshader.
+func get_biome_at(world_position: Vector2) -> String:
+	var sample_position: Vector2 = _get_biome_sample_position(world_position)
+	var macro: float = _fbm(sample_position, macro_frequency, float(world_seed) + 303.0)
+	var temperature: float = _fbm(sample_position, temperature_frequency, float(world_seed) + 404.0)
+	var humidity: float = _fbm(sample_position, humidity_frequency, float(world_seed) + 505.0)
+	var detail: float = _fbm(sample_position, border_detail_frequency, float(world_seed) + 606.0) - 0.5
+
+	temperature = clampf(temperature + detail * border_detail_strength, 0.0, 1.0)
+	humidity = clampf(humidity + detail * border_detail_strength * 0.5, 0.0, 1.0)
+	macro = smoothstep(0.30, 0.70, macro)
+
+	if macro >= void_threshold:
+		if temperature < cold_temperature:
+			return "cold"
+		if temperature > hot_temperature:
+			return "hot"
+		if humidity >= green_humidity:
+			return "green"
+		return "green"
+
+	return "void"
+
+## Returns normalized environment values that gameplay systems can use later.
+func get_environment_at(world_position: Vector2) -> Dictionary:
+	var sample_position: Vector2 = _get_biome_sample_position(world_position)
+	var macro: float = smoothstep(0.30, 0.70, _fbm(sample_position, macro_frequency, float(world_seed) + 303.0))
+	var temperature: float = _fbm(sample_position, temperature_frequency, float(world_seed) + 404.0)
+	var humidity: float = _fbm(sample_position, humidity_frequency, float(world_seed) + 505.0)
+	var detail: float = _fbm(sample_position, border_detail_frequency, float(world_seed) + 606.0) - 0.5
+
+	temperature = clampf(temperature + detail * border_detail_strength, 0.0, 1.0)
+	humidity = clampf(humidity + detail * border_detail_strength * 0.5, 0.0, 1.0)
+
+	return {
+		"biome": get_biome_at(world_position),
+		"macro": macro,
+		"temperature": temperature,
+		"humidity": humidity
+	}
+
+func _get_biome_sample_position(world_position: Vector2) -> Vector2:
+	var warp_x: float = _fbm(world_position, warp_frequency, float(world_seed) + 101.0)
+	var warp_y: float = _fbm(world_position, warp_frequency, float(world_seed) + 202.0)
+	return world_position + (Vector2(warp_x, warp_y) - Vector2(0.5, 0.5)) * warp_strength
+
+func _hash21(point: Vector2, seed_offset: float) -> float:
+	var shifted: Vector2 = point + Vector2(seed_offset * 0.0137, seed_offset * 0.0211)
+	var fractional: Vector2 = Vector2(
+		fposmod(shifted.x * 123.34, 1.0),
+		fposmod(shifted.y * 456.21, 1.0)
+	)
+	var dot_value: float = fractional.dot(fractional + Vector2(45.32, 45.32))
+	fractional += Vector2(dot_value, dot_value)
+	return fposmod(fractional.x * fractional.y, 1.0)
+
+func _value_noise(point: Vector2, seed_offset: float) -> float:
+	var cell: Vector2 = Vector2(floor(point.x), floor(point.y))
+	var local: Vector2 = Vector2(fposmod(point.x, 1.0), fposmod(point.y, 1.0))
+	local = local * local * (Vector2(3.0, 3.0) - 2.0 * local)
+
+	var a: float = _hash21(cell, seed_offset)
+	var b: float = _hash21(cell + Vector2(1.0, 0.0), seed_offset)
+	var c: float = _hash21(cell + Vector2(0.0, 1.0), seed_offset)
+	var d: float = _hash21(cell + Vector2(1.0, 1.0), seed_offset)
+
+	return lerpf(lerpf(a, b, local.x), lerpf(c, d, local.x), local.y)
+
+func _fbm(point: Vector2, frequency: float, seed_offset: float) -> float:
+	var result: float = 0.0
+	var amplitude: float = 0.5
+	var normalization: float = 0.0
+	var sample_position: Vector2 = point * frequency
+
+	for octave in range(4):
+		result += _value_noise(sample_position, seed_offset + float(octave) * 19.37) * amplitude
+		normalization += amplitude
+		sample_position *= 2.0
+		amplitude *= 0.5
+
+	return result / normalization
 
 func _setup_material() -> void:
 	var shader_source := load("res://GPT/Biomes/gpu_biome.gdshader") as Shader
