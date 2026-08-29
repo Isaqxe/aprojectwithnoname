@@ -16,6 +16,7 @@ extends CharacterBody2D
 @export var regeneration_rate: float = 4.0
 
 @export_category("Resources")
+@export var use_resource_capacity: bool = false
 @export var resource_capacity: float = 100.0
 var resources: float = 0.0
 
@@ -49,7 +50,10 @@ func attack(target: Node) -> void:
 func add_resources(amount: float) -> void:
 	if not alive or amount <= 0.0:
 		return
-	resources = minf(resources + amount, resource_capacity)
+	if use_resource_capacity:
+		resources = minf(resources + amount, resource_capacity)
+	else:
+		resources += amount
 
 func consume_resources(amount: float) -> bool:
 	if not alive or amount <= 0.0 or resources < amount:
