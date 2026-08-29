@@ -33,6 +33,10 @@ extends Node2D
 @export var border_detail_frequency: float = 0.0025
 @export var border_detail_strength: float = 0.18
 
+@export_category("CPU Biome Diagnostics")
+@export var print_biome_samples_on_ready: bool = false
+@export var biome_sample_spacing: float = 256.0
+
 var _center_target: Node2D
 var _loaded_chunks: Dictionary = {}
 var _shader: Shader
@@ -44,6 +48,8 @@ func _ready() -> void:
 	_find_center_target.call_deferred()
 	if generate_without_player:
 		_update_chunks(Vector2i.ZERO)
+	if print_biome_samples_on_ready:
+		_print_biome_diagnostics()
 
 func _process(_delta: float) -> void:
 	if _center_target == null or not is_instance_valid(_center_target):
@@ -58,44 +64,62 @@ func _process(_delta: float) -> void:
 ## Returns the gameplay biome at a world position using the same noise model
 ## and thresholds as gpu_biome.gdshader.
 func get_biome_at(world_position: Vector2) -> String:
-	var sample_position: Vector2 = _get_biome_sample_position(world_position)
-	var macro: float = _fbm(sample_position, macro_frequency, float(world_seed) + 303.0)
-	var temperature: float = _fbm(sample_position, temperature_frequency, float(world_seed) + 404.0)
-	var humidity: float = _fbm(sample_position, humidity_frequency, float(world_seed) + 505.0)
-	var detail: float = _fbm(sample_position, border_detail_frequency, float(world_seed) + 606.0) - 0.5
-
-	temperature = clampf(temperature + detail * border_detail_strength, 0.0, 1.0)
-	humidity = clampf(humidity + detail * border_detail_strength * 0.5, 0.0, 1.0)
-	macro = smoothstep(0.30, 0.70, macro)
-
-	if macro >= void_threshold:
-		if temperature < cold_temperature:
-			return "cold"
-		if temperature > hot_temperature:
-			return "hot"
-		if humidity >= green_humidity:
-			return "green"
-		return "green"
-
-	return "void"
+	return String(_sample_environment(world_position).get("biome", "unknown"))
 
 ## Returns normalized environment values that gameplay systems can use later.
 func get_environment_at(world_position: Vector2) -> Dictionary:
+	return _sample_environment(world_position)
+
+func _sample_environment(world_position: Vector2) -> Dictionary:
 	var sample_position: Vector2 = _get_biome_sample_position(world_position)
-	var macro: float = smoothstep(0.30, 0.70, _fbm(sample_position, macro_frequency, float(world_seed) + 303.0))
+	var macro_raw: float = _fbm(sample_position, macro_frequency, float(world_seed) + 303.0)
 	var temperature: float = _fbm(sample_position, temperature_frequency, float(world_seed) + 404.0)
 	var humidity: float = _fbm(sample_position, humidity_frequency, float(world_seed) + 505.0)
 	var detail: float = _fbm(sample_position, border_detail_frequency, float(world_seed) + 606.0) - 0.5
 
 	temperature = clampf(temperature + detail * border_detail_strength, 0.0, 1.0)
 	humidity = clampf(humidity + detail * border_detail_strength * 0.5, 0.0, 1.0)
+	var macro: float = smoothstep(0.30, 0.70, macro_raw)
+	var biome: String = _classify_biome(macro, temperature, humidity)
 
 	return {
-		"biome": get_biome_at(world_position),
+		"biome": biome,
 		"macro": macro,
+		"macro_raw": macro_raw,
 		"temperature": temperature,
-		"humidity": humidity
+		"humidity": humidity,
+		"detail": detail
 	}
+
+func _classify_biome(macro: float, temperature: float, humidity: float) -> String:
+	if macro < void_threshold:
+		return "void"
+	if temperature < cold_temperature:
+		return "cold"
+	if temperature > hot_temperature:
+		return "hot"
+	if humidity >= green_humidity:
+		return "green"
+	return "green"
+
+func _print_biome_diagnostics() -> void:
+	var spacing: float = maxf(biome_sample_spacing, 1.0)
+	var sample_points: Array[Vector2] = [
+		Vector2.ZERO,
+		Vector2(spacing, 0.0),
+		Vector2(-spacing, 0.0),
+		Vector2(0.0, spacing),
+		Vector2(0.0, -spacing),
+		Vector2(spacing, spacing),
+		Vector2(-spacing, -spacing),
+		Vector2(2.0 * spacing, 0.0),
+		Vector2(0.0, 2.0 * spacing)
+	]
+
+	print("===== GPU WORLD CPU BIOME DIAGNOSTICS =====")
+	for point in sample_points:
+		print(point, " -> ", get_environment_at(point))
+	print("===========================================")
 
 func _get_biome_sample_position(world_position: Vector2) -> Vector2:
 	var warp_x: float = _fbm(world_position, warp_frequency, float(world_seed) + 101.0)
