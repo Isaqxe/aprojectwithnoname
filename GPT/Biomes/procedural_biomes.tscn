@@ -1,7 +1,0 @@
-[gd_scene format=3 uid="uid://dl7ko3uwhhpo4"]
-
-[ext_resource type="Script" uid="uid://cbc383br28i2c" path="res://GPT/Biomes/procedural_biomes.gd" id="1_biomes"]
-
-[node name="ProceduralBiomes" type="Node2D" unique_id=2016065413]
-script = ExtResource("1_biomes")
-seed_value = 20260818

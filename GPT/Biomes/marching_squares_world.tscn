@@ -1,7 +1,0 @@
-[gd_scene format=3 uid="uid://dth6n1kwmu4y3"]
-
-[ext_resource type="Script" uid="uid://tnpkpfyt8hhh" path="res://GPT/Biomes/marching_squares_world.gd" id="1_ms"]
-
-[node name="MarchingSquaresWorld" type="Node2D" unique_id=1236245352]
-script = ExtResource("1_ms")
-world_seed = 121061
