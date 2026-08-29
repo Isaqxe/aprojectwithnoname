@@ -1,7 +1,7 @@
 extends Node
 
 ## Behavior state machine for Alive Cells.
-## Decisions stay separate from movement, resources and combat.
+## Decisions stay separate from movement, resources, combat and reproduction.
 
 class_name CellBehavior
 
@@ -9,7 +9,8 @@ enum BehaviorState {
 	WANDER,
 	SEEK_RESOURCE,
 	HUNT,
-	FLEE
+	FLEE,
+	MITOSIS
 }
 
 var state: BehaviorState = BehaviorState.WANDER
