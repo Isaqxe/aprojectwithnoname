@@ -1,14 +1,14 @@
 extends Node
 
-## CellManager coordinates all cell creation, registration, spawning and cleanup.
-## The player is still a normal cell; this manager also tracks species identities.
+## CellManager coordinates cell creation, registration, spawning, cleanup and spatial streaming.
+## The player remains a normal cell. SimulationCamera defines the active simulation area.
 
 @export var cell_factory: Node
 @export var cell_container: Node2D
 
 @export_category("Player")
 @export var spawn_player_on_ready: bool = false
-@export var player_spawn_position: Vector2 = Vector2(500.0, 300.0)
+@export var player_spawn_position: Vector2 = Vector2(0.0, 0.0)
 
 @export_category("Spawning")
 @export var auto_spawn: bool = true
@@ -16,7 +16,11 @@ extends Node
 @export var initial_population: int = 12
 @export var max_population: int = 30
 @export var initial_species_count: int = 3
-@export var spawn_area: Rect2 = Rect2(60.0, 60.0, 900.0, 500.0)
+@export var spawn_area: Rect2 = Rect2(-425.0, -425.0, 850.0, 850.0)
+
+@export_category("Simulation Streaming")
+@export var simulation_camera: Node
+@export var stream_cells_from_camera: bool = true
 
 var spawn_timer: float = 0.0
 var registered_cells: Array[Node] = []
@@ -36,15 +40,7 @@ const SPECIES_SUFFIXES: Array[String] = [
 func _ready() -> void:
 	randomize()
 	add_to_group("CellManagers")
-
-	if cell_factory == null:
-		cell_factory = get_node_or_null("CellFactory")
-
-	if cell_container == null:
-		var parent_node: Node = get_parent()
-		if parent_node != null:
-			cell_container = parent_node.get_node_or_null("Cells") as Node2D
-
+	_resolve_scene_nodes()
 	_initialize_species()
 	spawn_timer = spawn_interval
 
@@ -61,6 +57,31 @@ func _ready() -> void:
 
 	if spawn_player_on_ready:
 		spawn_player(player_spawn_position)
+
+func _process(delta: float) -> void:
+	_cleanup_invalid_cells()
+	_update_simulation_area()
+	_update_cell_processing()
+
+	if not auto_spawn or cell_factory == null or cell_container == null:
+		return
+
+	spawn_timer -= delta
+	if spawn_timer <= 0.0:
+		spawn_cell()
+		spawn_timer = spawn_interval
+
+func _resolve_scene_nodes() -> void:
+	if cell_factory == null:
+		cell_factory = get_node_or_null("CellFactory")
+
+	if cell_container == null:
+		var parent_node: Node = get_parent()
+		if parent_node != null:
+			cell_container = parent_node.get_node_or_null("Cells") as Node2D
+
+	if simulation_camera == null:
+		simulation_camera = get_tree().get_first_node_in_group("SimulationCameras")
 
 func register_cell(cell: Node) -> void:
 	if cell == null or not is_instance_valid(cell):
@@ -175,9 +196,13 @@ func spawn_cell(is_player: bool = false) -> Node:
 	if get_population() >= max_population:
 		return null
 
+	var active_spawn_area: Rect2 = spawn_area
+	if simulation_camera != null and is_instance_valid(simulation_camera) and simulation_camera.has_method("get_spawn_bounds"):
+		active_spawn_area = simulation_camera.get_spawn_bounds()
+
 	var spawn_position: Vector2 = Vector2(
-		randf_range(spawn_area.position.x, spawn_area.end.x),
-		randf_range(spawn_area.position.y, spawn_area.end.y)
+		randf_range(active_spawn_area.position.x, active_spawn_area.end.x),
+		randf_range(active_spawn_area.position.y, active_spawn_area.end.y)
 	)
 
 	return create_cell(spawn_position, is_player, _get_random_species_id())
@@ -209,16 +234,37 @@ func spawn_mitosis_child(parent_cell: Node) -> Node:
 
 	return create_cell_from_parent(parent_cell, child_position)
 
-func _process(delta: float) -> void:
-	_cleanup_invalid_cells()
+func _update_simulation_area() -> void:
+	if simulation_camera == null or not is_instance_valid(simulation_camera):
+		simulation_camera = get_tree().get_first_node_in_group("SimulationCameras")
+	if simulation_camera == null or not is_instance_valid(simulation_camera):
+		return
+	if simulation_camera.has_method("get_spawn_bounds"):
+		spawn_area = simulation_camera.get_spawn_bounds()
 
-	if not auto_spawn or cell_factory == null or cell_container == null:
+func _update_cell_processing() -> void:
+	if not stream_cells_from_camera:
+		return
+	if simulation_camera == null or not is_instance_valid(simulation_camera):
+		return
+	if not simulation_camera.has_method("get_simulation_center"):
 		return
 
-	spawn_timer -= delta
-	if spawn_timer <= 0.0:
-		spawn_cell()
-		spawn_timer = spawn_interval
+	var center: Vector2 = simulation_camera.get_simulation_center()
+	var load_radius: float = simulation_camera.get_load_radius() if simulation_camera.has_method("get_load_radius") else INF
+	var load_radius_squared: float = load_radius * load_radius
+
+	for cell in registered_cells:
+		if not is_instance_valid(cell):
+			continue
+		if cell == player_cell:
+			cell.process_mode = Node.PROCESS_MODE_INHERIT
+			continue
+		if not cell is Node2D:
+			continue
+
+		var distance_squared: float = center.distance_squared_to((cell as Node2D).global_position)
+		cell.process_mode = Node.PROCESS_MODE_INHERIT if distance_squared <= load_radius_squared else Node.PROCESS_MODE_DISABLED
 
 func _cleanup_invalid_cells() -> void:
 	var valid_cells: Array[Node] = []
