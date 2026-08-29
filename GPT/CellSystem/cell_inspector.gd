@@ -67,4 +67,6 @@ func _print_information(data: Dictionary) -> void:
 	print("Mitosis count: ", data.get("mitosis_count", 0))
 	print("Next mitosis cost: %.2f" % data.get("next_mitosis_cost", 0.0))
 	print("Genes: ", data.get("genes", {}))
+	print("Environment: ", data.get("environment", {}))
+	print("Environment stress: %.3f" % data.get("environment_stress", 0.0))
 	print("=====================================")
