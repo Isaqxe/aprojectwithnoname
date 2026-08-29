@@ -106,6 +106,29 @@ func create_cell(position: Vector2, is_player: bool = false) -> Node:
 
 	return new_cell
 
+func create_cell_from_parent(parent_cell: Node, position: Vector2 = Vector2.ZERO) -> Node:
+	if parent_cell == null or not is_instance_valid(parent_cell):
+		return null
+	if not parent_cell.has_method("get_heredity_data"):
+		return null
+	if get_population() >= max_population:
+		return null
+
+	var inherited_data: Dictionary = parent_cell.get_heredity_data()
+	var new_cell: Node = cell_factory.create_cell(position, false, inherited_data)
+	if new_cell == null:
+		return null
+
+	cell_container.add_child(new_cell)
+	register_cell(new_cell)
+
+	var species_id: String = String(new_cell.get("species_id"))
+	if species_id.is_empty():
+		species_id = "default"
+	register_species(species_id)
+
+	return new_cell
+
 func spawn_cell(is_player: bool = false) -> Node:
 	if get_population() >= max_population:
 		return null
@@ -125,6 +148,24 @@ func spawn_player(position: Vector2) -> Node:
 		return null
 
 	return create_cell(position, true)
+
+func spawn_mitosis_child(parent_cell: Node) -> Node:
+	if parent_cell == null or not is_instance_valid(parent_cell):
+		return null
+	if get_population() >= max_population:
+		return null
+
+	var parent_data = parent_cell.get("cell_data")
+	if parent_data == null:
+		return null
+
+	var parent_position: Vector2 = parent_cell.global_position
+	var parent_size: float = float(parent_data.size)
+	var spawn_angle: float = randf_range(0.0, TAU)
+	var spawn_distance: float = parent_size + 30.0
+	var child_position: Vector2 = parent_position + Vector2.from_angle(spawn_angle) * spawn_distance
+
+	return create_cell_from_parent(parent_cell, child_position)
 
 func _process(delta: float) -> void:
 	_cleanup_invalid_cells()
