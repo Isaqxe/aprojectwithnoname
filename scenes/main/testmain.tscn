@@ -25,5 +25,5 @@ seed_stat_variation = 0.4
 environment = SubResource("Environment_glow")
 
 [node name="GPUProceduralWorld" parent="." unique_id=852626813 instance=ExtResource("4_kikly")]
-world_seed = 122198
+world_seed = 131313
 void_threshold = 0.75
