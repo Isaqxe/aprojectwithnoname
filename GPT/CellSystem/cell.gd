@@ -54,6 +54,13 @@ func attack(target: Node) -> void:
 	if target != null and target.has_method("take_damage"):
 		target.take_damage(damage, self)
 
+func can_accept_resources() -> bool:
+	if not alive:
+		return false
+	if not use_resource_capacity:
+		return true
+	return resources < resource_capacity
+
 func add_resources(amount: float) -> void:
 	if not alive or amount <= 0.0:
 		return
@@ -66,6 +73,14 @@ func consume_resources(amount: float) -> bool:
 	if not alive or amount <= 0.0 or resources < amount:
 		return false
 	resources -= amount
+	return true
+
+func take_environmental_damage(amount: float) -> bool:
+	if not alive or amount <= 0.0:
+		return false
+	health -= amount
+	if health <= 0.0:
+		die()
 	return true
 
 func die() -> void:
