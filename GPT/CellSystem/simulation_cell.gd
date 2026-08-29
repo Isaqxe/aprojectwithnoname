@@ -1,12 +1,13 @@
 extends CharacterBody2D
 
 ## Integrated organism used by the CellSystem simulation.
-## Combines generic cell data, behavior, fear and combat prototypes.
+## Combines generic cell data, behavior, fear, combat and mitosis prototypes.
 
 const CELL_SCRIPT := preload("res://GPT/CellSystem/cell.gd")
 const BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior.gd")
 const FEAR_SCRIPT := preload("res://GPT/CellSystem/cell_fear.gd")
 const COMBAT_SCRIPT := preload("res://GPT/CellSystem/cell_combat.gd")
+const MITOSIS_SCRIPT := preload("res://GPT/CellSystem/cell_mitosis.gd")
 
 @export var is_player_controlled: bool = false
 @export var species_id: String = "default"
@@ -17,27 +18,25 @@ const COMBAT_SCRIPT := preload("res://GPT/CellSystem/cell_combat.gd")
 @export var resource_collect_radius: float = 18.0
 @export var combat_contact_margin: float = 2.0
 
+var inherited_data: Dictionary = {}
 var cell_data: CharacterBody2D
 var behavior: CellBehavior
 var fear_system: Node
 var combat: Node
+var mitosis: Node
 var _target: CharacterBody2D
 var _resource_target: Area2D
 var _direction := Vector2.ZERO
 var _retarget_timer := 0.0
+var _wander_time: float = 0.0
 var _base_color := Color.WHITE
 var _flash_timer := 0.0
 var _collision_shape: CollisionShape2D
+var _cell_manager: Node
 
 func _ready() -> void:
 	cell_data = CELL_SCRIPT.new()
-	cell_data.max_health = randf_range(40.0, 120.0)
-	cell_data.damage = randf_range(5.0, 25.0)
-	cell_data.speed = randf_range(45.0, 100.0)
-	cell_data.size = randf_range(10.0, 24.0)
-	cell_data.species_id = species_id
-	cell_data.is_player_controlled = is_player_controlled
-	cell_data.health = cell_data.max_health
+	_apply_initial_biology()
 	add_child(cell_data)
 
 	behavior = BEHAVIOR_SCRIPT.new()
@@ -51,8 +50,13 @@ func _ready() -> void:
 	combat.cooldown = randf_range(0.35, 0.65)
 	add_child(combat)
 
+	mitosis = MITOSIS_SCRIPT.new()
+	add_child(mitosis)
+
 	_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
 	_update_collision_shape()
+
+	_cell_manager = get_tree().get_first_node_in_group("CellManagers")
 
 	add_to_group("SimCells")
 	_base_color = Color.from_hsv(randf(), 0.55, 0.95)
@@ -64,8 +68,15 @@ func _physics_process(delta: float) -> void:
 
 	combat.update(delta)
 	_flash_timer = maxf(_flash_timer - delta, 0.0)
-	_retarget_timer -= delta
 
+	if mitosis.active:
+		velocity = Vector2.ZERO
+		if mitosis.update(delta):
+			_finish_mitosis()
+		queue_redraw()
+		return
+
+	_retarget_timer -= delta
 	if is_player_controlled:
 		_process_player()
 	else:
@@ -75,27 +86,50 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_process_collisions()
 	_process_resources()
+	_process_mitosis(delta)
 	queue_redraw()
+
+func _apply_initial_biology() -> void:
+	if inherited_data.is_empty():
+		cell_data.max_health = randf_range(40.0, 120.0)
+		cell_data.damage = randf_range(5.0, 25.0)
+		cell_data.speed = randf_range(45.0, 100.0)
+		cell_data.size = randf_range(10.0, 24.0)
+		cell_data.species_id = species_id
+	else:
+		cell_data.max_health = float(inherited_data.get("max_health", 100.0))
+		cell_data.damage = float(inherited_data.get("damage", 10.0))
+		cell_data.speed = float(inherited_data.get("speed", 75.0))
+		cell_data.size = float(inherited_data.get("size", 16.0))
+		cell_data.species_id = String(inherited_data.get("species_id", species_id))
+
+	cell_data.is_player_controlled = is_player_controlled
+	cell_data.health = cell_data.max_health
+	cell_data.resources = 0.0
 
 func _process_player() -> void:
 	behavior.set_state(CellBehavior.BehaviorState.WANDER)
+	_wander_time += get_physics_process_delta_time()
 	var input_direction: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	_direction = input_direction.normalized()
+	if input_direction.length_squared() > 0.01:
+		_wander_time = 0.0
 
 func _process_ai() -> void:
-	if _retarget_timer <= 0.0 or not is_instance_valid(_target):
+	if _retarget_timer <= 0.0 or (not is_instance_valid(_target) and not is_instance_valid(_resource_target)):
 		_target = _find_best_target()
 		_resource_target = _find_nearest_resource() if not is_instance_valid(_target) else null
 		_retarget_timer = 0.15
 
 	if is_instance_valid(_target):
+		_wander_time = 0.0
 		var target_data = _target.get("cell_data")
 		if target_data == null or not target_data.alive:
 			_target = null
 			behavior.set_state(CellBehavior.BehaviorState.WANDER)
 			return
 
-		var decision: String = fear_system.evaluate(cell_data, target_data)
+		var decision: String = String(fear_system.evaluate(cell_data, target_data))
 		behavior.evaluate_cell(cell_data, target_data)
 
 		if decision == "FLEE":
@@ -107,10 +141,12 @@ func _process_ai() -> void:
 	if is_instance_valid(_resource_target) and cell_data.resources < cell_data.resource_capacity:
 		behavior.evaluate_resource(cell_data)
 		_direction = global_position.direction_to(_resource_target.global_position)
+		_wander_time = 0.0
 	else:
 		_resource_target = null
 		behavior.set_state(CellBehavior.BehaviorState.WANDER)
 		_wander()
+		_wander_time += get_physics_process_delta_time()
 
 func _find_best_target() -> CharacterBody2D:
 	var best: CharacterBody2D = null
@@ -149,6 +185,18 @@ func get_cell_power() -> float:
 		return 0.0
 	return fear_system.get_cell_power(cell_data)
 
+func get_heredity_data() -> Dictionary:
+	if cell_data == null:
+		return {}
+
+	return {
+		"max_health": cell_data.max_health,
+		"damage": cell_data.damage,
+		"speed": cell_data.speed,
+		"size": cell_data.size,
+		"species_id": cell_data.species_id
+	}
+
 func _process_collisions() -> void:
 	for index in range(get_slide_collision_count()):
 		var collision: KinematicCollision2D = get_slide_collision(index)
@@ -162,11 +210,8 @@ func _process_collisions() -> void:
 		if not collider.has_method("take_damage"):
 			continue
 
-		var was_alive: bool = true
 		var target_data = collider.get("cell_data")
-		if target_data != null:
-			was_alive = target_data.alive
-
+		var was_alive: bool = target_data != null and target_data.alive
 		combat.attack(collider)
 
 		if was_alive and target_data != null and not target_data.alive:
@@ -205,6 +250,40 @@ func _collect_resource(resource_node: Area2D) -> void:
 	if collected > 0.0:
 		cell_data.add_resources(collected)
 	_resource_target = null
+
+func _process_mitosis(delta: float) -> void:
+	if not mitosis.active:
+		if behavior.state == CellBehavior.BehaviorState.WANDER and _wander_time >= mitosis.required_wander_time and cell_data.resources >= mitosis.required_resources:
+			_start_mitosis()
+		return
+
+	if mitosis.update(delta):
+		_finish_mitosis()
+
+func _start_mitosis() -> void:
+	if mitosis.active:
+		return
+	if cell_data.resources < mitosis.resource_cost:
+		return
+	if _cell_manager == null or not is_instance_valid(_cell_manager):
+		_cell_manager = get_tree().get_first_node_in_group("CellManagers")
+	if _cell_manager == null or not _cell_manager.has_method("spawn_mitosis_child"):
+		return
+
+	if not cell_data.consume_resources(mitosis.resource_cost):
+		return
+
+	_wander_time = 0.0
+	_direction = Vector2.ZERO
+	behavior.set_state(CellBehavior.BehaviorState.MITOSIS)
+	mitosis.start()
+
+func _finish_mitosis() -> void:
+	if _cell_manager != null and is_instance_valid(_cell_manager):
+		_cell_manager.spawn_mitosis_child(self)
+	behavior.set_state(CellBehavior.BehaviorState.WANDER)
+	_wander_time = 0.0
+	mitosis.reset()
 
 func take_damage(amount: float) -> void:
 	if cell_data == null:
