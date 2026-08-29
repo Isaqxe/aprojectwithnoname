@@ -12,14 +12,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	inspect_at_mouse()
+	get_viewport().set_input_as_handled()
 
 func inspect_at_mouse() -> void:
-	var camera: Camera2D = get_viewport().get_camera_2d()
-	if camera == null:
-		print("CellInspector: no Camera2D found.")
-		return
+	var viewport: Viewport = get_viewport()
+	var world_position: Vector2 = viewport.get_canvas_transform().affine_inverse() * viewport.get_mouse_position()
 
-	var world_position: Vector2 = camera.get_global_mouse_position()
 	var query := PhysicsPointQueryParameters2D.new()
 	query.position = world_position
 	query.collision_mask = collision_mask
