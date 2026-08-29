@@ -78,15 +78,15 @@ func _physics_process(delta: float) -> void:
 
 	_retarget_timer -= delta
 	if is_player_controlled:
-		_process_player()
+		_process_player(delta)
 	else:
-		_process_ai()
+		_process_ai(delta)
 
 	velocity = _direction * cell_data.speed
 	move_and_slide()
 	_process_collisions()
 	_process_resources()
-	_process_mitosis(delta)
+	_process_mitosis()
 	queue_redraw()
 
 func _apply_initial_biology() -> void:
@@ -107,15 +107,15 @@ func _apply_initial_biology() -> void:
 	cell_data.health = cell_data.max_health
 	cell_data.resources = 0.0
 
-func _process_player() -> void:
+func _process_player(delta: float) -> void:
 	behavior.set_state(CellBehavior.BehaviorState.WANDER)
-	_wander_time += get_physics_process_delta_time()
+	_wander_time += delta
 	var input_direction: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	_direction = input_direction.normalized()
 	if input_direction.length_squared() > 0.01:
 		_wander_time = 0.0
 
-func _process_ai() -> void:
+func _process_ai(delta: float) -> void:
 	if _retarget_timer <= 0.0 or (not is_instance_valid(_target) and not is_instance_valid(_resource_target)):
 		_target = _find_best_target()
 		_resource_target = _find_nearest_resource() if not is_instance_valid(_target) else null
@@ -146,7 +146,7 @@ func _process_ai() -> void:
 		_resource_target = null
 		behavior.set_state(CellBehavior.BehaviorState.WANDER)
 		_wander()
-		_wander_time += get_physics_process_delta_time()
+		_wander_time += delta
 
 func _find_best_target() -> CharacterBody2D:
 	var best: CharacterBody2D = null
@@ -251,26 +251,27 @@ func _collect_resource(resource_node: Area2D) -> void:
 		cell_data.add_resources(collected)
 	_resource_target = null
 
-func _process_mitosis(delta: float) -> void:
-	if not mitosis.active:
-		if behavior.state == CellBehavior.BehaviorState.WANDER and _wander_time >= mitosis.required_wander_time and cell_data.resources >= mitosis.required_resources:
-			_start_mitosis()
-		return
-
-	if mitosis.update(delta):
-		_finish_mitosis()
-
-func _start_mitosis() -> void:
+func _process_mitosis() -> void:
 	if mitosis.active:
 		return
-	if cell_data.resources < mitosis.resource_cost:
+
+	if behavior.state != CellBehavior.BehaviorState.WANDER:
+		return
+	if _wander_time < mitosis.required_wander_time:
+		return
+	if cell_data.resources < mitosis.required_resources:
 		return
 	if _cell_manager == null or not is_instance_valid(_cell_manager):
 		_cell_manager = get_tree().get_first_node_in_group("CellManagers")
 	if _cell_manager == null or not _cell_manager.has_method("spawn_mitosis_child"):
 		return
+	if _cell_manager.get_population() >= _cell_manager.max_population:
+		return
 
-	if not cell_data.consume_resources(mitosis.resource_cost):
+	_start_mitosis()
+
+func _start_mitosis() -> void:
+	if mitosis.active or not cell_data.consume_resources(mitosis.resource_cost):
 		return
 
 	_wander_time = 0.0
