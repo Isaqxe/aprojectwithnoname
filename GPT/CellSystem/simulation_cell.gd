@@ -1,7 +1,7 @@
 extends CharacterBody2D
 
 ## Integrated organism used by the CellSystem simulation.
-## Combines generic cell data, behavior, fear, combat, mitosis and genetics.
+## Combines generic cell data, behavior, fear, combat, mitosis, genetics and adaptation.
 
 const CELL_SCRIPT := preload("res://GPT/CellSystem/cell.gd")
 const BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior.gd")
@@ -9,6 +9,7 @@ const FEAR_SCRIPT := preload("res://GPT/CellSystem/cell_fear.gd")
 const COMBAT_SCRIPT := preload("res://GPT/CellSystem/cell_combat.gd")
 const MITOSIS_SCRIPT := preload("res://GPT/CellSystem/cell_mitosis.gd")
 const GENETICS_SCRIPT := preload("res://GPT/CellSystem/cell_genetics.gd")
+const ADAPTATION_SCRIPT := preload("res://GPT/CellSystem/cell_adaptation.gd")
 
 @export var is_player_controlled: bool = false
 @export var species_id: String = "default"
@@ -26,6 +27,7 @@ var fear_system: Node
 var combat: Node
 var mitosis: Node
 var genetics: Node
+var adaptation: Node
 var _target: CharacterBody2D
 var _resource_target: Area2D
 var _direction := Vector2.ZERO
@@ -79,6 +81,10 @@ func _ready() -> void:
 
 	add_child(genetics)
 
+	adaptation = ADAPTATION_SCRIPT.new()
+	adaptation.setup(self)
+	add_child(adaptation)
+
 	combat = COMBAT_SCRIPT.new()
 	combat.damage = cell_data.damage
 	combat.cooldown = randf_range(0.35, 0.65)
@@ -120,6 +126,7 @@ func _physics_process(delta: float) -> void:
 	_process_collisions()
 	_process_resources()
 	_process_mitosis()
+	_process_environment(delta)
 
 	if behavior.state == CellBehavior.BehaviorState.WANDER:
 		cell_data.regenerate(delta)
@@ -185,7 +192,7 @@ func _process_ai(delta: float) -> void:
 			_direction = global_position.direction_to(_target.global_position)
 		return
 
-	if is_instance_valid(_resource_target) and cell_data.resources < cell_data.resource_capacity:
+	if is_instance_valid(_resource_target) and cell_data.can_accept_resources():
 		behavior.evaluate_resource(cell_data)
 		_direction = global_position.direction_to(_resource_target.global_position)
 		_wander_time = 0.0
@@ -273,7 +280,9 @@ func get_inspection_data() -> Dictionary:
 		"resource_capacity": cell_data.resource_capacity,
 		"mitosis_count": mitosis.mitosis_count,
 		"next_mitosis_cost": mitosis.get_resource_cost(),
-		"genes": lineage.get("genes", {})
+		"genes": lineage.get("genes", {}),
+		"environment": adaptation.last_environment if adaptation != null else {},
+		"environment_stress": adaptation.get_stress() if adaptation != null else 0.0
 	}
 
 func _process_collisions() -> void:
@@ -301,7 +310,7 @@ func _process_collisions() -> void:
 				_target = null
 
 func _process_resources() -> void:
-	if cell_data.resources >= cell_data.resource_capacity:
+	if not cell_data.can_accept_resources():
 		_resource_target = null
 		return
 
@@ -331,6 +340,11 @@ func _collect_resource(resource_node: Area2D) -> void:
 	if collected > 0.0:
 		cell_data.add_resources(collected)
 	_resource_target = null
+
+func _process_environment(delta: float) -> void:
+	if adaptation == null or not is_instance_valid(adaptation):
+		return
+	adaptation.apply_stress(delta, genetics)
 
 func _process_mitosis() -> void:
 	if mitosis.active:
