@@ -7,7 +7,7 @@ extends Node2D
 @onready var cell_manager: Node = $CellManager
 @onready var resource_spawner: Node2D = $ResourceSpawner
 @onready var simulation_camera: Camera2D = $SimulationCamera
-@onready var debug_label: Label = $Debug
+@onready var debug_label: Label = $DebugLayer/Debug
 
 func _process(_delta: float) -> void:
 	if Input.is_key_pressed(KEY_SPACE):
