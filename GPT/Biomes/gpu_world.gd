@@ -3,6 +3,7 @@ extends Node2D
 ## Mundo procedural experimental renderizado por GPU.
 ## A CPU mantém somente os chunks; a aparência de cada chunk é produzida por shader.
 ## A classificação do bioma também pode ser consultada pela CPU para sistemas de gameplay.
+## O streaming visual usa a SimulationCamera como centro espacial quando disponível.
 
 @export_category("World")
 @export var world_seed: int = 123456
@@ -32,7 +33,7 @@ extends Node2D
 @export var border_detail_frequency: float = 0.0025
 @export var border_detail_strength: float = 0.18
 
-var _player: Node2D
+var _center_target: Node2D
 var _loaded_chunks: Dictionary = {}
 var _shader: Shader
 var _shader_template: ShaderMaterial
@@ -40,17 +41,19 @@ var _last_generation_center := Vector2i(999999, 999999)
 
 func _ready() -> void:
 	_setup_material()
-	_find_player.call_deferred()
+	_find_center_target.call_deferred()
 	if generate_without_player:
 		_update_chunks(Vector2i.ZERO)
 
 func _process(_delta: float) -> void:
-	if _player == null or not is_instance_valid(_player):
-		_find_player()
-		if not generate_without_player:
+	if _center_target == null or not is_instance_valid(_center_target):
+		_find_center_target()
+		if _center_target == null or not generate_without_player:
 			return
-		return
-	_update_chunks(_world_to_chunk(_player.global_position))
+		if _center_target == null:
+			return
+
+	_update_chunks(_world_to_chunk(_center_target.global_position))
 
 ## Returns the gameplay biome at a world position using the same noise model
 ## and thresholds as gpu_biome.gdshader.
@@ -156,8 +159,17 @@ func _setup_material() -> void:
 	_shader_template.set_shader_parameter("warp_strength", warp_strength)
 	_shader_template.set_shader_parameter("border_detail_strength", border_detail_strength)
 
-func _find_player() -> void:
-	_player = get_tree().get_first_node_in_group("PlayerCharacter") as Node2D
+func _find_center_target() -> void:
+	var camera: Node2D = get_tree().get_first_node_in_group("SimulationCameras") as Node2D
+	if camera != null and is_instance_valid(camera):
+		_center_target = camera
+		return
+
+	var manager: Node = get_tree().get_first_node_in_group("CellManagers")
+	if manager != null and is_instance_valid(manager) and manager.has_method("get_player"):
+		var player: Node = manager.get_player()
+		if player is Node2D and is_instance_valid(player):
+			_center_target = player as Node2D
 
 func _update_chunks(center_chunk: Vector2i) -> void:
 	if center_chunk == _last_generation_center and not _loaded_chunks.is_empty():
