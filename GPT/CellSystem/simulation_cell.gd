@@ -65,6 +65,7 @@ func _ready() -> void:
 		genetics.set_gene("damage", cell_data.damage)
 		genetics.set_gene("speed", cell_data.speed)
 		genetics.set_gene("size", cell_data.size)
+		genetics.set_gene("regeneration_rate", cell_data.regeneration_rate)
 	else:
 		genetics.species_id = cell_data.species_id
 		var inherited_genes: Dictionary = inherited_data.get("genes", {})
@@ -76,6 +77,7 @@ func _ready() -> void:
 			genetics.set_gene("damage", cell_data.damage)
 			genetics.set_gene("speed", cell_data.speed)
 			genetics.set_gene("size", cell_data.size)
+			genetics.set_gene("regeneration_rate", cell_data.regeneration_rate)
 	add_child(genetics)
 
 	_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
