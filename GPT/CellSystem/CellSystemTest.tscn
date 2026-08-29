@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://dsyrxh21qpnf0"]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://GPT/CellSystem/test_simulation.gd" id="1_test"]
 [ext_resource type="Script" path="res://GPT/CellSystem/cell_manager.gd" id="2_manager"]
@@ -7,9 +7,24 @@
 [ext_resource type="Script" path="res://GPT/CellSystem/world_resource_spawner.gd" id="5_resource_spawner"]
 [ext_resource type="PackedScene" path="res://GPT/CellSystem/world_resource.tscn" id="6_resource"]
 [ext_resource type="Script" path="res://GPT/CellSystem/cell_inspector.gd" id="7_inspector"]
+[ext_resource type="PackedScene" path="res://GPT/Biomes/gpu_world.tscn" id="8_world"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_top"]
+size = Vector2(940.0, 20.0)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_bottom"]
+size = Vector2(940.0, 20.0)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_left"]
+size = Vector2(20.0, 580.0)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_right"]
+size = Vector2(20.0, 580.0)
 
 [node name="CellSystemTest" type="Node2D" unique_id=442408827]
 script = ExtResource("1_test")
+
+[node name="GPUProceduralWorld" parent="." instance=ExtResource("8_world")]
 
 [node name="CellManager" type="Node" parent="." unique_id=1751606464]
 script = ExtResource("2_manager")
@@ -25,9 +40,29 @@ cell_scene = ExtResource("4_cell")
 [node name="ResourceSpawner" type="Node2D" parent="." unique_id=2036286132]
 script = ExtResource("5_resource_spawner")
 resource_scene = ExtResource("6_resource")
+allow_void_resources = true
+void_spawn_multiplier = 1.0
 
 [node name="CellInspector" type="Node" parent="." unique_id=2036286133]
 script = ExtResource("7_inspector")
+
+[node name="SimulationBounds" type="StaticBody2D" parent="."]
+
+[node name="Top" type="CollisionShape2D" parent="SimulationBounds"]
+position = Vector2(0.0, -300.0)
+shape = SubResource("RectangleShape2D_top")
+
+[node name="Bottom" type="CollisionShape2D" parent="SimulationBounds"]
+position = Vector2(0.0, 300.0)
+shape = SubResource("RectangleShape2D_bottom")
+
+[node name="Left" type="CollisionShape2D" parent="SimulationBounds"]
+position = Vector2(-450.0, 0.0)
+shape = SubResource("RectangleShape2D_left")
+
+[node name="Right" type="CollisionShape2D" parent="SimulationBounds"]
+position = Vector2(450.0, 0.0)
+shape = SubResource("RectangleShape2D_right")
 
 [node name="Debug" type="Label" parent="." unique_id=1791475315]
 offset_left = 20.0
