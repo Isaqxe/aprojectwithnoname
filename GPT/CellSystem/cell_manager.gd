@@ -92,13 +92,13 @@ func _initialize_species() -> void:
 		register_species(_generate_species_name())
 
 func _generate_species_name() -> String:
-	var name: String = ""
+	var generated_name: String = ""
 	var attempts: int = 0
 
 	while attempts < 20:
-		name = SPECIES_PREFIXES.pick_random() + SPECIES_MIDDLES.pick_random() + SPECIES_SUFFIXES.pick_random()
-		if not known_species.has(name):
-			return name
+		generated_name = SPECIES_PREFIXES.pick_random() + SPECIES_MIDDLES.pick_random() + SPECIES_SUFFIXES.pick_random()
+		if not known_species.has(generated_name):
+			return generated_name
 		attempts += 1
 
 	return "Species_%d" % (known_species.size() + 1)
@@ -163,11 +163,11 @@ func create_cell_from_parent(parent_cell: Node, position: Vector2 = Vector2.ZERO
 	cell_container.add_child(new_cell)
 	register_cell(new_cell)
 
-	var species_id: String = String(new_cell.get("species_id"))
-	if species_id.is_empty():
-		species_id = _get_random_species_id()
-		new_cell.species_id = species_id
-	register_species(species_id)
+	var child_species_id: String = String(new_cell.get("species_id"))
+	if child_species_id.is_empty():
+		child_species_id = _get_random_species_id()
+		new_cell.species_id = child_species_id
+	register_species(child_species_id)
 
 	return new_cell
 
