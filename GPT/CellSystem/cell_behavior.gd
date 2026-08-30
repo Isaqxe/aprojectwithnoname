@@ -24,11 +24,15 @@ var threat_count: int = 0
 var total_threat_strength: float = 0.0
 
 @export_category("Social Steering")
-@export var cohesion_weight: float = 0.55
-@export var alignment_weight: float = 0.20
-@export var separation_weight: float = 0.70
+@export var cohesion_weight: float = 0.38
+@export var alignment_weight: float = 0.14
+@export var separation_weight: float = 1.10
 @export var cohesion_radius: float = 150.0
-@export var separation_radius: float = 42.0
+@export var separation_radius: float = 46.0
+@export var max_cohesion_allies: int = 8
+
+@export_category("Neutrality")
+@export var neutral_aggression_threshold: float = 0.30
 
 @export_category("Collective Defense")
 @export var defense_advantage: float = 1.10
@@ -72,6 +76,9 @@ func is_same_species(my_cell, other_cell) -> bool:
 	var other_species: String = _get_species_id(other_cell)
 	return not my_species.is_empty() and my_species == other_species
 
+func is_neutral(my_cell) -> bool:
+	return _get_behavior_gene("aggression", 0.5) < neutral_aggression_threshold
+
 func is_valid_enemy(my_cell, other_cell) -> bool:
 	if my_cell == null or other_cell == null or my_cell == other_cell:
 		return false
@@ -100,6 +107,10 @@ func evaluate_cell(my_cell, other_cell) -> BehaviorState:
 	var caution: float = _get_behavior_gene("caution", 0.5)
 	var aggression_gene: float = _get_behavior_gene("aggression", 0.5)
 	aggression = aggression_gene
+	if aggression_gene < neutral_aggression_threshold:
+		state = BehaviorState.FLEE
+		return state
+
 	var flee_threshold: float = 1.0 + caution * 0.35
 	var hunt_threshold: float = 1.0 - aggression_gene * 0.25
 
@@ -153,11 +164,9 @@ func evaluate_collective_cell(my_cell, other_cell, ally_cells: Array) -> Behavio
 					continue
 				if not candidate is Node2D:
 					continue
-
 				var distance: float = owner_cell.global_position.distance_to((candidate as Node2D).global_position)
 				if distance > perception:
 					continue
-
 				var proximity: float = 1.0 - clampf(distance / perception, 0.0, 1.0)
 				var weighted_strength: float = calculate_strength(candidate) * maxf(proximity, 0.20)
 				if weighted_strength <= 0.0:
@@ -188,13 +197,16 @@ func evaluate_collective_cell(my_cell, other_cell, ally_cells: Array) -> Behavio
 		return state
 
 	if total_threat_strength > individual_strength * flee_multiplier:
-		if enough_defenders and has_collective_advantage and group_response >= 0.45:
+		if enough_defenders and has_collective_advantage and group_response >= 0.45 and aggression_gene >= neutral_aggression_threshold:
 			state = BehaviorState.HUNT
 		else:
 			state = BehaviorState.FLEE
 	else:
-		var hunt_multiplier: float = 1.0 - aggression_gene * 0.25
-		state = BehaviorState.HUNT if total_threat_strength <= individual_strength * hunt_multiplier else BehaviorState.FLEE
+		if aggression_gene < neutral_aggression_threshold:
+			state = BehaviorState.FLEE
+		else:
+			var hunt_multiplier: float = 1.0 - aggression_gene * 0.25
+			state = BehaviorState.HUNT if total_threat_strength <= individual_strength * hunt_multiplier else BehaviorState.FLEE
 
 	return state
 
@@ -222,14 +234,16 @@ func calculate_social_steering(origin: Vector2, desired_direction: Vector2, ally
 		return result.normalized() if result.length_squared() > 0.0001 else Vector2.ZERO
 
 	var sociality: float = _get_behavior_gene("sociality", 0.5)
-	var cohesion_factor: float = cohesion_weight * (0.35 + sociality * 0.65)
-	var alignment_factor: float = alignment_weight * (0.35 + sociality * 0.65)
-	var separation_factor: float = separation_weight
+	var nearby_count: int = ally_positions.size()
+	var crowd_factor: float = clampf(float(max_cohesion_allies) / maxf(float(nearby_count), 1.0), 0.20, 1.0)
+	var cohesion_factor: float = cohesion_weight * (0.25 + sociality * 0.55) * crowd_factor
+	var alignment_factor: float = alignment_weight * (0.35 + sociality * 0.65) * crowd_factor
+	var separation_factor: float = separation_weight * (1.0 + minf(float(nearby_count), 12.0) * 0.05)
 
-	var cohesion_vector := Vector2.ZERO
-	var separation_vector := Vector2.ZERO
-	var alignment_vector := Vector2.ZERO
-	var nearby_count: int = 0
+	var cohesion_vector: Vector2 = Vector2.ZERO
+	var separation_vector: Vector2 = Vector2.ZERO
+	var alignment_vector: Vector2 = Vector2.ZERO
+	var nearby_in_radius: int = 0
 	var alignment_count: int = 0
 
 	for index in range(ally_positions.size()):
@@ -237,21 +251,18 @@ func calculate_social_steering(origin: Vector2, desired_direction: Vector2, ally
 		var distance: float = offset.length()
 		if distance <= 0.001 or distance > cohesion_radius:
 			continue
-
 		cohesion_vector += offset
-		nearby_count += 1
-
+		nearby_in_radius += 1
 		if distance < separation_radius:
 			var normalized_offset: Vector2 = offset / distance
 			var closeness: float = 1.0 - clampf(distance / separation_radius, 0.0, 1.0)
-			separation_vector -= normalized_offset * closeness
-
+			separation_vector -= normalized_offset * closeness * (1.0 + closeness)
 		if index < ally_velocities.size():
 			alignment_vector += ally_velocities[index]
 			alignment_count += 1
 
-	if nearby_count > 0:
-		cohesion_vector /= float(nearby_count)
+	if nearby_in_radius > 0:
+		cohesion_vector /= float(nearby_in_radius)
 		if cohesion_vector.length_squared() > 0.0001:
 			result += cohesion_vector.normalized() * cohesion_factor
 
