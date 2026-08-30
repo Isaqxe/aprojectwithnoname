@@ -1,6 +1,7 @@
 extends Node
 
 ## CellManager coordinates cell creation, registration, cleanup and spatial streaming.
+## Genetics owns individual species identity; the manager owns the species registry.
 ## The ExperimentalDomain defines the valid laboratory-slide area.
 
 @export var cell_factory: Node
@@ -102,11 +103,12 @@ func unregister_cell(cell: Node) -> void:
 		player_cell = null
 
 func register_species(species_id: String) -> void:
-	if species_id.is_empty():
+	var normalized_id: String = species_id.strip_edges()
+	if normalized_id.is_empty() or normalized_id == "default":
 		return
-	if not known_species.has(species_id):
-		known_species[species_id] = true
-		species_colors[species_id] = _generate_species_color()
+	if not known_species.has(normalized_id):
+		known_species[normalized_id] = true
+		species_colors[normalized_id] = _generate_species_color()
 
 func get_species_ids() -> Array[String]:
 	var species_ids: Array[String] = []
@@ -115,11 +117,12 @@ func get_species_ids() -> Array[String]:
 	return species_ids
 
 func get_species_color(species_id: String) -> Color:
-	if species_id.is_empty():
+	var normalized_id: String = species_id.strip_edges()
+	if normalized_id.is_empty() or normalized_id == "default":
 		return Color.WHITE
-	if not species_colors.has(species_id):
-		register_species(species_id)
-	return species_colors.get(species_id, Color.WHITE)
+	if not species_colors.has(normalized_id):
+		register_species(normalized_id)
+	return species_colors.get(normalized_id, Color.WHITE)
 
 func _generate_species_color() -> Color:
 	return Color.from_hsv(randf(), 0.60, 0.95)
@@ -164,21 +167,23 @@ func create_cell(position: Vector2, is_player: bool = false, species_id_override
 	if cell_factory == null or not is_instance_valid(cell_factory):
 		return null
 
+	var resolved_species_id: String = species_id_override.strip_edges()
+	if resolved_species_id.is_empty() or resolved_species_id == "default":
+		resolved_species_id = _get_random_species_id()
+
 	var spawn_position: Vector2 = _clamp_to_domain(position)
 	var new_cell: Node = cell_factory.create_cell(spawn_position, is_player)
 	if new_cell == null:
 		return null
 
-	if not species_id_override.is_empty():
-		new_cell.species_id = species_id_override
+	if new_cell.has_method("set_species_id"):
+		if not new_cell.set_species_id(resolved_species_id):
+			return null
+	else:
+		new_cell.set("species_id", resolved_species_id)
 
 	cell_container.add_child(new_cell)
 	register_cell(new_cell)
-
-	var resolved_species_id: String = String(new_cell.get("species_id"))
-	if resolved_species_id.is_empty() or resolved_species_id == "default":
-		resolved_species_id = _get_random_species_id()
-		new_cell.species_id = resolved_species_id
 	register_species(resolved_species_id)
 
 	if new_cell.has_method("set_species_color"):
@@ -198,6 +203,10 @@ func create_cell_from_parent(parent_cell: Node, position: Vector2 = Vector2.ZERO
 		return null
 
 	var inherited_data: Dictionary = parent_cell.get_heredity_data()
+	var inherited_species: String = String(inherited_data.get("species_id", "")).strip_edges()
+	if inherited_species.is_empty() or inherited_species == "default":
+		return null
+
 	var child_position: Vector2 = _clamp_to_domain(position)
 	var new_cell: Node = cell_factory.create_cell(child_position, false, inherited_data)
 	if new_cell == null:
@@ -206,10 +215,11 @@ func create_cell_from_parent(parent_cell: Node, position: Vector2 = Vector2.ZERO
 	cell_container.add_child(new_cell)
 	register_cell(new_cell)
 
-	var child_species_id: String = String(new_cell.get("species_id"))
-	if child_species_id.is_empty():
-		child_species_id = _get_random_species_id()
-		new_cell.species_id = child_species_id
+	if not new_cell.has_method("get_species_id"):
+		return null
+	var child_species_id: String = new_cell.get_species_id()
+	if child_species_id.is_empty() or child_species_id == "default":
+		return null
 	register_species(child_species_id)
 
 	if new_cell.has_method("set_species_color"):
