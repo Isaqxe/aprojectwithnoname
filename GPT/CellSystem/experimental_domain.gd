@@ -13,6 +13,9 @@ class_name ExperimentalDomain
 @export_range(0.0, 1.0) var base_temperature: float = 0.50
 @export_range(0.0, 1.0) var base_humidity: float = 0.50
 @export_range(0.0, 1.0) var base_food_density: float = 1.00
+@export_range(0.0, 1.0) var temperature_variation: float = 0.35
+@export_range(0.0, 1.0) var humidity_variation: float = 0.30
+@export_range(0.0, 1.0) var food_edge_penalty: float = 0.45
 
 func _ready() -> void:
 	add_to_group("ExperimentalDomains")
@@ -44,8 +47,9 @@ func random_position(margin: float = 0.0) -> Vector2:
 	var distance: float = sqrt(randf()) * maximum_radius
 	return center + Vector2.from_angle(angle) * distance
 
-## Lightweight environment query used by gameplay.
-## The science-fair laboratory is intentionally uniform for now.
+## Continuous laboratory environment. No procedural biome map is required.
+## Temperature changes vertically, humidity horizontally, and food density
+## is slightly reduced toward the edge of the experimental slide.
 func get_environment_at(world_position: Vector2) -> Dictionary:
 	if not contains_position(world_position):
 		return {
@@ -56,11 +60,26 @@ func get_environment_at(world_position: Vector2) -> Dictionary:
 			"inside_domain": false
 		}
 
+	var center: Vector2 = get_center()
+	var safe_radius: float = maxf(get_radius(), 1.0)
+	var relative: Vector2 = (world_position - center) / safe_radius
+	var normalized_y: float = clampf(relative.y, -1.0, 1.0)
+	var normalized_x: float = clampf(relative.x, -1.0, 1.0)
+	var radial_distance: float = clampf(relative.length(), 0.0, 1.0)
+
+	var vertical_factor: float = normalized_y * 0.5 + 0.5
+	var horizontal_factor: float = normalized_x * 0.5 + 0.5
+	var edge_factor: float = smoothstep(0.0, 1.0, radial_distance)
+
+	var temperature: float = clampf(base_temperature + (vertical_factor - 0.5) * 2.0 * temperature_variation, 0.0, 1.0)
+	var humidity: float = clampf(base_humidity + (horizontal_factor - 0.5) * 2.0 * humidity_variation, 0.0, 1.0)
+	var food_density: float = clampf(base_food_density * (1.0 - edge_factor * food_edge_penalty), 0.0, 1.0)
+
 	return {
 		"biome": "laboratory",
-		"temperature": base_temperature,
-		"humidity": base_humidity,
-		"food_density": base_food_density,
+		"temperature": temperature,
+		"humidity": humidity,
+		"food_density": food_density,
 		"inside_domain": true
 	}
 
@@ -73,5 +92,4 @@ func is_inside(world_position: Vector2) -> bool:
 func _draw() -> void:
 	if radius <= 0.0:
 		return
-	# Very subtle editor/debug outline; the domain remains visually unobtrusive.
 	draw_arc(to_local(get_center()), radius, 0.0, TAU, 256, Color(0.4, 0.4, 0.4, 0.15), 2.0)
