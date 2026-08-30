@@ -38,6 +38,7 @@ class_name ProceduralWorld
 var _environment_viewport: SubViewport
 var _cached_image: Image
 var _readback_timer: float = 0.0
+var _readback_pending: bool = false
 var _last_center := Vector2(0.0, 0.0)
 
 func _ready() -> void:
@@ -47,7 +48,7 @@ func _ready() -> void:
 	_update_environment_transform()
 
 	if enable_cpu_readback:
-		_refresh_cpu_cache()
+		_request_cpu_cache_refresh()
 
 func _process(delta: float) -> void:
 	_resolve_stream_center()
@@ -58,8 +59,19 @@ func _process(delta: float) -> void:
 
 	_readback_timer -= delta
 	if _readback_timer <= 0.0:
-		_refresh_cpu_cache()
+		_request_cpu_cache_refresh()
 		_readback_timer = readback_interval
+
+func _request_cpu_cache_refresh() -> void:
+	if _readback_pending:
+		return
+	_readback_pending = true
+	_refresh_cpu_cache_after_render()
+
+func _refresh_cpu_cache_after_render() -> void:
+	await RenderingServer.frame_post_draw
+	_refresh_cpu_cache()
+	_readback_pending = false
 
 func _resolve_stream_center() -> void:
 	if stream_center != null and is_instance_valid(stream_center):
