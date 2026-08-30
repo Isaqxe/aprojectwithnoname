@@ -4,7 +4,6 @@ render_mode unshaded;
 uniform float world_seed = 123456.0;
 uniform vec2 world_center = vec2(0.0);
 uniform vec2 world_extent = vec2(1400.0);
-uniform vec2 world_size = vec2(1024.0);
 
 uniform float macro_frequency = 0.0004;
 uniform float temperature_frequency = 0.0007;
@@ -95,33 +94,5 @@ vec4 sample_environment(vec2 world_position) {
 
 void fragment() {
     vec2 world_position = world_center + (UV - vec2(0.5)) * world_extent;
-    vec4 environment = sample_environment(world_position);
-
-    float macro = environment.r;
-    float temperature = environment.g;
-    float humidity = environment.b;
-
-    float border_width = 0.14;
-    float land_factor = smoothstep(void_threshold - border_width, void_threshold + border_width, macro);
-
-    float cold_factor = smoothstep(cold_temperature + 0.045, cold_temperature - 0.045, temperature);
-    float hot_factor = smoothstep(hot_temperature - 0.045, hot_temperature + 0.045, temperature);
-    float green_factor = smoothstep(0.15, green_humidity, humidity);
-
-    vec3 climate_color = mix(GREEN_COLOR * 0.72, GREEN_COLOR, green_factor);
-    climate_color = mix(climate_color, COLD_COLOR, cold_factor);
-    climate_color = mix(climate_color, HOT_COLOR, hot_factor);
-
-    vec3 color = mix(VOID_COLOR, climate_color, land_factor);
-
-    float large_surface = fbm(world_position, 0.0017, world_seed + 808.0) - 0.5;
-    float medium_surface = fbm(world_position, 0.0042, world_seed + 909.0) - 0.5;
-    float surface_variation = large_surface * 0.7 + medium_surface * 0.3;
-    color += surface_variation * 0.055 * (0.30 + 0.70 * land_factor);
-
-    float edge_detail = fbm(world_position, 0.0036, world_seed + 1001.0) - 0.5;
-    float edge_mask = smoothstep(0.16, 0.0, abs(macro - void_threshold));
-    color += edge_detail * 0.028 * edge_mask;
-
-    COLOR = vec4(clamp(color, vec3(0.0), vec3(1.0)), 1.0);
+    COLOR = sample_environment(world_position);
 }
