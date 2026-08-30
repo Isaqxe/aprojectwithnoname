@@ -11,6 +11,7 @@
 [ext_resource type="Script" uid="uid://fnf4thui28ve" path="res://GPT/CellSystem/experimental_domain.gd" id="10_domain"]
 [ext_resource type="Script" uid="uid://bagxfxq1batif" path="res://GPT/CellSystem/cell_spatial_index.gd" id="11_spatial"]
 [ext_resource type="Script" uid="uid://bdyg5gv58m06p" path="res://GPT/CellSystem/resource_spatial_index.gd" id="12_resource_spatial"]
+[ext_resource type="Script" path="res://GPT/CellSystem/first_time_events.gd" id="13_first_events"]
 
 [node name="CellSystemTest" type="Node2D" unique_id=442408827]
 script = ExtResource("1_test")
@@ -51,6 +52,9 @@ script = ExtResource("7_inspector")
 script = ExtResource("9_camera")
 load_radius = 2000.0
 unload_radius = 3000.0
+
+[node name="FirstTimeEvents" type="Node" parent="." unique_id=2036286140]
+script = ExtResource("13_first_events")
 
 [node name="DebugLayer" type="CanvasLayer" parent="." unique_id=87415297]
 
