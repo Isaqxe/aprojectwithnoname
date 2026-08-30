@@ -30,6 +30,7 @@ extends CharacterBody2D
 var resources: float = 0.0
 var health: float
 var alive: bool = true
+var _activity_level: float = 0.0
 
 func _ready() -> void:
 	health = max_health
@@ -38,17 +39,33 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not alive:
 		return
-	var activity: float = 0.0
-	if speed > 0.0:
-		activity = clampf(velocity.length() / speed, 0.0, 1.0)
-	process_metabolism(delta, activity)
+	process_metabolism(delta, _activity_level)
+
+func set_activity_level(activity: float) -> void:
+	_activity_level = clampf(activity, 0.0, 1.0)
+
+func get_activity_level() -> float:
+	return _activity_level
+
+func get_species_id() -> String:
+	return species_id.strip_edges()
+
+func set_species_id(value: String) -> void:
+	var resolved: String = value.strip_edges()
+	if resolved.is_empty() or resolved == "default":
+		return
+	species_id = resolved
 
 func take_damage(amount: float, attacker: Node = null) -> bool:
 	if not alive or amount <= 0.0:
 		return false
 
 	if attacker != null and is_instance_valid(attacker):
-		var attacker_species: String = String(attacker.get("species_id"))
+		var attacker_species: String = ""
+		if attacker.has_method("get_species_id"):
+			attacker_species = String(attacker.get_species_id()).strip_edges()
+		else:
+			attacker_species = String(attacker.get("species_id")).strip_edges()
 		if not species_id.is_empty() and species_id == attacker_species:
 			return false
 
