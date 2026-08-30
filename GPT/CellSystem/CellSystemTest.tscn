@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3 uid="uid://dsyrxh21qpnf0"]
 
 [ext_resource type="Script" uid="uid://cul072bghcrj7" path="res://GPT/CellSystem/test_simulation.gd" id="1_test"]
 [ext_resource type="Script" uid="uid://fch6nykcxs7k" path="res://GPT/CellSystem/cell_manager.gd" id="2_manager"]
@@ -9,27 +9,22 @@
 [ext_resource type="Script" uid="uid://ba70s5jm5gc0b" path="res://GPT/CellSystem/cell_inspector.gd" id="7_inspector"]
 [ext_resource type="Script" uid="uid://c5of7nos3dgpy" path="res://GPT/CellSystem/simulation_camera.gd" id="9_camera"]
 [ext_resource type="Script" uid="uid://fnf4thui28ve" path="res://GPT/CellSystem/experimental_domain.gd" id="10_domain"]
-[ext_resource type="Script" path="res://GPT/CellSystem/cell_spatial_index.gd" id="11_spatial"]
+[ext_resource type="Script" uid="uid://bagxfxq1batif" path="res://GPT/CellSystem/cell_spatial_index.gd" id="11_spatial"]
 
 [node name="CellSystemTest" type="Node2D" unique_id=442408827]
 script = ExtResource("1_test")
 
 [node name="ExperimentalDomain" type="Node2D" parent="." unique_id=2036286132]
 script = ExtResource("10_domain")
-radius = 3000.0
+radius = 10000.0
 
 [node name="CellSpatialIndex" type="Node" parent="." unique_id=2036286135]
 script = ExtResource("11_spatial")
-cell_size = 256.0
-rebuild_interval = 0.15
 
 [node name="CellManager" type="Node" parent="." unique_id=1751606464]
 script = ExtResource("2_manager")
-cell_factory = NodePath("CellFactory")
-cell_container = NodePath("../Cells")
-experimental_domain = NodePath("../ExperimentalDomain")
 auto_spawn = false
-initial_population = 250
+initial_population = 500
 max_population = 10000
 initial_species_count = 25
 
@@ -42,13 +37,13 @@ cell_scene = ExtResource("4_cell")
 [node name="ResourceSpawner" type="Node2D" parent="." unique_id=2036286133]
 script = ExtResource("5_resource_spawner")
 resource_scene = ExtResource("6_resource")
-experimental_domain = NodePath("../ExperimentalDomain")
-initial_resources = 50
+initial_resources = 500
+max_resources = 900
 
 [node name="CellInspector" type="Node" parent="." unique_id=2036286134]
 script = ExtResource("7_inspector")
 
-[node name="SimulationCamera" type="Camera2D" parent="." unique_id=2036286135]
+[node name="SimulationCamera" type="Camera2D" parent="." unique_id=7919634]
 script = ExtResource("9_camera")
 load_radius = 2000.0
 unload_radius = 3000.0
