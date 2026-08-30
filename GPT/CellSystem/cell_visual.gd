@@ -22,7 +22,11 @@ func _ready() -> void:
 	var parent_cell: Node = get_parent()
 	_seed = 1
 	if parent_cell != null:
-		_seed = abs(parent_cell.get("cell_id").hash()) + 1
+		var identity_node: Node = parent_cell.get("genetics") as Node
+		if identity_node != null and is_instance_valid(identity_node):
+			_seed = abs(String(identity_node.get("cell_id")).hash()) + 1
+		else:
+			_seed = abs(int(parent_cell.get_instance_id())) + 1
 	_build_shape()
 	set_process(true)
 	queue_redraw()
@@ -81,7 +85,7 @@ func _draw() -> void:
 		return
 
 	var base_color: Color = Color.WHITE
-	var parent_color = parent_cell.get("species_color")
+	var parent_color: Variant = parent_cell.get("species_color")
 	if parent_color is Color:
 		base_color = parent_color
 
