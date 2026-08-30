@@ -21,7 +21,7 @@ var aggression: float = 0.0
 @export_category("Social Steering")
 @export var cohesion_weight: float = 0.55
 @export var alignment_weight: float = 0.20
-@export var separation_weight: float = 0.85
+@export var separation_weight: float = 0.70
 @export var cohesion_radius: float = 150.0
 @export var separation_radius: float = 42.0
 
@@ -33,7 +33,6 @@ func calculate_strength(cell) -> float:
 		return 0.0
 
 	var strength: float = 0.0
-
 	if "health" in cell:
 		strength += cell.health
 	if "damage" in cell:
@@ -42,7 +41,6 @@ func calculate_strength(cell) -> float:
 		strength += cell.speed
 	if "size" in cell:
 		strength += cell.size
-
 	return strength
 
 func evaluate_cell(my_cell, other_cell) -> BehaviorState:
@@ -53,18 +51,14 @@ func evaluate_cell(my_cell, other_cell) -> BehaviorState:
 
 	var my_strength: float = calculate_strength(my_cell)
 	var other_strength: float = calculate_strength(other_cell)
-
 	fear = other_strength - my_strength
 
 	if other_strength > my_strength:
 		state = BehaviorState.FLEE
 	else:
 		state = BehaviorState.HUNT
-
 	return state
 
-## Evaluates a threat using nearby allied strength as a simple collective defense.
-## A cell may stand its ground when its local group has enough combined power.
 func evaluate_collective_cell(my_cell, other_cell, ally_cells: Array) -> BehaviorState:
 	if my_cell == null or other_cell == null:
 		state = BehaviorState.WANDER
@@ -89,7 +83,6 @@ func evaluate_collective_cell(my_cell, other_cell, ally_cells: Array) -> Behavio
 			state = BehaviorState.FLEE
 	else:
 		state = BehaviorState.HUNT
-
 	return state
 
 func evaluate_resource(my_cell) -> BehaviorState:
@@ -111,17 +104,9 @@ func evaluate_resource(my_cell) -> BehaviorState:
 		state = BehaviorState.SEEK_RESOURCE
 	else:
 		state = BehaviorState.WANDER
-
 	return state
 
-## Combines a desired direction with social steering influences.
-## Positions are world-space positions of nearby same-species cells.
-func calculate_social_steering(
-	origin: Vector2,
-	desired_direction: Vector2,
-	ally_positions: Array[Vector2],
-	ally_velocities: Array[Vector2]
-) -> Vector2:
+func calculate_social_steering(origin: Vector2, desired_direction: Vector2, ally_positions: Array[Vector2], ally_velocities: Array[Vector2]) -> Vector2:
 	var result: Vector2 = desired_direction
 	if ally_positions.is_empty():
 		return result.normalized() if result.length_squared() > 0.0001 else Vector2.ZERO
@@ -142,7 +127,9 @@ func calculate_social_steering(
 		nearby_count += 1
 
 		if distance < separation_radius:
-			separation_vector -= offset / maxf(distance * distance, 1.0)
+			var normalized_offset: Vector2 = offset / distance
+			var closeness: float = 1.0 - clampf(distance / separation_radius, 0.0, 1.0)
+			separation_vector -= normalized_offset * closeness
 
 		if index < ally_velocities.size():
 			alignment_vector += ally_velocities[index]
@@ -150,10 +137,14 @@ func calculate_social_steering(
 
 	if nearby_count > 0:
 		cohesion_vector /= float(nearby_count)
-		result += cohesion_vector.normalized() * cohesion_weight
-		result += separation_vector.normalized() * separation_weight
+		if cohesion_vector.length_squared() > 0.0001:
+			result += cohesion_vector.normalized() * cohesion_weight
+
+	if separation_vector.length_squared() > 0.0001:
+		result += separation_vector * separation_weight
 
 	if alignment_count > 0 and alignment_vector.length_squared() > 0.001:
+		alignment_vector /= float(alignment_count)
 		result += alignment_vector.normalized() * alignment_weight
 
 	return result.normalized() if result.length_squared() > 0.0001 else Vector2.ZERO
