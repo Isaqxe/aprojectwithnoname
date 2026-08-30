@@ -34,6 +34,11 @@ func _ready() -> void:
 	_spatial_index = get_tree().get_first_node_in_group(SPATIAL_INDEX_GROUP)
 	_resource_spatial_index = get_tree().get_first_node_in_group(RESOURCE_INDEX_GROUP)
 
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	if cell_data != null and is_instance_valid(cell_data) and not cell_data.alive:
+		_die_as_organism()
+
 func get_species_id() -> String:
 	if genetics != null and is_instance_valid(genetics):
 		var genetic_species: String = String(genetics.get("species_id")).strip_edges()
@@ -50,7 +55,7 @@ func set_species_id(value: String) -> void:
 		return
 	species_id = resolved
 	initial_species_id = resolved
-	if cell_data != null:
+	if cell_data != null and is_instance_valid(cell_data):
 		cell_data.species_id = resolved
 	if genetics != null and is_instance_valid(genetics):
 		genetics.species_id = resolved
