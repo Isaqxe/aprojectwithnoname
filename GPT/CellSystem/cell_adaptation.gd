@@ -1,7 +1,7 @@
 extends Node
 
 ## Environmental adaptation layer for a single cell.
-## Converts inherited adaptation genes into an environmental fitness multiplier.
+## The science-fair laboratory uses a neutral baseline environment.
 
 @export var damage_per_second: float = 4.0
 @export var tolerance_margin: float = 0.20
@@ -23,6 +23,10 @@ func evaluate(environment: Dictionary, genetics: Node) -> float:
 		return 0.0
 
 	var biome: String = String(environment.get("biome", "unknown"))
+	if biome == "laboratory":
+		last_stress = 0.0
+		return 0.0
+
 	var adaptation: float = _get_adaptation_for_biome(biome, genetics)
 	last_stress = clampf(1.0 - adaptation, 0.0, 1.0)
 	return last_stress
@@ -50,7 +54,7 @@ func get_environment() -> Dictionary:
 		if cell != null and cell is Node2D:
 			return world_provider.get_environment_at((cell as Node2D).global_position)
 
-	return {"biome": "unknown", "temperature": 0.5, "humidity": 0.5, "macro": 0.0}
+	return {"biome": "unknown", "temperature": 0.5, "humidity": 0.5, "macro": 0.0, "inside_domain": false}
 
 func get_stress() -> float:
 	return last_stress
@@ -68,6 +72,8 @@ func _get_adaptation_for_biome(biome: String, genetics: Node) -> float:
 			return clampf(genetics.get_gene("heat_adaptation", 0.5), 0.0, 1.0)
 		"void":
 			return clampf(genetics.get_gene("void_adaptation", 0.5), 0.0, 1.0)
+		"laboratory":
+			return 1.0
 		_:
 			return 0.5
 
