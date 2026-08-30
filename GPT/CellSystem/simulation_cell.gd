@@ -6,6 +6,7 @@ extends CharacterBody2D
 
 const CELL_SCRIPT := preload("res://GPT/CellSystem/cell.gd")
 const BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior.gd")
+const SOCIAL_SCRIPT := preload("res://GPT/CellSystem/cell_behavior_social.gd")
 const FEAR_SCRIPT := preload("res://GPT/CellSystem/cell_fear.gd")
 const COMBAT_SCRIPT := preload("res://GPT/CellSystem/cell_combat.gd")
 const MITOSIS_SCRIPT := preload("res://GPT/CellSystem/cell_mitosis.gd")
@@ -13,7 +14,7 @@ const GENETICS_SCRIPT := preload("res://GPT/CellSystem/cell_genetics.gd")
 const ADAPTATION_SCRIPT := preload("res://GPT/CellSystem/cell_adaptation.gd")
 
 @export var is_player_controlled: bool = false
-@export var species_id: String = "default"
+@export var species_id: String = ""
 @export var elimination_resource_reward: float = 35.0
 @export var wander_speed_factor: float = 0.35
 @export var perception_radius: float = 180.0
@@ -29,6 +30,7 @@ var inherited_data: Dictionary = {}
 var species_color: Color = Color.WHITE
 var cell_data: CharacterBody2D
 var behavior: CellBehavior
+var social_behavior: CellBehaviorSocial
 var fear_system: Node
 var combat: Node
 var mitosis: Node
@@ -53,6 +55,10 @@ func _ready() -> void:
 	behavior = BEHAVIOR_SCRIPT.new()
 	add_child(behavior)
 	behavior.cohesion_radius = group_perception_radius
+
+	social_behavior = SOCIAL_SCRIPT.new()
+	add_child(social_behavior)
+	social_behavior.cohesion_radius = group_perception_radius
 
 	fear_system = FEAR_SCRIPT.new()
 	add_child(fear_system)
@@ -206,26 +212,32 @@ func _process_ai(delta: float) -> void:
 	if is_instance_valid(_target):
 		_wander_time = 0.0
 		var target_data = _target.get("cell_data")
-		if target_data == null or not target_data.alive:
+		if target_data == null or not target_data.alive or not social_behavior.is_valid_enemy(self, _target):
 			_target = null
 			behavior.set_state(CellBehavior.BehaviorState.WANDER)
 			_wander(delta, ally_positions, ally_velocities)
 			return
 
 		var decision: CellBehavior.BehaviorState = behavior.evaluate_collective_cell(cell_data, target_data, ally_cells)
+		if not social_behavior.is_valid_enemy(self, _target):
+			_target = null
+			behavior.set_state(CellBehavior.BehaviorState.WANDER)
+			_wander(delta, ally_positions, ally_velocities)
+			return
+
 		var desired_direction: Vector2
 		if decision == CellBehavior.BehaviorState.FLEE:
 			desired_direction = _target.global_position.direction_to(global_position)
 		else:
 			desired_direction = global_position.direction_to(_target.global_position)
 
-		_direction = behavior.calculate_social_steering(global_position, desired_direction, ally_positions, ally_velocities)
+		_direction = social_behavior.calculate_social_steering(global_position, desired_direction, ally_positions, ally_velocities, true)
 		return
 
 	if is_instance_valid(_resource_target) and cell_data.can_accept_resources():
 		behavior.evaluate_resource(cell_data)
 		var desired_resource_direction: Vector2 = global_position.direction_to(_resource_target.global_position)
-		_direction = behavior.calculate_social_steering(global_position, desired_resource_direction, ally_positions, ally_velocities)
+		_direction = social_behavior.calculate_social_steering(global_position, desired_resource_direction, ally_positions, ally_velocities, true)
 		_wander_time = 0.0
 	else:
 		_resource_target = null
@@ -240,9 +252,13 @@ func _find_best_target() -> CharacterBody2D:
 	for candidate in get_tree().get_nodes_in_group("SimCells"):
 		if candidate == self or not is_instance_valid(candidate):
 			continue
-		if not candidate.has_method("get_cell_power"):
+		if not candidate is CharacterBody2D:
 			continue
-		if String(candidate.get("species_id")) == cell_data.species_id:
+		if String(candidate.get("species_id")) == String(species_id):
+			continue
+		if not social_behavior.is_valid_enemy(self, candidate):
+			continue
+		if not candidate.has_method("get_cell_power"):
 			continue
 
 		var distance: float = global_position.distance_to(candidate.global_position)
@@ -261,7 +277,7 @@ func _get_local_allies(radius: float) -> Array:
 			continue
 		if not candidate is CharacterBody2D:
 			continue
-		if String(candidate.get("species_id")) != cell_data.species_id:
+		if String(candidate.get("species_id")) != String(species_id):
 			continue
 		if global_position.distance_squared_to((candidate as CharacterBody2D).global_position) <= radius_squared:
 			allies.append(candidate)
@@ -346,7 +362,7 @@ func _process_collisions() -> void:
 			continue
 		if not collider.has_method("take_damage"):
 			continue
-		if String(collider.get("species_id")) == cell_data.species_id:
+		if not social_behavior.is_valid_enemy(self, collider as CharacterBody2D):
 			continue
 
 		var target_data = collider.get("cell_data")
@@ -444,8 +460,7 @@ func take_damage(amount: float, attacker: Node = null) -> bool:
 		return false
 
 	if attacker != null and is_instance_valid(attacker):
-		var attacker_species: String = String(attacker.get("species_id"))
-		if not species_id.is_empty() and species_id == attacker_species:
+		if not social_behavior.is_valid_enemy(self, attacker):
 			return false
 
 	var damage_applied: bool = cell_data.take_damage(amount, attacker)
@@ -475,7 +490,7 @@ func _wander(delta: float, ally_positions: Array[Vector2], ally_velocities: Arra
 		_direction = _direction.lerp(random_direction, 0.025).normalized()
 
 	if not ally_positions.is_empty():
-		_direction = behavior.calculate_social_steering(global_position, _direction, ally_positions, ally_velocities)
+		_direction = social_behavior.calculate_social_steering(global_position, _direction, ally_positions, ally_velocities, false)
 
 func _draw() -> void:
 	var visible_color: Color = _base_color
