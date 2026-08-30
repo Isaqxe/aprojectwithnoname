@@ -105,9 +105,9 @@ func _random_domain_position() -> Vector2:
 		randf_range(spawn_area.position.y, spawn_area.end.y)
 	)
 
-func _get_environment(position: Vector2) -> Dictionary:
+func _get_environment(environment_position: Vector2) -> Dictionary:
 	if experimental_domain != null and is_instance_valid(experimental_domain) and experimental_domain.has_method("get_environment_at"):
-		return experimental_domain.get_environment_at(position)
+		return experimental_domain.get_environment_at(environment_position)
 	return {"food_density": 1.0}
 
 func get_resource_count() -> int:
