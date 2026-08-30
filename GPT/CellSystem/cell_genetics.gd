@@ -2,7 +2,7 @@ extends Node
 
 ## Genetic identity and lineage data for a single cell.
 ## Mutations happen during reproduction and alter inherited genes slightly.
-## Behavioral traits are ordinary heritable genes just like biological traits.
+## Behavioral traits are ordinary heritable genes with normalized 0..1 values.
 
 @export var species_id: String = ""
 @export_range(0.0, 1.0) var mutation_chance: float = 0.10
@@ -15,6 +15,13 @@ var generation: int = 0
 var genes: Dictionary = {}
 
 static var _next_id: int = 1
+
+const BEHAVIOR_GENES: Array[String] = [
+	"sociality",
+	"aggression",
+	"caution",
+	"group_response"
+]
 
 func initialize_random() -> void:
 	cell_id = _generate_id()
@@ -46,10 +53,13 @@ func initialize_from_parent(parent_genetics: Node, inherited_genes: Dictionary) 
 	_ensure_behavior_genes()
 
 func set_gene(gene_name: String, value: float) -> void:
-	genes[gene_name] = clampf(value, 0.0, 1.0)
+	genes[gene_name] = clampf(value, 0.0, 1.0) if gene_name in BEHAVIOR_GENES else value
 
 func get_gene(gene_name: String, fallback: float = 0.0) -> float:
-	return clampf(float(genes.get(gene_name, fallback)), 0.0, 1.0)
+	var value: float = float(genes.get(gene_name, fallback))
+	if gene_name in BEHAVIOR_GENES:
+		return clampf(value, 0.0, 1.0)
+	return value
 
 func mutate_genes() -> Array[String]:
 	var mutated_genes: Array[String] = []
@@ -60,7 +70,12 @@ func mutate_genes() -> Array[String]:
 
 		var current_value: float = float(genes[gene_name])
 		var variation: float = randf_range(-mutation_strength, mutation_strength)
-		genes[gene_name] = clampf(current_value * (1.0 + variation), 0.0, 1.0)
+		var mutated_value: float = current_value * (1.0 + variation)
+		if String(gene_name) in BEHAVIOR_GENES:
+			mutated_value = clampf(mutated_value, 0.0, 1.0)
+		else:
+			mutated_value = maxf(mutated_value, 0.0)
+		genes[gene_name] = mutated_value
 		mutated_genes.append(String(gene_name))
 
 	_ensure_behavior_genes()
@@ -76,14 +91,9 @@ func get_lineage_data() -> Dictionary:
 	}
 
 func _ensure_behavior_genes() -> void:
-	if not genes.has("sociality"):
-		genes["sociality"] = 0.5
-	if not genes.has("aggression"):
-		genes["aggression"] = 0.5
-	if not genes.has("caution"):
-		genes["caution"] = 0.5
-	if not genes.has("group_response"):
-		genes["group_response"] = 0.5
+	for gene_name in BEHAVIOR_GENES:
+		if not genes.has(gene_name):
+			genes[gene_name] = 0.5
 
 func _generate_id() -> String:
 	var new_id: String = "cell_%08d" % _next_id
