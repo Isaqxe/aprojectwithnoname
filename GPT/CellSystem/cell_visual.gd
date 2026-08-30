@@ -62,6 +62,10 @@ func _process(delta: float) -> void:
 
 	queue_redraw()
 
+func _is_presentation_mode() -> bool:
+	var scene: Node = get_tree().current_scene
+	return scene != null and bool(scene.get("presentation_mode", false))
+
 func _draw() -> void:
 	var parent_cell: Node = get_parent()
 	if parent_cell == null or not is_instance_valid(parent_cell):
@@ -99,7 +103,7 @@ func _draw() -> void:
 
 	var health: float = float(cell_data.get("health"))
 	var max_health: float = maxf(float(cell_data.get("max_health")), 0.001)
-	if health < max_health - 0.01 and bool(cell_data.get("alive")):
+	if not _is_presentation_mode() and health < max_health - 0.01 and bool(cell_data.get("alive")):
 		var ratio: float = clampf(health / max_health, 0.0, 1.0)
 		var bar_width: float = maxf(health_bar_width, radius * 1.6)
 		var bar_height: float = maxf(health_bar_height, 2.0)
