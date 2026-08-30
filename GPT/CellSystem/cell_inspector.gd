@@ -1,8 +1,7 @@
 extends Node
 
 ## Interactive cell inspector.
-## Select a cell with the left mouse button and show its data in a fixed
-## top-right UI panel while the camera follows the selected organism.
+## Right mouse button selects a cell and shows its data in a fixed top-right UI panel.
 
 @export var collision_mask: int = 1
 @export var panel_width: float = 360.0
@@ -34,7 +33,7 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventMouseButton:
 		return
-	if event.button_index != MOUSE_BUTTON_LEFT or not event.pressed:
+	if event.button_index != MOUSE_BUTTON_RIGHT or not event.pressed:
 		return
 	inspect_at_mouse()
 
