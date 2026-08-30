@@ -47,6 +47,15 @@ func _physics_process(delta: float) -> void:
 				movement_ratio = clampf(velocity.length() / cell_data.speed, 0.0, 1.0)
 			cell_data.set_activity_level(movement_ratio)
 
+func _die_as_organism() -> void:
+	if is_queued_for_deletion():
+		return
+	if _cell_manager == null or not is_instance_valid(_cell_manager):
+		_cell_manager = get_tree().get_first_node_in_group("CellManagers")
+	if _cell_manager != null and is_instance_valid(_cell_manager) and _cell_manager.has_method("unregister_cell"):
+		_cell_manager.unregister_cell(self)
+	queue_free()
+
 func get_species_id() -> String:
 	if genetics != null and is_instance_valid(genetics):
 		var genetic_species: String = String(genetics.get("species_id")).strip_edges()
@@ -64,7 +73,10 @@ func set_species_id(value: String) -> void:
 	species_id = resolved
 	initial_species_id = resolved
 	if cell_data != null and is_instance_valid(cell_data):
-		cell_data.set_species_id(resolved) if cell_data.has_method("set_species_id") else null
+		if cell_data.has_method("set_species_id"):
+			cell_data.set_species_id(resolved)
+		else:
+			cell_data.species_id = resolved
 	if genetics != null and is_instance_valid(genetics):
 		genetics.species_id = resolved
 
