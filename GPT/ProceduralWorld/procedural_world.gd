@@ -28,6 +28,8 @@ class_name ProceduralWorld
 @export var warp_strength: float = 150.0
 @export var border_detail_frequency: float = 0.0025
 @export var border_detail_strength: float = 0.18
+@export var border_micro_frequency: float = 0.0065
+@export var border_micro_strength: float = 0.08
 
 @export_category("GPU Readback")
 @export var readback_interval: float = 0.25
@@ -118,6 +120,8 @@ func _apply_environment_parameters() -> void:
 	material.set_shader_parameter("warp_strength", warp_strength)
 	material.set_shader_parameter("border_detail_frequency", border_detail_frequency)
 	material.set_shader_parameter("border_detail_strength", border_detail_strength)
+	material.set_shader_parameter("border_micro_frequency", border_micro_frequency)
+	material.set_shader_parameter("border_micro_strength", border_micro_strength)
 	material.set_shader_parameter("void_threshold", void_threshold)
 	material.set_shader_parameter("cold_temperature", cold_temperature)
 	material.set_shader_parameter("hot_temperature", hot_temperature)
