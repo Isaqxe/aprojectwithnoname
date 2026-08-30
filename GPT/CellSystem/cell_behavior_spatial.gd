@@ -20,14 +20,16 @@ func evaluate_collective_cell(my_cell, other_cell, ally_cells: Array) -> Behavio
 	for ally in ally_cells:
 		if ally == null or ally == my_cell or not is_instance_valid(ally):
 			continue
-		if not is_same_species(my_cell, ally) or not bool(ally.get("alive")):
+		if not is_same_species(my_cell, ally):
+			continue
+		if "alive" in ally and not ally.alive:
 			continue
 		group_strength += calculate_strength(ally)
 		ally_count += 1
 
 	var perception: float = 180.0
 	var owner_cell: Node = get_parent()
-	if owner_cell != null:
+	if owner_cell != null and is_instance_valid(owner_cell):
 		perception = maxf(float(owner_cell.get("perception_radius")), 1.0)
 
 	threat_count = 0
@@ -35,7 +37,9 @@ func evaluate_collective_cell(my_cell, other_cell, ally_cells: Array) -> Behavio
 	for candidate in _query_cells(perception):
 		if not is_valid_enemy(my_cell, candidate) or not candidate is Node2D:
 			continue
-		var distance: float = (owner_cell as Node2D).global_position.distance_to((candidate as Node2D).global_position)
+		var candidate_node: Node2D = candidate as Node2D
+		var owner_node: Node2D = owner_cell as Node2D
+		var distance: float = owner_node.global_position.distance_to(candidate_node.global_position)
 		var proximity: float = 1.0 - clampf(distance / perception, 0.0, 1.0)
 		total_threat_strength += calculate_strength(candidate) * maxf(proximity, 0.20)
 		threat_count += 1
