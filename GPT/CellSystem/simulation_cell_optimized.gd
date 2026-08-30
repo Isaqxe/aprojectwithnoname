@@ -47,15 +47,6 @@ func _physics_process(delta: float) -> void:
 				movement_ratio = clampf(velocity.length() / cell_data.speed, 0.0, 1.0)
 			cell_data.set_activity_level(movement_ratio)
 
-func _die_as_organism() -> void:
-	if is_queued_for_deletion():
-		return
-	if _cell_manager == null or not is_instance_valid(_cell_manager):
-		_cell_manager = get_tree().get_first_node_in_group("CellManagers")
-	if _cell_manager != null and is_instance_valid(_cell_manager) and _cell_manager.has_method("unregister_cell"):
-		_cell_manager.unregister_cell(self)
-	queue_free()
-
 func get_species_id() -> String:
 	if genetics != null and is_instance_valid(genetics):
 		var genetic_species: String = String(genetics.get("species_id")).strip_edges()
@@ -182,3 +173,7 @@ func _calculate_collective_flee_direction() -> Vector2:
 func _finish_mitosis() -> void:
 	super._finish_mitosis()
 	_sync_energy_capacity()
+
+func _draw() -> void:
+	## Rendering is delegated to the child CellVisual node.
+	return
