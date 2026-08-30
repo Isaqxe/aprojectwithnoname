@@ -1,9 +1,9 @@
 extends Node
 
-## CellManager coordinates cell creation, registration, cleanup and spatial streaming.
-## Genetics owns individual species identity; the manager owns the species registry.
+## CellManager coordinates cell creation, registration and spatial streaming.
+## Genetics owns individual species identity; the manager owns species statistics.
 ## The ExperimentalDomain defines the valid laboratory-slide area.
-## Population telemetry is event-driven with lightweight periodic sampling.
+## Telemetry is event-driven with lightweight periodic sampling.
 
 @export var cell_factory: Node
 @export var cell_container: Node2D
@@ -11,7 +11,7 @@ extends Node
 
 @export_category("Player")
 @export var spawn_player_on_ready: bool = false
-@export var player_spawn_position: Vector2 = Vector2(0.0, 0.0)
+@export var player_spawn_position: Vector2 = Vector2.ZERO
 
 @export_category("Spawning")
 @export var auto_spawn: bool = true
@@ -62,7 +62,7 @@ const SPECIES_MIDDLES: Array[String] = [
 	"a", "e", "i", "o", "u", "ae", "ia", "or", "en", "ur"
 ]
 const SPECIES_SUFFIXES: Array[String] = [
-	"is", "a", "on", "um", "ar", "en", "yx", "is", "or"
+	"is", "a", "on", "um", "ar", "en", "yx", "or"
 ]
 
 func _ready() -> void:
@@ -76,7 +76,6 @@ func _ready() -> void:
 	if cell_factory == null:
 		push_error("CellManager: CellFactory not found. Cells cannot spawn.")
 		return
-
 	if cell_container == null:
 		push_error("CellManager: Cells container not found. Cells cannot spawn.")
 		return
@@ -123,12 +122,11 @@ func _resolve_scene_nodes() -> void:
 		simulation_camera = get_tree().get_first_node_in_group("SimulationCameras")
 
 func register_cell(cell: Node) -> void:
-	if cell == null or not is_instance_valid(cell):
-		return
-	if registered_cells.has(cell):
+	if cell == null or not is_instance_valid(cell) or registered_cells.has(cell):
 		return
 
 	registered_cells.append(cell)
+
 	var species_id: String = _get_cell_species_id(cell)
 	var generation: int = _get_cell_generation(cell)
 	_tracked_species[cell] = species_id
@@ -138,7 +136,7 @@ func register_cell(cell: Node) -> void:
 	if not species_id.is_empty() and species_id != "default":
 		register_species(species_id)
 		_record_birth(species_id, generation)
-		hehighest_generation = maxi(highest_generation, generation)
+		highest_generation = maxi(highest_generation, generation)
 
 func unregister_cell(cell: Node) -> void:
 	if is_instance_valid(cell):
@@ -153,26 +151,29 @@ func register_species(species_id: String) -> void:
 	var normalized_id: String = species_id.strip_edges()
 	if normalized_id.is_empty() or normalized_id == "default":
 		return
-	if not known_species.has(normalized_id):
-		known_species[normalized_id] = true
-		species_colors[normalized_id] = _generate_species_color()
-		births_by_species[normalized_id] = 0
-		deaths_by_species[normalized_id] = 0
-		population_history[normalized_id] = []
-		species_statistics[normalized_id] = {
-			"population": 0,
-			"births": 0,
-			"deaths": 0,
-			"peak_population": 0,
-			"highest_generation": 0,
-			"total_mutations": 0
-		}
+	if known_species.has(normalized_id):
+		return
+
+	known_species[normalized_id] = true
+	species_colors[normalized_id] = _generate_species_color()
+	births_by_species[normalized_id] = 0
+	deaths_by_species[normalized_id] = 0
+	population_history[normalized_id] = []
+	species_statistics[normalized_id] = {
+		"population": 0,
+		"births": 0,
+		"deaths": 0,
+		"peak_population": 0,
+		"highest_generation": 0,
+		"total_mutations": 0,
+		"eliminations": 0
+	}
 
 func get_species_ids() -> Array[String]:
-	var species_ids: Array[String] = []
-	for species_id in known_species.keys():
-		species_ids.append(String(species_id))
-	return species_ids
+	var ids: Array[String] = []
+	for species_key in known_species.keys():
+		ids.append(String(species_key))
+	return ids
 
 func get_species_color(species_id: String) -> Color:
 	var normalized_id: String = species_id.strip_edges()
@@ -186,26 +187,25 @@ func _generate_species_color() -> Color:
 	return Color.from_hsv(randf(), 0.60, 0.95)
 
 func _initialize_species() -> void:
-	var desired_count: int = max(initial_species_count, 1)
+	var desired_count: int = maxi(initial_species_count, 1)
 	for _i in range(desired_count):
 		register_species(_generate_species_name())
 
 func _generate_species_name() -> String:
-	var generated_name: String = ""
 	var attempts: int = 0
 	while attempts < 20:
-		generated_name = SPECIES_PREFIXES.pick_random() + SPECIES_MIDDLES.pick_random() + SPECIES_SUFFIXES.pick_random()
+		var generated_name: String = SPECIES_PREFIXES.pick_random() + SPECIES_MIDDLES.pick_random() + SPECIES_SUFFIXES.pick_random()
 		if not known_species.has(generated_name):
 			return generated_name
 		attempts += 1
 	return "Species_%d" % (known_species.size() + 1)
 
 func _get_random_species_id() -> String:
-	var species_ids: Array[String] = get_species_ids()
-	if species_ids.is_empty():
+	var ids: Array[String] = get_species_ids()
+	if ids.is_empty():
 		_initialize_species()
-		species_ids = get_species_ids()
-	return species_ids.pick_random()
+		ids = get_species_ids()
+	return ids.pick_random() if not ids.is_empty() else ""
 
 func get_cell_count() -> int:
 	_cleanup_invalid_cells()
@@ -226,20 +226,23 @@ func create_cell(position: Vector2, is_player: bool = false, species_id_override
 	var resolved_species_id: String = species_id_override.strip_edges()
 	if resolved_species_id.is_empty() or resolved_species_id == "default":
 		resolved_species_id = _get_random_species_id()
-	register_species(resolved_species_id)
+	if resolved_species_id.is_empty():
+		return null
 
+	register_species(resolved_species_id)
 	var spawn_position: Vector2 = _clamp_to_domain(position)
 	var new_cell: Node = cell_factory.create_cell(spawn_position, is_player, {}, resolved_species_id)
 	if new_cell == null:
 		return null
 
 	cell_container.add_child(new_cell)
-	register_cell(new_cell)
 
 	if new_cell.has_method("set_species_id"):
 		new_cell.set_species_id(resolved_species_id)
-	elif new_cell.get("species_id") == null:
-		return null
+	else:
+		new_cell.set("species_id", resolved_species_id)
+
+	register_cell(new_cell)
 
 	if new_cell.has_method("set_species_color"):
 		new_cell.set_species_color(get_species_color(resolved_species_id))
@@ -271,12 +274,13 @@ func create_cell_from_parent(parent_cell: Node, position: Vector2 = Vector2.ZERO
 		return null
 
 	cell_container.add_child(new_cell)
-	register_cell(new_cell)
 
 	if new_cell.has_method("set_species_id"):
 		new_cell.set_species_id(inherited_species)
 	else:
 		new_cell.set("species_id", inherited_species)
+
+	register_cell(new_cell)
 
 	if new_cell.has_method("set_species_color"):
 		new_cell.set_species_color(get_species_color(inherited_species))
@@ -285,6 +289,7 @@ func create_cell_from_parent(parent_cell: Node, position: Vector2 = Vector2.ZERO
 func spawn_cell(is_player: bool = false) -> Node:
 	if get_population() >= max_population:
 		return null
+
 	var spawn_position: Vector2 = _get_domain_random_position()
 	if simulation_camera != null and is_instance_valid(simulation_camera) and simulation_camera.has_method("get_spawn_bounds"):
 		var camera_area: Rect2 = simulation_camera.get_spawn_bounds()
@@ -293,6 +298,7 @@ func spawn_cell(is_player: bool = false) -> Node:
 			randf_range(camera_area.position.y, camera_area.end.y)
 		)
 		spawn_position = _clamp_to_domain(spawn_position, 8.0)
+
 	return create_cell(spawn_position, is_player, _get_random_species_id())
 
 func spawn_player(position: Vector2) -> Node:
@@ -307,14 +313,19 @@ func spawn_mitosis_child(parent_cell: Node) -> Node:
 		return null
 	if get_population() >= max_population:
 		return null
-	var parent_data = parent_cell.get("cell_data")
+
+	var parent_data: Node = parent_cell.get("cell_data") as Node
 	if parent_data == null:
 		return null
+
 	var parent_position: Vector2 = parent_cell.global_position
-	var parent_size: float = float(parent_data.size)
+	var parent_size: float = float(parent_data.get("size"))
 	var spawn_angle: float = randf_range(0.0, TAU)
 	var spawn_distance: float = parent_size + 30.0
-	var child_position: Vector2 = _clamp_to_domain(parent_position + Vector2.from_angle(spawn_angle) * spawn_distance, parent_size)
+	var child_position: Vector2 = _clamp_to_domain(
+		parent_position + Vector2.from_angle(spawn_angle) * spawn_distance,
+		parent_size
+	)
 	return create_cell_from_parent(parent_cell, child_position)
 
 func record_mutations(species_id: String, mutation_count: int) -> void:
@@ -323,22 +334,33 @@ func record_mutations(species_id: String, mutation_count: int) -> void:
 		return
 	register_species(normalized_id)
 	total_mutations += mutation_count
-	species_statistics[normalized_id]["total_mutations"] = int(species_statistics[normalized_id].get("total_mutations", 0)) + mutation_count
+	var stats: Dictionary = species_statistics[normalized_id]
+	stats["total_mutations"] = int(stats.get("total_mutations", 0)) + mutation_count
+	species_statistics[normalized_id] = stats
 
 func record_elimination(species_id: String) -> void:
 	var normalized_id: String = species_id.strip_edges()
 	if normalized_id.is_empty() or normalized_id == "default":
 		return
 	register_species(normalized_id)
-	species_statistics[normalized_id]["eliminations"] = int(species_statistics[normalized_id].get("eliminations", 0)) + 1
+	var stats: Dictionary = species_statistics[normalized_id]
+	stats["eliminations"] = int(stats.get("eliminations", 0)) + 1
+	species_statistics[normalized_id] = stats
 
 func get_species_statistics(species_id: String = "") -> Dictionary:
-	if species_id.strip_edges().is_empty():
+	var normalized_id: String = species_id.strip_edges()
+	if normalized_id.is_empty():
 		return species_statistics.duplicate(true)
-	return species_statistics.get(species_id.strip_edges(), {}).duplicate(true)
+	if not species_statistics.has(normalized_id):
+		return {}
+	var stats: Dictionary = species_statistics[normalized_id]
+	return stats.duplicate(true)
 
 func get_population_history(species_id: String) -> Array:
-	return population_history.get(species_id.strip_edges(), []).duplicate(true)
+	var normalized_id: String = species_id.strip_edges()
+	if not population_history.has(normalized_id):
+		return []
+	return population_history[normalized_id].duplicate(true)
 
 func get_recent_events() -> Array[String]:
 	return event_history.duplicate()
@@ -350,11 +372,13 @@ func _record_birth(species_id: String, generation: int) -> void:
 	register_species(normalized_id)
 	total_births += 1
 	births_by_species[normalized_id] = int(births_by_species.get(normalized_id, 0)) + 1
+
 	var stats: Dictionary = species_statistics[normalized_id]
 	stats["births"] = int(stats.get("births", 0)) + 1
 	stats["population"] = int(stats.get("population", 0)) + 1
 	stats["highest_generation"] = maxi(int(stats.get("highest_generation", 0)), generation)
 	species_statistics[normalized_id] = stats
+
 	_record_event("Birth: %s (gen %d)" % [normalized_id, generation])
 
 func _record_death(species_id: String, generation: int) -> void:
@@ -364,35 +388,42 @@ func _record_death(species_id: String, generation: int) -> void:
 	register_species(normalized_id)
 	deaths_by_species[normalized_id] = int(deaths_by_species.get(normalized_id, 0)) + 1
 	total_deaths += 1
+
 	var stats: Dictionary = species_statistics[normalized_id]
 	stats["deaths"] = int(stats.get("deaths", 0)) + 1
 	stats["population"] = maxi(int(stats.get("population", 0)) - 1, 0)
 	species_statistics[normalized_id] = stats
+
 	_record_event("Death: %s (gen %d)" % [normalized_id, generation])
 
 func _sample_population() -> void:
-	_cleanup_invalid_cells()
 	var current_population: int = registered_cells.size()
 	if current_population > peak_population:
 		peak_population = current_population
 		time_of_peak_population = simulation_time
 		_record_event("Population peak: %d" % peak_population)
 
-	for species_id in known_species.keys():
-		var normalized_id: String = String(species_id)
-		var population: int = int(species_statistics.get(normalized_id, {}).get("population", 0))
-		var history: Array = population_history.get(normalized_id, [])
-		history.append({"time": simulation_time, "population": population})
+	for species_key in known_species.keys():
+		var normalized_id: String = String(species_key)
+		var stats: Dictionary = species_statistics[normalized_id]
+		var population: int = int(stats.get("population", 0))
+
+		var history: Array = population_history[normalized_id]
+		history.append({
+			"time": simulation_time,
+			"population": population
+		})
 		if history.size() > 300:
 			history.pop_front()
 		population_history[normalized_id] = history
-		var stats: Dictionary = species_statistics.get(normalized_id, {})
+
 		stats["peak_population"] = maxi(int(stats.get("peak_population", 0)), population)
 		species_statistics[normalized_id] = stats
 
 func _record_event(message: String) -> void:
 	event_history.append("[%06.1f] %s" % [simulation_time, message])
-	if event_history.size() > max(event_history_limit, 1):
+	var limit: int = maxi(event_history_limit, 1)
+	while event_history.size() > limit:
 		event_history.pop_front()
 
 func _get_cell_species_id(cell: Node) -> String:
@@ -400,15 +431,16 @@ func _get_cell_species_id(cell: Node) -> String:
 		return ""
 	if cell.has_method("get_species_id"):
 		return String(cell.get_species_id()).strip_edges()
-	return String(cell.get("species_id")).strip_edges()
+	var value: Variant = cell.get("species_id")
+	return String(value).strip_edges()
 
 func _get_cell_generation(cell: Node) -> int:
 	if cell == null or not is_instance_valid(cell):
 		return 0
 	var genetics: Node = cell.get("genetics") as Node
-	if genetics != null and is_instance_valid(genetics):
-		return int(genetics.get("generation"))
-	return 0
+	if genetics == null or not is_instance_valid(genetics):
+		return 0
+	return int(genetics.get("generation"))
 
 func _get_domain_random_position() -> Vector2:
 	if experimental_domain != null and is_instance_valid(experimental_domain) and experimental_domain.has_method("random_position"):
@@ -435,9 +467,13 @@ func _update_cell_processing() -> void:
 		return
 	if not simulation_camera.has_method("get_simulation_center"):
 		return
+
 	var center: Vector2 = simulation_camera.get_simulation_center()
-	var load_radius: float = simulation_camera.get_load_radius() if simulation_camera.has_method("get_load_radius") else INF
+	var load_radius: float = INF
+	if simulation_camera.has_method("get_load_radius"):
+		load_radius = float(simulation_camera.get_load_radius())
 	var load_radius_squared: float = load_radius * load_radius
+
 	for cell in registered_cells:
 		if not is_instance_valid(cell):
 			continue
@@ -446,7 +482,9 @@ func _update_cell_processing() -> void:
 			continue
 		if not cell is Node2D:
 			continue
-		var distance_squared: float = center.distance_squared_to((cell as Node2D).global_position)
+
+		var cell_node: Node2D = cell as Node2D
+		var distance_squared: float = center.distance_squared_to(cell_node.global_position)
 		cell.process_mode = Node.PROCESS_MODE_INHERIT if distance_squared <= load_radius_squared else Node.PROCESS_MODE_DISABLED
 
 func _enforce_domain_bounds() -> void:
@@ -454,6 +492,7 @@ func _enforce_domain_bounds() -> void:
 		return
 	if not experimental_domain.has_method("clamp_position"):
 		return
+
 	for cell in registered_cells:
 		if not is_instance_valid(cell) or not cell is Node2D:
 			continue
@@ -464,31 +503,27 @@ func _cleanup_invalid_cells() -> void:
 	var valid_cells: Array[Node] = []
 
 	for cell in registered_cells:
-		if is_instance_valid(cell):
-			var species_id: String = String(_tracked_species.get(cell, _get_cell_species_id(cell))).strip_edges()
-			var cell_data: Node = cell.get("cell_data") as Node
-			if cell_data == null or not is_instance_valid(cell_data) or not bool(cell_data.get("alive")):
-				if not _tracked_deaths.has(cell):
-					_tracked_deaths[cell] = true
-					_record_death(species_id, int(_tracked_generations.get(cell, 0)))
-					if cell != player_cell:
-						cell.queue_free()
-					else:
-						player_cell = null
-				continue
-			valid_cells.append(cell)
-		else:
+		if not is_instance_valid(cell):
+			var dead_species: String = String(_tracked_species.get(cell, "")).strip_edges()
+			var dead_generation: int = int(_tracked_generations.get(cell, 0))
 			if not _tracked_deaths.has(cell):
 				_tracked_deaths[cell] = true
-				_record_death(String(_tracked_species.get(cell, "")), int(_tracked_generations.get(cell, 0)))
+				_record_death(dead_species, dead_generation)
 			if cell == player_cell:
 				player_cell = null
+			continue
+
+		var cell_data: Node = cell.get("cell_data") as Node
+		if cell_data == null or not is_instance_valid(cell_data) or not bool(cell_data.get("alive")):
+			var species_id: String = String(_tracked_species.get(cell, _get_cell_species_id(cell))).strip_edges()
+			var generation: int = int(_tracked_generations.get(cell, _get_cell_generation(cell)))
+			if not _tracked_deaths.has(cell):
+				_tracked_deaths[cell] = true
+				_record_death(species_id, generation)
+			if cell == player_cell:
+				player_cell = null
+			continue
+
+		valid_cells.append(cell)
 
 	registered_cells = valid_cells
-
-	var live_cells: Dictionary = {}
-	for cell in registered_cells:
-		live_cells[cell] = true
-	for tracked_cell in _tracked_species.keys():
-		if not live_cells.has(tracked_cell) and not _tracked_deaths.has(tracked_cell):
-			_tracked_deaths[tracked_cell] = true
