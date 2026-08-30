@@ -1,7 +1,7 @@
 extends CharacterBody2D
 
-## Base organism prototype for Alive Cells.
-## This script represents a generic cell, independent of player/enemy roles.
+## Base organism data and metabolism for Alive Cells.
+## The containing simulation cell owns the lifecycle; this component never queue_frees itself.
 
 @export_category("Identity")
 @export var cell_id: String = "cell"
@@ -53,10 +53,8 @@ func take_damage(amount: float, attacker: Node = null) -> bool:
 			return false
 
 	health -= amount
-
 	if health <= 0.0:
 		die()
-
 	return true
 
 func regenerate(delta: float) -> void:
@@ -133,10 +131,10 @@ func take_environmental_damage(amount: float) -> bool:
 func attack(target: Node) -> void:
 	if not alive:
 		return
-
 	if target != null and target.has_method("take_damage"):
 		target.take_damage(damage, self)
 
 func die() -> void:
+	## Lifecycle is owned by the containing simulation cell.
 	alive = false
-	queue_free()
+	health = 0.0
