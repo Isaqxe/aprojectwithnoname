@@ -2,14 +2,20 @@ extends Node2D
 class_name ProceduralWorldRenderer
 
 ## Visual layer for the new ProceduralWorld prototype.
-## It samples the GPU-generated environment data and turns it into a smooth biome image.
+## It samples the GPU-generated environment data and turns it into a smooth,
+## world-space-anchored biome image.
 
 @export var world_provider: ProceduralWorld
 @export var z_index_value: int = -100
-@export var edge_softness: float = 0.16
-@export var edge_detail_frequency: float = 0.018
-@export var edge_detail_strength: float = 0.035
-@export var surface_variation_strength: float = 0.04
+
+@export_category("Visual Boundaries")
+@export var edge_softness: float = 0.24
+@export var edge_detail_frequency: float = 0.0018
+@export var edge_detail_strength: float = 0.018
+@export var surface_large_frequency: float = 0.0014
+@export var surface_medium_frequency: float = 0.0040
+@export var surface_small_frequency: float = 0.012
+@export var surface_variation_strength: float = 0.035
 
 var _display: Sprite2D
 var _visual_material: ShaderMaterial
@@ -39,6 +45,8 @@ func _process(_delta: float) -> void:
 	_display.z_index = z_index_value
 
 	_visual_material.set_shader_parameter("environment_map", map_texture)
+	_visual_material.set_shader_parameter("world_center", world_provider.get_environment_center())
+	_visual_material.set_shader_parameter("world_extent", extent)
 	_visual_material.set_shader_parameter("void_threshold", world_provider.void_threshold)
 	_visual_material.set_shader_parameter("cold_temperature", world_provider.cold_temperature)
 	_visual_material.set_shader_parameter("hot_temperature", world_provider.hot_temperature)
@@ -46,6 +54,9 @@ func _process(_delta: float) -> void:
 	_visual_material.set_shader_parameter("edge_softness", edge_softness)
 	_visual_material.set_shader_parameter("edge_detail_frequency", edge_detail_frequency)
 	_visual_material.set_shader_parameter("edge_detail_strength", edge_detail_strength)
+	_visual_material.set_shader_parameter("surface_large_frequency", surface_large_frequency)
+	_visual_material.set_shader_parameter("surface_medium_frequency", surface_medium_frequency)
+	_visual_material.set_shader_parameter("surface_small_frequency", surface_small_frequency)
 	_visual_material.set_shader_parameter("surface_variation_strength", surface_variation_strength)
 
 func _create_display() -> void:
