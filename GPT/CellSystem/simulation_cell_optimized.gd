@@ -1,6 +1,7 @@
 extends "res://GPT/CellSystem/simulation_cell_clean.gd"
 
 ## Optimized cell organism using CellSpatialIndex for local perception.
+## Species identity is owned by Genetics through the base organism API.
 
 const SPATIAL_INDEX_GROUP := "CellSpatialIndexes"
 const SPATIAL_BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior_spatial.gd")
@@ -8,9 +9,9 @@ var _spatial_index: Node = null
 
 func _ready() -> void:
 	if not inherited_data.is_empty():
-		var inherited_species: String = String(inherited_data.get("species_id", ""))
+		var inherited_species: String = String(inherited_data.get("species_id", "")).strip_edges()
 		if not inherited_species.is_empty() and inherited_species != "default":
-			species_id = inherited_species
+			initial_species_id = inherited_species
 
 	super._ready()
 
@@ -36,9 +37,11 @@ func _refresh_perception() -> void:
 	for candidate in nearby:
 		if candidate == self or not is_instance_valid(candidate) or not candidate is CharacterBody2D:
 			continue
-		if String(candidate.get("species_id")) != String(species_id):
+		if not candidate.has_method("get_species_id"):
 			continue
 		var ally: CharacterBody2D = candidate as CharacterBody2D
+		if ally.get_species_id() != get_species_id():
+			continue
 		if global_position.distance_squared_to(ally.global_position) > radius_squared:
 			continue
 		_cached_allies.append(ally)
