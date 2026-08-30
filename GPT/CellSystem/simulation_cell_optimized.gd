@@ -3,6 +3,7 @@ extends "res://GPT/CellSystem/simulation_cell_clean.gd"
 ## Optimized cell organism using CellSpatialIndex for local perception.
 
 const SPATIAL_INDEX_GROUP := "CellSpatialIndexes"
+const SPATIAL_BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior_spatial.gd")
 var _spatial_index: Node = null
 
 func _ready() -> void:
@@ -10,7 +11,19 @@ func _ready() -> void:
 		var inherited_species: String = String(inherited_data.get("species_id", ""))
 		if not inherited_species.is_empty() and inherited_species != "default":
 			species_id = inherited_species
+
 	super._ready()
+
+	# Replace the generic behavior node with the spatial-aware variant after
+	# the parent has initialized genetics and all other organism systems.
+	var old_behavior: Node = behavior
+	behavior = SPATIAL_BEHAVIOR_SCRIPT.new()
+	behavior.cohesion_radius = group_perception_radius
+	add_child(behavior)
+	_apply_behavior_genes()
+	if old_behavior != null and is_instance_valid(old_behavior):
+		old_behavior.queue_free()
+
 	_spatial_index = get_tree().get_first_node_in_group(SPATIAL_INDEX_GROUP)
 
 func _refresh_perception() -> void:
