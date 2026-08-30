@@ -1,7 +1,7 @@
 extends Camera2D
 
 ## Central spatial controller for the CellSystem simulation.
-## Follows the Player or a selected cell, with optional manual mouse panning.
+## Follows the Player or a selected cell, with manual mouse panning and wheel zoom.
 
 @export_category("Following")
 @export var follow_player: bool = true
@@ -12,10 +12,14 @@ extends Camera2D
 @export var unload_radius: float = 650.0
 @export var spawn_radius: float = 425.0
 
-@export_category("Mouse Pan")
+@export_category("Mouse Controls")
 @export var pan_enabled: bool = true
-@export var pan_button: MouseButton = MOUSE_BUTTON_MIDDLE
+@export var pan_button: MouseButton = MOUSE_BUTTON_LEFT
 @export var pan_speed: float = 1.0
+@export var zoom_enabled: bool = true
+@export var zoom_step: float = 1.15
+@export var min_zoom: float = 0.25
+@export var max_zoom: float = 3.0
 
 var follow_target: Node2D = null
 var selected_target: Node2D = null
@@ -47,21 +51,27 @@ func _process(delta: float) -> void:
 			global_position = global_position.lerp(follow_target.global_position, weight)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not pan_enabled or not event is InputEventMouseButton:
+	if not event is InputEventMouseButton:
 		return
 
 	var mouse_event: InputEventMouseButton = event as InputEventMouseButton
-	if mouse_event.button_index != pan_button:
+
+	if pan_enabled and mouse_event.button_index == pan_button:
+		if mouse_event.pressed:
+			_manual_pan_active = true
+			follow_target = null
+			selected_target = null
+			Input.set_default_cursor_shape(Input.CURSOR_DRAG)
+		else:
+			_manual_pan_active = false
+			Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 		return
 
-	if mouse_event.pressed:
-		_manual_pan_active = true
-		follow_target = null
-		selected_target = null
-		Input.set_default_cursor_shape(Input.CURSOR_DRAG)
-	else:
-		_manual_pan_active = false
-		Input.set_default_cursor_shape(Input.CURSOR_ARROW)
+	if zoom_enabled and mouse_event.pressed:
+		if mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_set_zoom(zoom * zoom_step)
+		elif mouse_event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_set_zoom(zoom / zoom_step)
 
 func _input(event: InputEvent) -> void:
 	if not pan_enabled or not _manual_pan_active or not event is InputEventMouseMotion:
@@ -118,3 +128,7 @@ func _find_player() -> void:
 		var player: Node = manager.get_player()
 		if player is Node2D and is_instance_valid(player):
 			_set_target(player as Node2D)
+
+func _set_zoom(new_zoom: Vector2) -> void:
+	var clamped: float = clampf(new_zoom.x, min_zoom, max_zoom)
+	zoom = Vector2.ONE * clamped
