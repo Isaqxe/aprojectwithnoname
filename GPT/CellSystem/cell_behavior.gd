@@ -40,7 +40,6 @@ func set_state(new_state: BehaviorState) -> void:
 func calculate_strength(cell) -> float:
 	if cell == null:
 		return 0.0
-
 	var strength: float = 0.0
 	if "health" in cell:
 		strength += cell.health
@@ -61,10 +60,17 @@ func _get_behavior_gene(gene_name: String, fallback: float) -> float:
 		return clampf(float(genetics.get_gene(gene_name, fallback)), 0.0, 1.0)
 	return fallback
 
+func _get_species_id(cell: Node) -> String:
+	if cell == null or not is_instance_valid(cell):
+		return ""
+	if cell.has_method("get_species_id"):
+		return String(cell.get_species_id())
+	return String(cell.get("species_id"))
+
 func is_same_species(my_cell, other_cell) -> bool:
-	if my_cell == null or other_cell == null:
-		return false
-	return String(my_cell.get("species_id")) == String(other_cell.get("species_id"))
+	var my_species: String = _get_species_id(my_cell)
+	var other_species: String = _get_species_id(other_cell)
+	return not my_species.is_empty() and my_species == other_species
 
 func is_valid_enemy(my_cell, other_cell) -> bool:
 	if my_cell == null or other_cell == null or my_cell == other_cell:
@@ -101,8 +107,6 @@ func evaluate_cell(my_cell, other_cell) -> BehaviorState:
 		state = BehaviorState.FLEE
 	return state
 
-## Evaluates the local combat situation using all nearby enemies rather than
-## only the currently selected target. Ally support is weighted by group_response.
 func evaluate_collective_cell(my_cell, other_cell, ally_cells: Array) -> BehaviorState:
 	if my_cell == null:
 		state = BehaviorState.WANDER
