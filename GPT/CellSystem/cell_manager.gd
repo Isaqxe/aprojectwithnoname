@@ -1,10 +1,11 @@
 extends Node
 
 ## CellManager coordinates cell creation, registration, cleanup and spatial streaming.
-## Species also own a shared visual color so members are visually related.
+## The ExperimentalDomain defines the valid laboratory-slide area.
 
 @export var cell_factory: Node
 @export var cell_container: Node2D
+@export var experimental_domain: Node
 
 @export_category("Player")
 @export var spawn_player_on_ready: bool = false
@@ -14,7 +15,7 @@ extends Node
 @export var auto_spawn: bool = true
 @export var spawn_interval: float = 2.0
 @export var initial_population: int = 12
-@export var max_population: int = 30
+@export var max_population: int = 200
 @export var initial_species_count: int = 6
 @export var spawn_area: Rect2 = Rect2(-425.0, -425.0, 850.0, 850.0)
 
@@ -63,6 +64,7 @@ func _process(delta: float) -> void:
 	_cleanup_invalid_cells()
 	_update_simulation_area()
 	_update_cell_processing()
+	_enforce_domain_bounds()
 
 	if not auto_spawn or cell_factory == null or cell_container == null:
 		return
@@ -80,6 +82,9 @@ func _resolve_scene_nodes() -> void:
 		var parent_node: Node = get_parent()
 		if parent_node != null:
 			cell_container = parent_node.get_node_or_null("Cells") as Node2D
+
+	if experimental_domain == null:
+		experimental_domain = get_tree().get_first_node_in_group("ExperimentalDomains")
 
 	if simulation_camera == null:
 		simulation_camera = get_tree().get_first_node_in_group("SimulationCameras")
@@ -159,7 +164,8 @@ func create_cell(position: Vector2, is_player: bool = false, species_id_override
 	if cell_factory == null or not is_instance_valid(cell_factory):
 		return null
 
-	var new_cell: Node = cell_factory.create_cell(position, is_player)
+	var spawn_position: Vector2 = _clamp_to_domain(position)
+	var new_cell: Node = cell_factory.create_cell(spawn_position, is_player)
 	if new_cell == null:
 		return null
 
@@ -192,7 +198,8 @@ func create_cell_from_parent(parent_cell: Node, position: Vector2 = Vector2.ZERO
 		return null
 
 	var inherited_data: Dictionary = parent_cell.get_heredity_data()
-	var new_cell: Node = cell_factory.create_cell(position, false, inherited_data)
+	var child_position: Vector2 = _clamp_to_domain(position)
+	var new_cell: Node = cell_factory.create_cell(child_position, false, inherited_data)
 	if new_cell == null:
 		return null
 
@@ -214,14 +221,14 @@ func spawn_cell(is_player: bool = false) -> Node:
 	if get_population() >= max_population:
 		return null
 
-	var active_spawn_area: Rect2 = spawn_area
+	var spawn_position: Vector2 = _get_domain_random_position()
 	if simulation_camera != null and is_instance_valid(simulation_camera) and simulation_camera.has_method("get_spawn_bounds"):
-		active_spawn_area = simulation_camera.get_spawn_bounds()
-
-	var spawn_position: Vector2 = Vector2(
-		randf_range(active_spawn_area.position.x, active_spawn_area.end.x),
-		randf_range(active_spawn_area.position.y, active_spawn_area.end.y)
-	)
+		var camera_area: Rect2 = simulation_camera.get_spawn_bounds()
+		spawn_position = Vector2(
+			randf_range(camera_area.position.x, camera_area.end.x),
+			randf_range(camera_area.position.y, camera_area.end.y)
+		)
+		spawn_position = _clamp_to_domain(spawn_position, 8.0)
 
 	return create_cell(spawn_position, is_player, _get_random_species_id())
 
@@ -230,7 +237,7 @@ func spawn_player(position: Vector2) -> Node:
 		return player_cell
 	if get_population() >= max_population:
 		return null
-	return create_cell(position, true, _get_random_species_id())
+	return create_cell(_clamp_to_domain(position, 8.0), true, _get_random_species_id())
 
 func spawn_mitosis_child(parent_cell: Node) -> Node:
 	if parent_cell == null or not is_instance_valid(parent_cell):
@@ -246,9 +253,19 @@ func spawn_mitosis_child(parent_cell: Node) -> Node:
 	var parent_size: float = float(parent_data.size)
 	var spawn_angle: float = randf_range(0.0, TAU)
 	var spawn_distance: float = parent_size + 30.0
-	var child_position: Vector2 = parent_position + Vector2.from_angle(spawn_angle) * spawn_distance
+	var child_position: Vector2 = _clamp_to_domain(parent_position + Vector2.from_angle(spawn_angle) * spawn_distance, parent_size)
 
 	return create_cell_from_parent(parent_cell, child_position)
+
+func _get_domain_random_position() -> Vector2:
+	if experimental_domain != null and is_instance_valid(experimental_domain) and experimental_domain.has_method("random_position"):
+		return experimental_domain.random_position(8.0)
+	return Vector2.ZERO
+
+func _clamp_to_domain(position: Vector2, margin: float = 0.0) -> Vector2:
+	if experimental_domain != null and is_instance_valid(experimental_domain) and experimental_domain.has_method("clamp_position"):
+		return experimental_domain.clamp_position(position, margin)
+	return position
 
 func _update_simulation_area() -> void:
 	if simulation_camera == null or not is_instance_valid(simulation_camera):
@@ -281,6 +298,18 @@ func _update_cell_processing() -> void:
 
 		var distance_squared: float = center.distance_squared_to((cell as Node2D).global_position)
 		cell.process_mode = Node.PROCESS_MODE_INHERIT if distance_squared <= load_radius_squared else Node.PROCESS_MODE_DISABLED
+
+func _enforce_domain_bounds() -> void:
+	if experimental_domain == null or not is_instance_valid(experimental_domain):
+		return
+	if not experimental_domain.has_method("clamp_position"):
+		return
+
+	for cell in registered_cells:
+		if not is_instance_valid(cell) or not cell is Node2D:
+			continue
+		var cell_node: Node2D = cell as Node2D
+		cell_node.global_position = experimental_domain.clamp_position(cell_node.global_position, 4.0)
 
 func _cleanup_invalid_cells() -> void:
 	var valid_cells: Array[Node] = []
