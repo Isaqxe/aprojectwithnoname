@@ -64,7 +64,10 @@ func _process(delta: float) -> void:
 
 func _is_presentation_mode() -> bool:
 	var scene: Node = get_tree().current_scene
-	return scene != null and bool(scene.get("presentation_mode", false))
+	if scene == null:
+		return false
+	var mode_value: Variant = scene.get("presentation_mode")
+	return bool(mode_value) if mode_value != null else false
 
 func _draw() -> void:
 	var parent_cell: Node = get_parent()
