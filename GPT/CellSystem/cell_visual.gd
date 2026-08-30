@@ -1,7 +1,7 @@
 extends Node2D
 
 ## Lightweight procedural visual for a simulation cell.
-## The simulation cell keeps all gameplay physics; this node only renders and deforms the shape.
+## Gameplay physics remains on the simulation cell; this node only renders and deforms the shape.
 
 @export var point_count: int = 20
 @export var deformation_strength: float = 0.10
@@ -9,7 +9,7 @@ extends Node2D
 @export var damping: float = 8.0
 @export var idle_wobble: float = 0.035
 @export var impact_strength: float = 0.85
-@export var impact_radius: float = 0.70
+@export var impact_cooldown: float = 0.12
 @export var health_bar_width: float = 42.0
 @export var health_bar_height: float = 5.0
 @export var health_bar_offset: float = 8.0
@@ -22,6 +22,8 @@ var _time: float = 0.0
 var _elongation: Vector2 = Vector2.ONE
 var _asymmetry: Vector2 = Vector2.ZERO
 var _impact_offset: Vector2 = Vector2.ZERO
+var _last_impact_time: float = -INF
+var _last_impact_collider_id: int = -1
 
 func _ready() -> void:
 	var parent_cell: Node = get_parent()
@@ -52,7 +54,7 @@ func _build_shape() -> void:
 		_velocities.append(Vector2.ZERO)
 
 func apply_impact(world_direction: Vector2, strength: float) -> void:
-	var direction: Vector2 = -world_direction.normalized()
+	var direction: Vector2 = world_direction.normalized()
 	if direction.length_squared() <= 0.001:
 		return
 	var impulse: float = clampf(strength, 0.0, 2.0) * impact_strength
@@ -63,6 +65,29 @@ func apply_impact(world_direction: Vector2, strength: float) -> void:
 		var facing: float = maxf(radial_direction.dot(direction), 0.0)
 		_velocities[i] += direction * facing * impulse * 1.8
 
+func _process_visual_impacts(parent_cell: Node2D) -> void:
+	if not parent_cell.has_method("get_slide_collision_count"):
+		return
+	var collision_count: int = parent_cell.get_slide_collision_count()
+	for index in range(collision_count):
+		var collision: KinematicCollision2D = parent_cell.get_slide_collision(index)
+		if collision == null:
+			continue
+		var collider: Object = collision.get_collider()
+		if collider == null or not collider is Node2D:
+			continue
+		var collider_id: int = collider.get_instance_id()
+		if collider_id == _last_impact_collider_id and _time - _last_impact_time < impact_cooldown:
+			continue
+		var relative_velocity: Vector2 = parent_cell.get("velocity") - (collider as Node2D).get("velocity")
+		var impact_speed: float = relative_velocity.length()
+		if impact_speed < 4.0:
+			continue
+		apply_impact(-collision.get_normal(), clampf(impact_speed / 75.0, 0.15, 1.5))
+		_last_impact_collider_id = collider_id
+		_last_impact_time = _time
+		break
+
 func _process(delta: float) -> void:
 	_time += delta
 	var parent_cell: Node2D = get_parent() as Node2D
@@ -71,6 +96,8 @@ func _process(delta: float) -> void:
 	var cell_data: Node = parent_cell.get("cell_data") as Node
 	if cell_data == null or not is_instance_valid(cell_data):
 		return
+
+	_process_visual_impacts(parent_cell)
 
 	var radius: float = maxf(float(cell_data.get("size")), 4.0)
 	var movement_velocity: Vector2 = parent_cell.get("velocity")
@@ -91,7 +118,10 @@ func _process(delta: float) -> void:
 		var morphology_factor: float = 1.0 + direction.x * _asymmetry.x + direction.y * _asymmetry.y
 		var target_radius: float = radius * (_radii[i] + local_wobble + directional_push) * morphology_factor
 		var target: Vector2 = Vector2(direction.x * _elongation.x, direction.y * _elongation.y) * target_radius
-		var impact_blend: float = clampf(1.0 - absf(angle - _impact_offset.angle()) / PI, 0.0, 1.0)
+		var impact_blend: float = 0.0
+		if _impact_offset.length_squared() > 0.0001:
+			var impact_direction: Vector2 = _impact_offset.normalized()
+			impact_blend = maxf(direction.dot(impact_direction), 0.0)
 		target += _impact_offset * impact_blend * radius
 		var displacement: Vector2 = target - _points[i]
 		_velocities[i] += displacement * spring_strength * delta
