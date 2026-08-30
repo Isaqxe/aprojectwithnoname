@@ -144,9 +144,9 @@ func register_cell(cell: Node) -> void:
 func unregister_cell(cell: Node) -> void:
 	if is_instance_valid(cell):
 		registered_cells.erase(cell)
-	_tracked_species.erase(cell)
-	_tracked_generations.erase(cell)
-	_tracked_deaths.erase(cell)
+		_tracked_species.erase(cell)
+		_tracked_generations.erase(cell)
+		_tracked_deaths.erase(cell)
 	if player_cell == cell:
 		player_cell = null
 
@@ -446,7 +446,8 @@ func _get_cell_species_id(cell: Node) -> String:
 		return ""
 	if cell.has_method("get_species_id"):
 		return String(cell.get_species_id()).strip_edges()
-	return String(cell.get("species_id")).strip_edges()
+	var value: Variant = cell.get("species_id")
+	return String(value).strip_edges()
 
 func _get_cell_generation(cell: Node) -> int:
 	if cell == null or not is_instance_valid(cell):
@@ -471,8 +472,8 @@ func _update_simulation_area() -> void:
 		simulation_camera = get_tree().get_first_node_in_group("SimulationCameras")
 	if simulation_camera == null or not is_instance_valid(simulation_camera):
 		return
-	if simulation_camera.has_method("get_spawn_bounds"):
-		spawn_area = simulation_camera.get_spawn_bounds()
+	# Camera bounds are used only for streaming/debug visualization.
+	# Cell spawning is controlled by the ExperimentalDomain.
 
 func _update_cell_processing() -> void:
 	if not stream_cells_from_camera:
@@ -505,6 +506,7 @@ func _enforce_domain_bounds() -> void:
 		return
 	if not experimental_domain.has_method("clamp_position"):
 		return
+
 	for cell in registered_cells:
 		if not is_instance_valid(cell) or not cell is Node2D:
 			continue
