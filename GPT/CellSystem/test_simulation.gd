@@ -23,9 +23,6 @@ func _process(delta: float) -> void:
 	if Input.is_key_pressed(KEY_SPACE):
 		cell_manager.spawn_player(Vector2.ZERO)
 
-	if Input.is_key_pressed(presentation_toggle_key):
-		_toggle_presentation_mode()
-
 	_debug_timer -= delta
 	if _debug_timer > 0.0:
 		return
@@ -66,8 +63,14 @@ func _process(delta: float) -> void:
 		"Camera: (%.0f, %.0f) | Domain R: %.0f\n" % [simulation_camera.global_position.x, simulation_camera.global_position.y, float(experimental_domain.get("radius"))] + \
 		"Temp: %.2f | Humidity: %.2f | Food: %.2f" % [float(environment.get("temperature", 0.5)), float(environment.get("humidity", 0.5)), float(environment.get("food_density", 1.0))]
 
+func _unhandled_input(event: InputEvent) -> void:
+	if not event is InputEventKey:
+		return
+	var key_event: InputEventKey = event as InputEventKey
+	if key_event.pressed and not key_event.echo and key_event.keycode == presentation_toggle_key:
+		_toggle_presentation_mode()
+
 func _toggle_presentation_mode() -> void:
-	# Input.is_key_pressed() can fire for multiple frames. Use a one-shot guard.
 	presentation_mode = not presentation_mode
 	debug_layer.visible = not presentation_mode
 	if cell_inspector != null and is_instance_valid(cell_inspector) and cell_inspector.has_method("set_presentation_mode"):
