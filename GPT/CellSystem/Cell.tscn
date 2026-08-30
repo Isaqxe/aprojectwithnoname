@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://GPT/CellSystem/simulation_cell_clean.gd" id="1_cell"]
+[ext_resource type="Script" path="res://GPT/CellSystem/simulation_cell_optimized.gd" id="1_cell"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_cell"]
 radius = 12.0
