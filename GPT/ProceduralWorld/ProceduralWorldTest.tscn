@@ -10,15 +10,22 @@ script = ExtResource("1_test")
 [node name="ProceduralWorld" type="Node2D" parent="."]
 script = ExtResource("2_world")
 world_seed = 123456
-environment_resolution = Vector2i(256, 256)
+environment_resolution = Vector2i(512, 512)
 load_radius = 700.0
 unload_radius = 900.0
 enable_cpu_readback = true
 readback_interval = 0.25
+border_detail_frequency = 0.0025
+border_detail_strength = 0.18
+border_micro_frequency = 0.0065
+border_micro_strength = 0.08
 
 [node name="Renderer" type="Node2D" parent="ProceduralWorld"]
 script = ExtResource("3_renderer")
-display_scale = 5.46875
+edge_softness = 0.16
+edge_detail_frequency = 0.018
+edge_detail_strength = 0.035
+surface_variation_strength = 0.04
 
 [node name="SimulationCamera" type="Camera2D" parent="."]
 enabled = true
