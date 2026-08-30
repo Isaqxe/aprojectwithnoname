@@ -5,7 +5,7 @@ extends Node
 
 @export var cell_scene: PackedScene
 
-func create_cell(position: Vector2, player_controlled: bool = false, inherited_data: Dictionary = {}) -> Node:
+func create_cell(position: Vector2, player_controlled: bool = false, inherited_data: Dictionary = {}, species_id: String = "") -> Node:
 	if cell_scene == null:
 		return null
 
@@ -15,5 +15,11 @@ func create_cell(position: Vector2, player_controlled: bool = false, inherited_d
 
 	if not inherited_data.is_empty():
 		new_cell.inherited_data = inherited_data
+
+	if not species_id.strip_edges().is_empty() and species_id.strip_edges() != "default":
+		if new_cell.has_method("set_species_id"):
+			new_cell.set_species_id(species_id)
+		else:
+			new_cell.species_id = species_id.strip_edges()
 
 	return new_cell
