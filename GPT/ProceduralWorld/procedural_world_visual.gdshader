@@ -1,0 +1,70 @@
+shader_type canvas_item;
+render_mode unshaded;
+
+uniform sampler2D environment_map;
+uniform float void_threshold = 0.60;
+uniform float cold_temperature = 0.34;
+uniform float hot_temperature = 0.68;
+uniform float green_humidity = 0.45;
+uniform float edge_softness = 0.10;
+uniform float edge_detail_frequency = 0.010;
+uniform float edge_detail_strength = 0.05;
+
+const vec3 VOID_COLOR = vec3(0.18, 0.19, 0.22);
+const vec3 COLD_COLOR = vec3(0.42, 0.68, 0.92);
+const vec3 GREEN_COLOR = vec3(0.30, 0.72, 0.38);
+const vec3 HOT_COLOR = vec3(0.92, 0.48, 0.20);
+
+float hash21(vec2 p) {
+	p = fract(p * vec2(123.34, 456.21));
+	p += dot(p, p + 45.32);
+	return fract(p.x * p.y);
+}
+
+float value_noise(vec2 p) {
+	vec2 cell = floor(p);
+	vec2 local = fract(p);
+	local = local * local * (3.0 - 2.0 * local);
+	float a = hash21(cell);
+	float b = hash21(cell + vec2(1.0, 0.0));
+	float c = hash21(cell + vec2(0.0, 1.0));
+	float d = hash21(cell + vec2(1.0, 1.0));
+	return mix(mix(a, b, local.x), mix(c, d, local.x), local.y);
+}
+
+float fbm(vec2 p) {
+	float result = 0.0;
+	float amplitude = 0.5;
+	float normalization = 0.0;
+	for (int octave = 0; octave < 4; octave++) {
+		result += value_noise(p) * amplitude;
+		normalization += amplitude;
+		p *= 2.0;
+		amplitude *= 0.5;
+	}
+	return result / normalization;
+}
+
+void fragment() {
+	vec4 environment = texture(environment_map, UV);
+	float macro = environment.r;
+	float temperature = environment.g;
+	float humidity = environment.b;
+
+	float edge_noise = fbm(UV * edge_detail_frequency * 100.0) - 0.5;
+	float edge_center = void_threshold + edge_noise * edge_detail_strength;
+	float land_factor = smoothstep(edge_center - edge_softness, edge_center + edge_softness, macro);
+
+	float cold_factor = 1.0 - smoothstep(cold_temperature - 0.05, cold_temperature + 0.05, temperature);
+	float hot_factor = smoothstep(hot_temperature - 0.05, hot_temperature + 0.05, temperature);
+	float green_factor = smoothstep(0.15, green_humidity, humidity);
+
+	vec3 climate_color = mix(GREEN_COLOR * 0.72, GREEN_COLOR, green_factor);
+	climate_color = mix(climate_color, COLD_COLOR, cold_factor);
+	climate_color = mix(climate_color, HOT_COLOR, hot_factor);
+
+	vec3 color = mix(VOID_COLOR, climate_color, land_factor);
+	float surface_variation = fbm(UV * 18.0) - 0.5;
+	color += surface_variation * 0.05 * land_factor;
+	COLOR = vec4(clamp(color, vec3(0.0), vec3(1.0)), 1.0);
+}
