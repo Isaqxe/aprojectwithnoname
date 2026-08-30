@@ -78,15 +78,12 @@ func _process(delta: float) -> void:
 func _resolve_scene_nodes() -> void:
 	if cell_factory == null:
 		cell_factory = get_node_or_null("CellFactory")
-
 	if cell_container == null:
 		var parent_node: Node = get_parent()
 		if parent_node != null:
 			cell_container = parent_node.get_node_or_null("Cells") as Node2D
-
 	if experimental_domain == null:
 		experimental_domain = get_tree().get_first_node_in_group("ExperimentalDomains")
-
 	if simulation_camera == null:
 		simulation_camera = get_tree().get_first_node_in_group("SimulationCameras")
 
@@ -135,13 +132,11 @@ func _initialize_species() -> void:
 func _generate_species_name() -> String:
 	var generated_name: String = ""
 	var attempts: int = 0
-
 	while attempts < 20:
 		generated_name = SPECIES_PREFIXES.pick_random() + SPECIES_MIDDLES.pick_random() + SPECIES_SUFFIXES.pick_random()
 		if not known_species.has(generated_name):
 			return generated_name
 		attempts += 1
-
 	return "Species_%d" % (known_species.size() + 1)
 
 func _get_random_species_id() -> String:
@@ -170,28 +165,26 @@ func create_cell(position: Vector2, is_player: bool = false, species_id_override
 	var resolved_species_id: String = species_id_override.strip_edges()
 	if resolved_species_id.is_empty() or resolved_species_id == "default":
 		resolved_species_id = _get_random_species_id()
+	register_species(resolved_species_id)
 
 	var spawn_position: Vector2 = _clamp_to_domain(position)
-	var new_cell: Node = cell_factory.create_cell(spawn_position, is_player)
+	var new_cell: Node = cell_factory.create_cell(spawn_position, is_player, {}, resolved_species_id)
 	if new_cell == null:
 		return null
 
-	if new_cell.has_method("set_species_id"):
-		if not new_cell.set_species_id(resolved_species_id):
-			return null
-	else:
-		new_cell.set("species_id", resolved_species_id)
-
 	cell_container.add_child(new_cell)
 	register_cell(new_cell)
-	register_species(resolved_species_id)
+
+	if new_cell.has_method("set_species_id"):
+		new_cell.set_species_id(resolved_species_id)
+	elif new_cell.get("species_id") == null:
+		return null
 
 	if new_cell.has_method("set_species_color"):
 		new_cell.set_species_color(get_species_color(resolved_species_id))
 
 	if is_player:
 		player_cell = new_cell
-
 	return new_cell
 
 func create_cell_from_parent(parent_cell: Node, position: Vector2 = Vector2.ZERO) -> Node:
@@ -205,32 +198,32 @@ func create_cell_from_parent(parent_cell: Node, position: Vector2 = Vector2.ZERO
 	var inherited_data: Dictionary = parent_cell.get_heredity_data()
 	var inherited_species: String = String(inherited_data.get("species_id", "")).strip_edges()
 	if inherited_species.is_empty() or inherited_species == "default":
+		if parent_cell.has_method("get_species_id"):
+			inherited_species = String(parent_cell.get_species_id()).strip_edges()
+	if inherited_species.is_empty() or inherited_species == "default":
 		return null
 
+	register_species(inherited_species)
 	var child_position: Vector2 = _clamp_to_domain(position)
-	var new_cell: Node = cell_factory.create_cell(child_position, false, inherited_data)
+	var new_cell: Node = cell_factory.create_cell(child_position, false, inherited_data, inherited_species)
 	if new_cell == null:
 		return null
 
 	cell_container.add_child(new_cell)
 	register_cell(new_cell)
 
-	if not new_cell.has_method("get_species_id"):
-		return null
-	var child_species_id: String = new_cell.get_species_id()
-	if child_species_id.is_empty() or child_species_id == "default":
-		return null
-	register_species(child_species_id)
+	if new_cell.has_method("set_species_id"):
+		new_cell.set_species_id(inherited_species)
+	else:
+		new_cell.set("species_id", inherited_species)
 
 	if new_cell.has_method("set_species_color"):
-		new_cell.set_species_color(get_species_color(child_species_id))
-
+		new_cell.set_species_color(get_species_color(inherited_species))
 	return new_cell
 
 func spawn_cell(is_player: bool = false) -> Node:
 	if get_population() >= max_population:
 		return null
-
 	var spawn_position: Vector2 = _get_domain_random_position()
 	if simulation_camera != null and is_instance_valid(simulation_camera) and simulation_camera.has_method("get_spawn_bounds"):
 		var camera_area: Rect2 = simulation_camera.get_spawn_bounds()
@@ -239,7 +232,6 @@ func spawn_cell(is_player: bool = false) -> Node:
 			randf_range(camera_area.position.y, camera_area.end.y)
 		)
 		spawn_position = _clamp_to_domain(spawn_position, 8.0)
-
 	return create_cell(spawn_position, is_player, _get_random_species_id())
 
 func spawn_player(position: Vector2) -> Node:
@@ -254,17 +246,14 @@ func spawn_mitosis_child(parent_cell: Node) -> Node:
 		return null
 	if get_population() >= max_population:
 		return null
-
 	var parent_data = parent_cell.get("cell_data")
 	if parent_data == null:
 		return null
-
 	var parent_position: Vector2 = parent_cell.global_position
 	var parent_size: float = float(parent_data.size)
 	var spawn_angle: float = randf_range(0.0, TAU)
 	var spawn_distance: float = parent_size + 30.0
 	var child_position: Vector2 = _clamp_to_domain(parent_position + Vector2.from_angle(spawn_angle) * spawn_distance, parent_size)
-
 	return create_cell_from_parent(parent_cell, child_position)
 
 func _get_domain_random_position() -> Vector2:
@@ -292,11 +281,9 @@ func _update_cell_processing() -> void:
 		return
 	if not simulation_camera.has_method("get_simulation_center"):
 		return
-
 	var center: Vector2 = simulation_camera.get_simulation_center()
 	var load_radius: float = simulation_camera.get_load_radius() if simulation_camera.has_method("get_load_radius") else INF
 	var load_radius_squared: float = load_radius * load_radius
-
 	for cell in registered_cells:
 		if not is_instance_valid(cell):
 			continue
@@ -305,7 +292,6 @@ func _update_cell_processing() -> void:
 			continue
 		if not cell is Node2D:
 			continue
-
 		var distance_squared: float = center.distance_squared_to((cell as Node2D).global_position)
 		cell.process_mode = Node.PROCESS_MODE_INHERIT if distance_squared <= load_radius_squared else Node.PROCESS_MODE_DISABLED
 
@@ -314,7 +300,6 @@ func _enforce_domain_bounds() -> void:
 		return
 	if not experimental_domain.has_method("clamp_position"):
 		return
-
 	for cell in registered_cells:
 		if not is_instance_valid(cell) or not cell is Node2D:
 			continue
@@ -323,11 +308,9 @@ func _enforce_domain_bounds() -> void:
 
 func _cleanup_invalid_cells() -> void:
 	var valid_cells: Array[Node] = []
-
 	for cell in registered_cells:
 		if is_instance_valid(cell):
 			valid_cells.append(cell)
 		elif cell == player_cell:
 			player_cell = null
-
 	registered_cells = valid_cells
