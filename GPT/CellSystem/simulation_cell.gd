@@ -24,7 +24,6 @@ const ADAPTATION_SCRIPT := preload("res://GPT/CellSystem/cell_adaptation.gd")
 @export_category("Social Behavior")
 @export var group_perception_radius: float = 150.0
 @export var defense_radius: float = 180.0
-@export var defense_power_ratio: float = 1.10
 
 var inherited_data: Dictionary = {}
 var species_color: Color = Color.WHITE
@@ -194,8 +193,15 @@ func _process_ai(delta: float) -> void:
 		_resource_target = _find_nearest_resource() if not is_instance_valid(_target) else null
 		_retarget_timer = 0.18
 
-	var ally_positions: Array[Vector2] = _get_local_ally_positions(group_perception_radius)
-	var ally_velocities: Array[Vector2] = _get_local_ally_velocities(group_perception_radius)
+	var ally_cells: Array = _get_local_allies(group_perception_radius)
+	var ally_positions: Array[Vector2] = []
+	var ally_velocities: Array[Vector2] = []
+	for ally in ally_cells:
+		if not is_instance_valid(ally) or not ally is CharacterBody2D:
+			continue
+		var ally_node: CharacterBody2D = ally as CharacterBody2D
+		ally_positions.append(ally_node.global_position)
+		ally_velocities.append(ally_node.velocity)
 
 	if is_instance_valid(_target):
 		_wander_time = 0.0
@@ -206,10 +212,8 @@ func _process_ai(delta: float) -> void:
 			_wander(delta, ally_positions, ally_velocities)
 			return
 
-		var ally_cells: Array = _get_local_allies(defense_radius)
 		var decision: CellBehavior.BehaviorState = behavior.evaluate_collective_cell(cell_data, target_data, ally_cells)
 		var desired_direction: Vector2
-
 		if decision == CellBehavior.BehaviorState.FLEE:
 			desired_direction = _target.global_position.direction_to(global_position)
 		else:
@@ -263,19 +267,6 @@ func _get_local_allies(radius: float) -> Array:
 			allies.append(candidate)
 
 	return allies
-
-func _get_local_ally_positions(radius: float) -> Array[Vector2]:
-	var positions: Array[Vector2] = []
-	for ally in _get_local_allies(radius):
-		positions.append((ally as CharacterBody2D).global_position)
-	return positions
-
-func _get_local_ally_velocities(radius: float) -> Array[Vector2]:
-	var velocities: Array[Vector2] = []
-	for ally in _get_local_allies(radius):
-		if ally is CharacterBody2D:
-			velocities.append((ally as CharacterBody2D).velocity)
-	return velocities
 
 func _find_nearest_resource() -> Area2D:
 	var nearest: Area2D = null
@@ -475,7 +466,7 @@ func _update_collision_shape() -> void:
 		return
 	circle_shape.radius = cell_data.size + combat_contact_margin
 
-func _wander(delta: float, ally_positions: Array[Vector2] = [], ally_velocities: Array[Vector2] = []) -> void:
+func _wander(delta: float, ally_positions: Array[Vector2], ally_velocities: Array[Vector2]) -> void:
 	if _wander_direction_timer <= 0.0 or _direction.length_squared() < 0.01:
 		_direction = Vector2.from_angle(randf_range(0.0, TAU))
 		_wander_direction_timer = randf_range(0.8, 1.8)
@@ -485,3 +476,9 @@ func _wander(delta: float, ally_positions: Array[Vector2] = [], ally_velocities:
 
 	if not ally_positions.is_empty():
 		_direction = behavior.calculate_social_steering(global_position, _direction, ally_positions, ally_velocities)
+
+func _draw() -> void:
+	var visible_color: Color = _base_color
+	if _flash_timer > 0.0:
+		visible_color = Color(0.9, 0.95, 1.0, 1.0)
+	draw_circle(Vector2.ZERO, cell_data.size if cell_data != null else 16.0, visible_color)
