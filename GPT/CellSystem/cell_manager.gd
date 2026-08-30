@@ -1,9 +1,7 @@
 extends Node
 
-## CellManager coordinates cell creation, registration and spatial streaming.
-## Genetics owns individual species identity; the manager owns species statistics.
-## The ExperimentalDomain defines the valid laboratory-slide area.
-## Telemetry is event-driven with lightweight periodic sampling.
+## CellManager coordinates creation, registration, streaming and lightweight telemetry.
+## Genetics owns individual identity; this manager owns population statistics.
 
 @export var cell_factory: Node
 @export var cell_container: Node2D
@@ -19,17 +17,18 @@ extends Node
 @export var initial_population: int = 12
 @export var max_population: int = 200
 @export var initial_species_count: int = 6
-@export var spawn_area: Rect2 = Rect2(-425.0, -425.0, 850.0, 850.0)
 
 @export_category("Simulation Streaming")
 @export var simulation_camera: Node
 @export var stream_cells_from_camera: bool = true
+@export var maintenance_interval: float = 0.25
 
 @export_category("Telemetry")
 @export var statistics_sample_interval: float = 1.0
 @export var event_history_limit: int = 100
 
 var spawn_timer: float = 0.0
+var maintenance_timer: float = 0.0
 var statistics_sample_timer: float = 0.0
 var simulation_time: float = 0.0
 
@@ -71,6 +70,7 @@ func _ready() -> void:
 	_resolve_scene_nodes()
 	_initialize_species()
 	spawn_timer = spawn_interval
+	maintenance_timer = 0.0
 	statistics_sample_timer = statistics_sample_interval
 
 	if cell_factory == null:
@@ -90,10 +90,14 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	simulation_time += delta
-	_cleanup_invalid_cells()
-	_update_simulation_area()
-	_update_cell_processing()
-	_enforce_domain_bounds()
+
+	maintenance_timer -= delta
+	if maintenance_timer <= 0.0:
+		maintenance_timer = maxf(maintenance_interval, 0.05)
+		_cleanup_invalid_cells()
+		_update_simulation_area()
+		_update_cell_processing()
+		_enforce_domain_bounds()
 
 	if statistics_sample_interval > 0.0:
 		statistics_sample_timer -= delta
@@ -126,7 +130,6 @@ func register_cell(cell: Node) -> void:
 		return
 
 	registered_cells.append(cell)
-
 	var species_id: String = _get_cell_species_id(cell)
 	var generation: int = _get_cell_generation(cell)
 	_tracked_species[cell] = species_id
@@ -141,17 +144,15 @@ func register_cell(cell: Node) -> void:
 func unregister_cell(cell: Node) -> void:
 	if is_instance_valid(cell):
 		registered_cells.erase(cell)
-		_tracked_species.erase(cell)
-		_tracked_generations.erase(cell)
-		_tracked_deaths.erase(cell)
+	_tracked_species.erase(cell)
+	_tracked_generations.erase(cell)
+	_tracked_deaths.erase(cell)
 	if player_cell == cell:
 		player_cell = null
 
 func register_species(species_id: String) -> void:
 	var normalized_id: String = species_id.strip_edges()
-	if normalized_id.is_empty() or normalized_id == "default":
-		return
-	if known_species.has(normalized_id):
+	if normalized_id.is_empty() or normalized_id == "default" or known_species.has(normalized_id):
 		return
 
 	known_species[normalized_id] = true
@@ -208,16 +209,40 @@ func _get_random_species_id() -> String:
 	return ids.pick_random() if not ids.is_empty() else ""
 
 func get_cell_count() -> int:
-	_cleanup_invalid_cells()
 	return registered_cells.size()
 
 func get_population() -> int:
-	return get_cell_count()
+	return registered_cells.size()
 
 func get_player() -> Node:
 	if not is_instance_valid(player_cell):
 		player_cell = null
 	return player_cell
+
+func get_dominant_species() -> String:
+	var best_species: String = ""
+	var best_population: int = 0
+	for species_key in known_species.keys():
+		var species_id: String = String(species_key)
+		var stats: Dictionary = species_statistics.get(species_id, {})
+		var population: int = int(stats.get("population", 0))
+		if population > best_population:
+			best_population = population
+			best_species = species_id
+	return best_species
+
+func get_telemetry_snapshot() -> Dictionary:
+	return {
+		"simulation_time": simulation_time,
+		"population": registered_cells.size(),
+		"peak_population": peak_population,
+		"total_births": total_births,
+		"total_deaths": total_deaths,
+		"highest_generation": highest_generation,
+		"total_mutations": total_mutations,
+		"species_count": known_species.size(),
+		"dominant_species": get_dominant_species()
+	}
 
 func create_cell(position: Vector2, is_player: bool = false, species_id_override: String = "") -> Node:
 	if cell_factory == null or not is_instance_valid(cell_factory):
@@ -353,8 +378,7 @@ func get_species_statistics(species_id: String = "") -> Dictionary:
 		return species_statistics.duplicate(true)
 	if not species_statistics.has(normalized_id):
 		return {}
-	var stats: Dictionary = species_statistics[normalized_id]
-	return stats.duplicate(true)
+	return species_statistics[normalized_id].duplicate(true)
 
 func get_population_history(species_id: String) -> Array:
 	var normalized_id: String = species_id.strip_edges()
@@ -372,13 +396,11 @@ func _record_birth(species_id: String, generation: int) -> void:
 	register_species(normalized_id)
 	total_births += 1
 	births_by_species[normalized_id] = int(births_by_species.get(normalized_id, 0)) + 1
-
 	var stats: Dictionary = species_statistics[normalized_id]
 	stats["births"] = int(stats.get("births", 0)) + 1
 	stats["population"] = int(stats.get("population", 0)) + 1
 	stats["highest_generation"] = maxi(int(stats.get("highest_generation", 0)), generation)
 	species_statistics[normalized_id] = stats
-
 	_record_event("Birth: %s (gen %d)" % [normalized_id, generation])
 
 func _record_death(species_id: String, generation: int) -> void:
@@ -388,12 +410,10 @@ func _record_death(species_id: String, generation: int) -> void:
 	register_species(normalized_id)
 	deaths_by_species[normalized_id] = int(deaths_by_species.get(normalized_id, 0)) + 1
 	total_deaths += 1
-
 	var stats: Dictionary = species_statistics[normalized_id]
 	stats["deaths"] = int(stats.get("deaths", 0)) + 1
 	stats["population"] = maxi(int(stats.get("population", 0)) - 1, 0)
 	species_statistics[normalized_id] = stats
-
 	_record_event("Death: %s (gen %d)" % [normalized_id, generation])
 
 func _sample_population() -> void:
@@ -404,21 +424,16 @@ func _sample_population() -> void:
 		_record_event("Population peak: %d" % peak_population)
 
 	for species_key in known_species.keys():
-		var normalized_id: String = String(species_key)
-		var stats: Dictionary = species_statistics[normalized_id]
+		var species_id: String = String(species_key)
+		var stats: Dictionary = species_statistics.get(species_id, {})
 		var population: int = int(stats.get("population", 0))
-
-		var history: Array = population_history[normalized_id]
-		history.append({
-			"time": simulation_time,
-			"population": population
-		})
+		var history: Array = population_history.get(species_id, [])
+		history.append({"time": simulation_time, "population": population})
 		if history.size() > 300:
 			history.pop_front()
-		population_history[normalized_id] = history
-
+		population_history[species_id] = history
 		stats["peak_population"] = maxi(int(stats.get("peak_population", 0)), population)
-		species_statistics[normalized_id] = stats
+		species_statistics[species_id] = stats
 
 func _record_event(message: String) -> void:
 	event_history.append("[%06.1f] %s" % [simulation_time, message])
@@ -431,8 +446,7 @@ func _get_cell_species_id(cell: Node) -> String:
 		return ""
 	if cell.has_method("get_species_id"):
 		return String(cell.get_species_id()).strip_edges()
-	var value: Variant = cell.get("species_id")
-	return String(value).strip_edges()
+	return String(cell.get("species_id")).strip_edges()
 
 func _get_cell_generation(cell: Node) -> int:
 	if cell == null or not is_instance_valid(cell):
@@ -482,7 +496,6 @@ func _update_cell_processing() -> void:
 			continue
 		if not cell is Node2D:
 			continue
-
 		var cell_node: Node2D = cell as Node2D
 		var distance_squared: float = center.distance_squared_to(cell_node.global_position)
 		cell.process_mode = Node.PROCESS_MODE_INHERIT if distance_squared <= load_radius_squared else Node.PROCESS_MODE_DISABLED
@@ -492,7 +505,6 @@ func _enforce_domain_bounds() -> void:
 		return
 	if not experimental_domain.has_method("clamp_position"):
 		return
-
 	for cell in registered_cells:
 		if not is_instance_valid(cell) or not cell is Node2D:
 			continue
