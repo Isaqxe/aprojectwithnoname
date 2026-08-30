@@ -5,7 +5,7 @@ extends CharacterBody2D
 
 @export_category("Identity")
 @export var cell_id: String = "cell"
-@export var species_id: String = "default"
+@export var species_id: String = ""
 @export var is_player_controlled: bool = false
 
 @export_category("Biology")
