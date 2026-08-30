@@ -25,6 +25,11 @@ const ADAPTATION_SCRIPT := preload("res://GPT/CellSystem/cell_adaptation.gd")
 @export var group_perception_radius: float = 150.0
 @export var defense_radius: float = 180.0
 
+@export_category("Health Bar")
+@export var health_bar_width: float = 42.0
+@export var health_bar_height: float = 5.0
+@export var health_bar_offset: float = 8.0
+
 var inherited_data: Dictionary = {}
 var species_color: Color = Color.WHITE
 var cell_data: CharacterBody2D
@@ -477,4 +482,15 @@ func _draw() -> void:
 	var visible_color: Color = _base_color
 	if _flash_timer > 0.0:
 		visible_color = Color(0.9, 0.95, 1.0, 1.0)
-	draw_circle(Vector2.ZERO, cell_data.size if cell_data != null else 16.0, visible_color)
+	var radius: float = cell_data.size if cell_data != null else 16.0
+	draw_circle(Vector2.ZERO, radius, visible_color)
+
+	if cell_data != null and cell_data.alive and cell_data.health < cell_data.max_health - 0.01:
+		var max_health_value: float = maxf(cell_data.max_health, 0.001)
+		var health_ratio: float = clampf(cell_data.health / max_health_value, 0.0, 1.0)
+		var bar_width: float = maxf(health_bar_width, radius * 1.6)
+		var bar_height: float = maxf(health_bar_height, 2.0)
+		var bar_top: float = -radius - health_bar_offset - bar_height
+		var bar_left: float = -bar_width * 0.5
+		draw_rect(Rect2(bar_left, bar_top, bar_width, bar_height), Color(0.08, 0.08, 0.08, 0.85), true)
+		draw_rect(Rect2(bar_left, bar_top, bar_width * health_ratio, bar_height), Color(0.35, 0.9, 0.35, 1.0), true)
