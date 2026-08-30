@@ -14,15 +14,11 @@ func _ready() -> void:
 
 	super._ready()
 
-	# Replace the generic behavior node with the spatial-aware variant after
-	# the parent has initialized genetics and all other organism systems.
-	var old_behavior: Node = behavior
-	behavior = SPATIAL_BEHAVIOR_SCRIPT.new()
-	behavior.cohesion_radius = group_perception_radius
-	add_child(behavior)
-	_apply_behavior_genes()
-	if old_behavior != null and is_instance_valid(old_behavior):
-		old_behavior.queue_free()
+	if behavior != null:
+		remove_child(behavior)
+		behavior.free()
+		behavior = SPATIAL_BEHAVIOR_SCRIPT.new()
+		add_child(behavior)
 
 	_spatial_index = get_tree().get_first_node_in_group(SPATIAL_INDEX_GROUP)
 
@@ -30,9 +26,11 @@ func _refresh_perception() -> void:
 	_apply_behavior_genes()
 	_target = _find_best_target()
 	_resource_target = null if is_instance_valid(_target) else _find_nearest_resource()
+
 	_cached_allies.clear()
 	_cached_ally_positions.clear()
 	_cached_ally_velocities.clear()
+
 	var nearby: Array = _query_cells(group_perception_radius)
 	var radius_squared: float = group_perception_radius * group_perception_radius
 	for candidate in nearby:
