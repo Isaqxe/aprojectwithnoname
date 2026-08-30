@@ -9,19 +9,30 @@ extends Node2D
 @onready var resource_spawner: Node2D = $ResourceSpawner
 @onready var simulation_camera: Camera2D = $SimulationCamera
 @onready var experimental_domain: Node2D = $ExperimentalDomain
+@onready var debug_layer: CanvasLayer = $DebugLayer
 @onready var debug_label: Label = $DebugLayer/Debug
+@onready var cell_inspector: Node = $CellInspector
 
 @export var debug_update_interval: float = 0.25
+@export var presentation_toggle_key: Key = KEY_P
+
 var _debug_timer: float = 0.0
+var presentation_mode: bool = false
 
 func _process(delta: float) -> void:
 	if Input.is_key_pressed(KEY_SPACE):
 		cell_manager.spawn_player(Vector2.ZERO)
 
+	if Input.is_key_pressed(presentation_toggle_key):
+		_toggle_presentation_mode()
+
 	_debug_timer -= delta
 	if _debug_timer > 0.0:
 		return
 	_debug_timer = maxf(debug_update_interval, 0.05)
+
+	if presentation_mode:
+		return
 
 	var environment: Dictionary = {}
 	if experimental_domain.has_method("get_environment_at"):
@@ -54,3 +65,11 @@ func _process(delta: float) -> void:
 		"Player: %s\n" % ["Spawned" if cell_manager.get_player() != null else "Not spawned"] + \
 		"Camera: (%.0f, %.0f) | Domain R: %.0f\n" % [simulation_camera.global_position.x, simulation_camera.global_position.y, float(experimental_domain.get("radius"))] + \
 		"Temp: %.2f | Humidity: %.2f | Food: %.2f" % [float(environment.get("temperature", 0.5)), float(environment.get("humidity", 0.5)), float(environment.get("food_density", 1.0))]
+
+func _toggle_presentation_mode() -> void:
+	# Input.is_key_pressed() can fire for multiple frames. Use a one-shot guard.
+	presentation_mode = not presentation_mode
+	debug_layer.visible = not presentation_mode
+	if cell_inspector != null and is_instance_valid(cell_inspector) and cell_inspector.has_method("set_presentation_mode"):
+		cell_inspector.set_presentation_mode(presentation_mode)
+	_debug_timer = 0.0
