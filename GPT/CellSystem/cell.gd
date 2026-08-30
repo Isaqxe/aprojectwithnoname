@@ -35,6 +35,14 @@ func _ready() -> void:
 	health = max_health
 	resources = clampf(resource_capacity * starting_energy_ratio, 0.0, resource_capacity)
 
+func _process(delta: float) -> void:
+	if not alive:
+		return
+	var activity: float = 0.0
+	if speed > 0.0:
+		activity = clampf(velocity.length() / speed, 0.0, 1.0)
+	process_metabolism(delta, activity)
+
 func take_damage(amount: float, attacker: Node = null) -> bool:
 	if not alive or amount <= 0.0:
 		return false
