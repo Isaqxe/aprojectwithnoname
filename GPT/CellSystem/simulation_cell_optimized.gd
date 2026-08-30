@@ -1,10 +1,13 @@
 extends "res://GPT/CellSystem/simulation_cell_clean.gd"
 
 ## Optimized cell organism using CellSpatialIndex for local perception.
-## Species identity is owned by Genetics through the base organism API.
+## Species identity is exposed through a single organism API while keeping
+## compatibility with the current clean base organism.
 
 const SPATIAL_INDEX_GROUP := "CellSpatialIndexes"
 const SPATIAL_BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior_spatial.gd")
+
+var initial_species_id: String = ""
 var _spatial_index: Node = null
 
 func _ready() -> void:
@@ -12,8 +15,14 @@ func _ready() -> void:
 		var inherited_species: String = String(inherited_data.get("species_id", "")).strip_edges()
 		if not inherited_species.is_empty() and inherited_species != "default":
 			initial_species_id = inherited_species
+			species_id = inherited_species
+	elif species_id.strip_edges() != "":
+		initial_species_id = species_id.strip_edges()
 
 	super._ready()
+
+	if initial_species_id.is_empty():
+		initial_species_id = species_id.strip_edges()
 
 	if behavior != null:
 		remove_child(behavior)
@@ -22,6 +31,27 @@ func _ready() -> void:
 		add_child(behavior)
 
 	_spatial_index = get_tree().get_first_node_in_group(SPATIAL_INDEX_GROUP)
+
+func get_species_id() -> String:
+	if genetics != null and is_instance_valid(genetics):
+		var genetic_species: String = String(genetics.get("species_id")).strip_edges()
+		if not genetic_species.is_empty() and genetic_species != "default":
+			return genetic_species
+	var current_species: String = species_id.strip_edges()
+	if not current_species.is_empty() and current_species != "default":
+		return current_species
+	return initial_species_id
+
+func set_species_id(value: String) -> void:
+	var resolved: String = value.strip_edges()
+	if resolved.is_empty() or resolved == "default":
+		return
+	species_id = resolved
+	initial_species_id = resolved
+	if cell_data != null:
+		cell_data.species_id = resolved
+	if genetics != null and is_instance_valid(genetics):
+		genetics.species_id = resolved
 
 func _refresh_perception() -> void:
 	_apply_behavior_genes()
