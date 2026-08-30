@@ -6,9 +6,10 @@ uniform float void_threshold = 0.60;
 uniform float cold_temperature = 0.34;
 uniform float hot_temperature = 0.68;
 uniform float green_humidity = 0.45;
-uniform float edge_softness = 0.10;
-uniform float edge_detail_frequency = 0.010;
-uniform float edge_detail_strength = 0.05;
+uniform float edge_softness = 0.16;
+uniform float edge_detail_frequency = 0.018;
+uniform float edge_detail_strength = 0.035;
+uniform float surface_variation_strength = 0.04;
 
 const vec3 VOID_COLOR = vec3(0.18, 0.19, 0.22);
 const vec3 COLD_COLOR = vec3(0.42, 0.68, 0.92);
@@ -51,6 +52,7 @@ void fragment() {
 	float temperature = environment.g;
 	float humidity = environment.b;
 
+	// Environmental data stays authoritative; these details only affect presentation.
 	float edge_noise = fbm(UV * edge_detail_frequency * 100.0) - 0.5;
 	float edge_center = void_threshold + edge_noise * edge_detail_strength;
 	float land_factor = smoothstep(edge_center - edge_softness, edge_center + edge_softness, macro);
@@ -65,6 +67,6 @@ void fragment() {
 
 	vec3 color = mix(VOID_COLOR, climate_color, land_factor);
 	float surface_variation = fbm(UV * 18.0) - 0.5;
-	color += surface_variation * 0.05 * land_factor;
+	color += surface_variation * surface_variation_strength * land_factor;
 	COLOR = vec4(clamp(color, vec3(0.0), vec3(1.0)), 1.0);
 }
