@@ -1,14 +1,15 @@
 extends "res://GPT/CellSystem/simulation_cell_clean.gd"
 
-## Optimized cell organism using CellSpatialIndex for local perception.
-## Species identity is exposed through a single organism API while keeping
-## compatibility with the current clean base organism.
+## Optimized cell organism using spatial indexes for local perception.
+## Genetics remains the source of species identity.
 
 const SPATIAL_INDEX_GROUP := "CellSpatialIndexes"
+const RESOURCE_INDEX_GROUP := "ResourceSpatialIndexes"
 const SPATIAL_BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior_spatial.gd")
 
 var initial_species_id: String = ""
 var _spatial_index: Node = null
+var _resource_spatial_index: Node = null
 
 func _ready() -> void:
 	if not inherited_data.is_empty():
@@ -31,6 +32,7 @@ func _ready() -> void:
 		add_child(behavior)
 
 	_spatial_index = get_tree().get_first_node_in_group(SPATIAL_INDEX_GROUP)
+	_resource_spatial_index = get_tree().get_first_node_in_group(RESOURCE_INDEX_GROUP)
 
 func get_species_id() -> String:
 	if genetics != null and is_instance_valid(genetics):
@@ -62,9 +64,8 @@ func _refresh_perception() -> void:
 	_cached_ally_positions.clear()
 	_cached_ally_velocities.clear()
 
-	var nearby: Array = _query_cells(group_perception_radius)
 	var radius_squared: float = group_perception_radius * group_perception_radius
-	for candidate in nearby:
+	for candidate in _query_cells(group_perception_radius):
 		if candidate == self or not is_instance_valid(candidate) or not candidate is CharacterBody2D:
 			continue
 		if not candidate.has_method("get_species_id"):
@@ -87,8 +88,6 @@ func _find_best_target() -> CharacterBody2D:
 		var enemy: CharacterBody2D = candidate as CharacterBody2D
 		if not behavior.is_valid_enemy(self, enemy):
 			continue
-		if not enemy.has_method("get_cell_power"):
-			continue
 		var distance: float = global_position.distance_to(enemy.global_position)
 		if distance > perception_radius:
 			continue
@@ -98,6 +97,31 @@ func _find_best_target() -> CharacterBody2D:
 			best = enemy
 			best_score = score
 	return best
+
+func _find_nearest_resource() -> Area2D:
+	if _resource_spatial_index == null or not is_instance_valid(_resource_spatial_index):
+		_resource_spatial_index = get_tree().get_first_node_in_group(RESOURCE_INDEX_GROUP)
+	if _resource_spatial_index == null or not _resource_spatial_index.has_method("query_circle"):
+		return super._find_nearest_resource()
+
+	var nearest: Area2D = null
+	var nearest_distance: float = resource_perception_radius
+	for candidate in _resource_spatial_index.query_circle(global_position, resource_perception_radius):
+		if not is_instance_valid(candidate) or not candidate is Area2D:
+			continue
+		var resource: Area2D = candidate as Area2D
+		var distance: float = global_position.distance_to(resource.global_position)
+		if distance < nearest_distance:
+			nearest = resource
+			nearest_distance = distance
+	return nearest
+
+func _query_cells(radius: float) -> Array:
+	if _spatial_index == null or not is_instance_valid(_spatial_index):
+		_spatial_index = get_tree().get_first_node_in_group(SPATIAL_INDEX_GROUP)
+	if _spatial_index != null and _spatial_index.has_method("query_circle"):
+		return _spatial_index.query_circle(global_position, radius)
+	return get_tree().get_nodes_in_group("SimCells")
 
 func _calculate_collective_flee_direction() -> Vector2:
 	var weighted_away := Vector2.ZERO
@@ -116,13 +140,7 @@ func _calculate_collective_flee_direction() -> Vector2:
 			continue
 		var proximity: float = 1.0 - clampf(distance / defense_radius, 0.0, 1.0)
 		weighted_away -= offset.normalized() * proximity
+
 	if weighted_away.length_squared() > 0.0001:
 		return weighted_away.normalized()
 	return _direction.normalized()
-
-func _query_cells(radius: float) -> Array:
-	if _spatial_index == null or not is_instance_valid(_spatial_index):
-		_spatial_index = get_tree().get_first_node_in_group(SPATIAL_INDEX_GROUP)
-	if _spatial_index != null and _spatial_index.has_method("query_circle"):
-		return _spatial_index.query_circle(global_position, radius)
-	return get_tree().get_nodes_in_group("SimCells")
