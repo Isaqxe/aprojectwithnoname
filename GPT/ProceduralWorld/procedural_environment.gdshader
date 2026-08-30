@@ -13,7 +13,6 @@ uniform float warp_frequency = 0.0012;
 uniform float warp_strength = 150.0;
 uniform float border_detail_frequency = 0.0025;
 uniform float border_detail_strength = 0.18;
-
 uniform float border_micro_frequency = 0.0065;
 uniform float border_micro_strength = 0.08;
 
@@ -21,11 +20,6 @@ uniform float void_threshold = 0.60;
 uniform float cold_temperature = 0.34;
 uniform float hot_temperature = 0.68;
 uniform float green_humidity = 0.45;
-
-const vec3 VOID_COLOR = vec3(0.18, 0.19, 0.22);
-const vec3 COLD_COLOR = vec3(0.42, 0.68, 0.92);
-const vec3 GREEN_COLOR = vec3(0.30, 0.72, 0.38);
-const vec3 HOT_COLOR = vec3(0.92, 0.48, 0.20);
 
 float hash21(vec2 p, float seed_offset) {
     p += vec2(seed_offset * 0.0137, seed_offset * 0.0211);
@@ -82,11 +76,8 @@ vec4 sample_environment(vec2 world_position) {
     humidity = clamp(humidity + detail * border_detail_strength * 0.5, 0.0, 1.0);
 
     float macro = smoothstep(0.30, 0.70, macro_raw);
-
-    // Preserve the environmental data channels while sharpening local biome boundaries.
     float border_band = smoothstep(void_threshold - 0.12, void_threshold + 0.05, macro);
-    float border_variation = micro_detail * border_micro_strength * border_band;
-    macro = clamp(macro + border_variation, 0.0, 1.0);
+    macro = clamp(macro + micro_detail * border_micro_strength * border_band, 0.0, 1.0);
 
     float biome_code = 0.0;
     if (macro >= void_threshold) {
@@ -110,23 +101,27 @@ void fragment() {
     float temperature = environment.g;
     float humidity = environment.b;
 
-    vec3 biome_color = VOID_COLOR;
+    float border_width = 0.14;
+    float land_factor = smoothstep(void_threshold - border_width, void_threshold + border_width, macro);
 
-    if (macro >= void_threshold) {
-        if (temperature < cold_temperature) {
-            biome_color = COLD_COLOR;
-        } else if (temperature > hot_temperature) {
-            biome_color = HOT_COLOR;
-        } else {
-            float humidity_mix = smoothstep(0.15, green_humidity, humidity);
-            biome_color = mix(GREEN_COLOR * 0.72, GREEN_COLOR, humidity_mix);
-        }
-    }
+    float cold_factor = smoothstep(cold_temperature + 0.045, cold_temperature - 0.045, temperature);
+    float hot_factor = smoothstep(hot_temperature - 0.045, hot_temperature + 0.045, temperature);
+    float green_factor = smoothstep(0.15, green_humidity, humidity);
 
-    // Add subtle continuous variation so large regions do not look flat.
-    float surface_variation = fbm(world_position, 0.0035, world_seed + 808.0) - 0.5;
-    biome_color += surface_variation * 0.08;
-    biome_color = clamp(biome_color, vec3(0.0), vec3(1.0));
+    vec3 climate_color = mix(GREEN_COLOR * 0.72, GREEN_COLOR, green_factor);
+    climate_color = mix(climate_color, COLD_COLOR, cold_factor);
+    climate_color = mix(climate_color, HOT_COLOR, hot_factor);
 
-    COLOR = vec4(biome_color, 1.0);
+    vec3 color = mix(VOID_COLOR, climate_color, land_factor);
+
+    float large_surface = fbm(world_position, 0.0017, world_seed + 808.0) - 0.5;
+    float medium_surface = fbm(world_position, 0.0042, world_seed + 909.0) - 0.5;
+    float surface_variation = large_surface * 0.7 + medium_surface * 0.3;
+    color += surface_variation * 0.055 * (0.30 + 0.70 * land_factor);
+
+    float edge_detail = fbm(world_position, 0.0036, world_seed + 1001.0) - 0.5;
+    float edge_mask = smoothstep(0.16, 0.0, abs(macro - void_threshold));
+    color += edge_detail * 0.028 * edge_mask;
+
+    COLOR = vec4(clamp(color, vec3(0.0), vec3(1.0)), 1.0);
 }
