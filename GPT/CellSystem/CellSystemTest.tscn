@@ -15,13 +15,17 @@ script = ExtResource("1_test")
 
 [node name="ExperimentalDomain" type="Node2D" parent="." unique_id=2036286132]
 script = ExtResource("10_domain")
+radius = 3000.0
 
 [node name="CellManager" type="Node" parent="." unique_id=1751606464]
 script = ExtResource("2_manager")
 cell_factory = NodePath("CellFactory")
 cell_container = NodePath("../Cells")
 experimental_domain = NodePath("../ExperimentalDomain")
-initial_population = 100
+auto_spawn = false
+initial_population = 250
+max_population = 10000
+initial_species_count = 25
 
 [node name="CellFactory" type="Node" parent="CellManager" unique_id=680687788]
 script = ExtResource("3_factory")
