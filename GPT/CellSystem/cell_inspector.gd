@@ -10,6 +10,7 @@ extends Node
 
 var _selected_cell: Node = null
 var _refresh_timer: float = 0.0
+var _presentation_mode: bool = false
 var _panel: PanelContainer
 var _title_label: Label
 var _details_label: Label
@@ -20,6 +21,8 @@ func _ready() -> void:
 	_create_ui()
 
 func _process(delta: float) -> void:
+	if _presentation_mode:
+		return
 	if not is_instance_valid(_selected_cell):
 		_selected_cell = null
 		_set_panel_visible(false)
@@ -31,11 +34,16 @@ func _process(delta: float) -> void:
 		_update_ui_from_selected()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not event is InputEventMouseButton:
+	if _presentation_mode or not event is InputEventMouseButton:
 		return
-	if event.button_index != MOUSE_BUTTON_RIGHT or not event.pressed:
+	var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_RIGHT or not mouse_event.pressed:
 		return
 	inspect_at_mouse()
+
+func set_presentation_mode(enabled: bool) -> void:
+	_presentation_mode = enabled
+	_set_panel_visible(not enabled and is_instance_valid(_selected_cell))
 
 func inspect_at_mouse() -> void:
 	var viewport: Viewport = get_viewport()
