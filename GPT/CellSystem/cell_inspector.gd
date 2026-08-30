@@ -129,6 +129,8 @@ func _update_ui_from_selected() -> void:
 	var max_health: float = maxf(float(data.get("max_health", 0.0)), 0.001)
 	var resources: float = float(data.get("resources", 0.0))
 	var resource_capacity: float = maxf(float(data.get("resource_capacity", 0.0)), 0.001)
+	var hunger_state: String = String(data.get("hunger_state", "UNKNOWN"))
+	var energy_ratio: float = float(data.get("energy_ratio", resources / resource_capacity))
 	var environment_stress: float = float(data.get("environment_stress", 0.0))
 
 	_title_label.text = "%s  •  Gen %d" % [species, generation]
@@ -136,10 +138,11 @@ func _update_ui_from_selected() -> void:
 		"ID: %s\n" % String(data.get("cell_id", "unknown")) +
 		"Parent: %s\n" % String(data.get("parent_id", "none")) +
 		"State: %s\n" % String(data.get("state", "unknown")) +
+		"Energy: %.1f / %.1f  (%d%%)\n" % [resources, resource_capacity, roundi(energy_ratio * 100.0)] +
+		"Hunger: %s\n" % hunger_state +
 		"Damage: %.1f\n" % float(data.get("damage", 0.0)) +
 		"Speed: %.1f\n" % float(data.get("speed", 0.0)) +
 		"Size: %.1f\n" % float(data.get("size", 0.0)) +
-		"Resources: %.1f / %.1f\n" % [resources, resource_capacity] +
 		"Mitosis: %d  |  Next cost: %.1f\n" % [int(data.get("mitosis_count", 0)), float(data.get("next_mitosis_cost", 0.0))] +
 		"Allies nearby: %d\n" % int(data.get("nearby_allies", 0)) +
 		"Fear: %.2f  |  Env. stress: %.2f" % [float(data.get("fear", 0.0)), environment_stress]
@@ -175,11 +178,12 @@ func _print_information(data: Dictionary) -> void:
 	print("Player: ", data.get("player", false))
 	print("State: ", data.get("state", "unknown"))
 	print("Health: %.2f / %.2f" % [data.get("health", 0.0), data.get("max_health", 0.0)])
+	print("Energy: %.2f / %.2f" % [data.get("resources", 0.0), data.get("resource_capacity", 0.0)])
+	print("Hunger: ", data.get("hunger_state", "UNKNOWN"))
 	print("Damage: %.2f" % data.get("damage", 0.0))
 	print("Speed: %.2f" % data.get("speed", 0.0))
 	print("Size: %.2f" % data.get("size", 0.0))
 	print("Regeneration: %.2f" % data.get("regeneration_rate", 0.0))
-	print("Resources: %.2f / %.2f" % [data.get("resources", 0.0), data.get("resource_capacity", 0.0)])
 	print("Mitosis count: ", data.get("mitosis_count", 0))
 	print("Next mitosis cost: %.2f" % data.get("next_mitosis_cost", 0.0))
 	print("Genes: ", data.get("genes", {}))
