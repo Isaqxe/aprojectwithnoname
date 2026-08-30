@@ -34,6 +34,7 @@ func _ready() -> void:
 	_spatial_index = get_tree().get_first_node_in_group(SPATIAL_INDEX_GROUP)
 	_resource_spatial_index = get_tree().get_first_node_in_group(RESOURCE_INDEX_GROUP)
 	_sync_energy_capacity()
+	_update_collision_shape()
 
 func _physics_process(delta: float) -> void:
 	super._physics_process(delta)
@@ -80,6 +81,18 @@ func _sync_energy_capacity() -> void:
 	var next_cost: float = float(mitosis.get_resource_cost())
 	var required_capacity: float = next_cost * 1.25
 	cell_data.resource_capacity = maxf(cell_data.resource_capacity, required_capacity)
+
+func _update_collision_shape() -> void:
+	if _collision_shape == null or cell_data == null or not is_instance_valid(cell_data):
+		return
+	var circle_shape: CircleShape2D = _collision_shape.shape as CircleShape2D
+	if circle_shape == null:
+		return
+	# The procedural membrane can expand beyond its biological radius because
+	# of its per-point variation and motion deformation. Keep physics cheap by
+	# using a conservative circle that encloses the visual envelope.
+	var visual_envelope_factor: float = 1.20
+	circle_shape.radius = maxf(cell_data.size * visual_envelope_factor, 4.0) + combat_contact_margin
 
 func _refresh_perception() -> void:
 	_apply_behavior_genes()
