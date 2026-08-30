@@ -10,6 +10,7 @@
 [ext_resource type="Script" uid="uid://c5of7nos3dgpy" path="res://GPT/CellSystem/simulation_camera.gd" id="9_camera"]
 [ext_resource type="Script" uid="uid://fnf4thui28ve" path="res://GPT/CellSystem/experimental_domain.gd" id="10_domain"]
 [ext_resource type="Script" uid="uid://bagxfxq1batif" path="res://GPT/CellSystem/cell_spatial_index.gd" id="11_spatial"]
+[ext_resource type="Script" path="res://GPT/CellSystem/resource_spatial_index.gd" id="12_resource_spatial"]
 
 [node name="CellSystemTest" type="Node2D" unique_id=442408827]
 script = ExtResource("1_test")
@@ -20,6 +21,13 @@ radius = 10000.0
 
 [node name="CellSpatialIndex" type="Node" parent="." unique_id=2036286135]
 script = ExtResource("11_spatial")
+cell_size = 256.0
+rebuild_interval = 0.15
+
+[node name="ResourceSpatialIndex" type="Node" parent="." unique_id=2036286136]
+script = ExtResource("12_resource_spatial")
+cell_size = 256.0
+rebuild_interval = 0.25
 
 [node name="CellManager" type="Node" parent="." unique_id=1751606464]
 script = ExtResource("2_manager")
@@ -48,11 +56,11 @@ script = ExtResource("9_camera")
 load_radius = 2000.0
 unload_radius = 3000.0
 
-[node name="DebugLayer" type="CanvasLayer" parent="." unique_id=178791305]
+[node name="DebugLayer" type="CanvasLayer" parent="."]
 
-[node name="Debug" type="Label" parent="DebugLayer" unique_id=1756678640]
+[node name="Debug" type="Label" parent="DebugLayer"]
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 500.0
-offset_bottom = 100.0
+offset_bottom = 220.0
 text = "CellSystem Simulation"
