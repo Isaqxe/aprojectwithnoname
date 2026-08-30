@@ -1,25 +1,20 @@
 extends Node2D
 
-## Spawns collectible resources according to the procedural world's biome.
+## Spawns collectible resources inside the ExperimentalDomain.
 ## SimulationCamera defines the active spawn area.
 
 @export var resource_scene: PackedScene
-@export var world_provider: Node
+@export var experimental_domain: Node
 @export var simulation_camera: Node
 @export var spawn_area: Rect2 = Rect2(-425.0, -425.0, 850.0, 850.0)
 @export var initial_resources: int = 25
-@export var max_resources: int = 50
+@export var max_resources: int = 200
 @export var spawn_interval: float = 1.5
 @export var minimum_spacing: float = 28.0
 @export var max_spawn_attempts: int = 12
 
-@export_category("Biome Distribution")
-@export var allow_void_resources: bool = true
-@export var cold_spawn_multiplier: float = 0.75
-@export var green_spawn_multiplier: float = 1.50
-@export var hot_spawn_multiplier: float = 1.00
-@export var void_spawn_multiplier: float = 1.00
-@export var default_spawn_multiplier: float = 1.0
+@export_category("Resource Distribution")
+@export var base_spawn_multiplier: float = 1.0
 
 var spawn_timer: float = 0.0
 var resources: Array[Node] = []
@@ -43,8 +38,8 @@ func _process(delta: float) -> void:
 		spawn_timer = spawn_interval
 
 func _resolve_nodes() -> void:
-	if world_provider == null or not is_instance_valid(world_provider):
-		world_provider = _find_world_provider(get_parent())
+	if experimental_domain == null or not is_instance_valid(experimental_domain):
+		experimental_domain = get_tree().get_first_node_in_group("ExperimentalDomains")
 
 	if simulation_camera == null or not is_instance_valid(simulation_camera):
 		simulation_camera = get_tree().get_first_node_in_group("SimulationCameras")
@@ -57,28 +52,31 @@ func spawn_resource() -> Node:
 	if resource_scene == null or get_resource_count() >= max_resources:
 		return null
 
-	var biome: String = "default"
 	var spawn_position: Vector2 = Vector2.INF
 
 	for _attempt in range(max_spawn_attempts):
-		var candidate: Vector2 = Vector2(
-			randf_range(spawn_area.position.x, spawn_area.end.x),
-			randf_range(spawn_area.position.y, spawn_area.end.y)
-		)
+		var candidate: Vector2
+		if experimental_domain != null and is_instance_valid(experimental_domain) and experimental_domain.has_method("random_position"):
+			candidate = experimental_domain.random_position(4.0)
+		else:
+			candidate = Vector2(
+				randf_range(spawn_area.position.x, spawn_area.end.x),
+				randf_range(spawn_area.position.y, spawn_area.end.y)
+			)
+
+		if simulation_camera != null and is_instance_valid(simulation_camera) and simulation_camera.has_method("get_spawn_bounds"):
+			var camera_area: Rect2 = simulation_camera.get_spawn_bounds()
+			candidate = Vector2(
+				randf_range(camera_area.position.x, camera_area.end.x),
+				randf_range(camera_area.position.y, camera_area.end.y)
+			)
+			if experimental_domain != null and is_instance_valid(experimental_domain) and experimental_domain.has_method("clamp_position"):
+				candidate = experimental_domain.clamp_position(candidate, 4.0)
+
 		if not _is_position_clear(candidate):
 			continue
 
-		var candidate_biome: String = _get_biome(candidate)
-		var multiplier: float = _get_biome_spawn_multiplier(candidate_biome)
-		if multiplier <= 0.0:
-			continue
-		if candidate_biome == "void" and not allow_void_resources:
-			continue
-		if multiplier < 1.0 and randf() > multiplier:
-			continue
-
 		spawn_position = candidate
-		biome = candidate_biome
 		break
 
 	if spawn_position == Vector2.INF:
@@ -87,11 +85,10 @@ func spawn_resource() -> Node:
 	var resource_node: Node = resource_scene.instantiate()
 	resource_node.global_position = spawn_position
 
-	var spawn_multiplier: float = _get_biome_spawn_multiplier(biome)
 	if resource_node.has_method("set_amount_multiplier"):
-		resource_node.set_amount_multiplier(spawn_multiplier)
+		resource_node.set_amount_multiplier(maxf(base_spawn_multiplier, 0.0))
 	elif resource_node.get("amount") != null:
-		resource_node.amount = float(resource_node.get("amount")) * spawn_multiplier
+		resource_node.amount = float(resource_node.get("amount")) * maxf(base_spawn_multiplier, 0.0)
 
 	add_child(resource_node)
 	resources.append(resource_node)
@@ -100,39 +97,6 @@ func spawn_resource() -> Node:
 func get_resource_count() -> int:
 	_cleanup()
 	return resources.size()
-
-func _get_biome(spawn_position: Vector2) -> String:
-	if world_provider == null or not is_instance_valid(world_provider):
-		world_provider = _find_world_provider(get_parent())
-	if world_provider == null or not world_provider.has_method("get_biome_at"):
-		return "default"
-	return String(world_provider.get_biome_at(spawn_position))
-
-func _get_biome_spawn_multiplier(biome: String) -> float:
-	match biome:
-		"cold":
-			return maxf(cold_spawn_multiplier, 0.0)
-		"green":
-			return maxf(green_spawn_multiplier, 0.0)
-		"hot":
-			return maxf(hot_spawn_multiplier, 0.0)
-		"void":
-			return maxf(void_spawn_multiplier, 0.0)
-		_:
-			return maxf(default_spawn_multiplier, 0.0)
-
-func _find_world_provider(start_node: Node) -> Node:
-	if start_node == null:
-		return null
-	if start_node.has_method("get_biome_at"):
-		return start_node
-
-	for child in start_node.get_children():
-		var provider: Node = _find_world_provider(child)
-		if provider != null:
-			return provider
-
-	return null
 
 func _is_position_clear(spawn_position: Vector2) -> bool:
 	for resource_node in resources:
