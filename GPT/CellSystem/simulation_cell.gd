@@ -2,6 +2,7 @@ extends CharacterBody2D
 
 ## Integrated organism used by the CellSystem simulation.
 ## Combines generic cell data, behavior, fear, combat, mitosis, genetics and adaptation.
+## Behavior also supports lightweight social steering and collective defense.
 
 const CELL_SCRIPT := preload("res://GPT/CellSystem/cell.gd")
 const BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior.gd")
@@ -20,6 +21,10 @@ const ADAPTATION_SCRIPT := preload("res://GPT/CellSystem/cell_adaptation.gd")
 @export var resource_collect_radius: float = 18.0
 @export var combat_contact_margin: float = 2.0
 
+@export_category("Social Behavior")
+@export var group_perception_radius: float = 150.0
+@export var defense_radius: float = 180.0
+
 var inherited_data: Dictionary = {}
 var species_color: Color = Color.WHITE
 var cell_data: CharacterBody2D
@@ -34,6 +39,7 @@ var _resource_target: Area2D
 var _direction := Vector2.ZERO
 var _retarget_timer := 0.0
 var _wander_time: float = 0.0
+var _wander_direction_timer: float = 0.0
 var _base_color := Color.WHITE
 var _flash_timer := 0.0
 var _collision_shape: CollisionShape2D
@@ -46,6 +52,7 @@ func _ready() -> void:
 
 	behavior = BEHAVIOR_SCRIPT.new()
 	add_child(behavior)
+	behavior.cohesion_radius = group_perception_radius
 
 	fear_system = FEAR_SCRIPT.new()
 	add_child(fear_system)
@@ -126,6 +133,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_retarget_timer -= delta
+	_wander_direction_timer -= delta
 	if is_player_controlled:
 		_process_player(delta)
 	else:
@@ -183,7 +191,17 @@ func _process_ai(delta: float) -> void:
 	if _retarget_timer <= 0.0 or (not is_instance_valid(_target) and not is_instance_valid(_resource_target)):
 		_target = _find_best_target()
 		_resource_target = _find_nearest_resource() if not is_instance_valid(_target) else null
-		_retarget_timer = 0.15
+		_retarget_timer = 0.18
+
+	var ally_cells: Array = _get_local_allies(group_perception_radius)
+	var ally_positions: Array[Vector2] = []
+	var ally_velocities: Array[Vector2] = []
+	for ally in ally_cells:
+		if not is_instance_valid(ally) or not ally is CharacterBody2D:
+			continue
+		var ally_node: CharacterBody2D = ally as CharacterBody2D
+		ally_positions.append(ally_node.global_position)
+		ally_velocities.append(ally_node.velocity)
 
 	if is_instance_valid(_target):
 		_wander_time = 0.0
@@ -191,25 +209,28 @@ func _process_ai(delta: float) -> void:
 		if target_data == null or not target_data.alive:
 			_target = null
 			behavior.set_state(CellBehavior.BehaviorState.WANDER)
+			_wander(delta, ally_positions, ally_velocities)
 			return
 
-		var decision: String = String(fear_system.evaluate(cell_data, target_data))
-		behavior.evaluate_cell(cell_data, target_data)
-
-		if decision == "FLEE":
-			_direction = _target.global_position.direction_to(global_position)
+		var decision: CellBehavior.BehaviorState = behavior.evaluate_collective_cell(cell_data, target_data, ally_cells)
+		var desired_direction: Vector2
+		if decision == CellBehavior.BehaviorState.FLEE:
+			desired_direction = _target.global_position.direction_to(global_position)
 		else:
-			_direction = global_position.direction_to(_target.global_position)
+			desired_direction = global_position.direction_to(_target.global_position)
+
+		_direction = behavior.calculate_social_steering(global_position, desired_direction, ally_positions, ally_velocities)
 		return
 
 	if is_instance_valid(_resource_target) and cell_data.can_accept_resources():
 		behavior.evaluate_resource(cell_data)
-		_direction = global_position.direction_to(_resource_target.global_position)
+		var desired_resource_direction: Vector2 = global_position.direction_to(_resource_target.global_position)
+		_direction = behavior.calculate_social_steering(global_position, desired_resource_direction, ally_positions, ally_velocities)
 		_wander_time = 0.0
 	else:
 		_resource_target = null
 		behavior.set_state(CellBehavior.BehaviorState.WANDER)
-		_wander()
+		_wander(delta, ally_positions, ally_velocities)
 		_wander_time += delta
 
 func _find_best_target() -> CharacterBody2D:
@@ -230,6 +251,22 @@ func _find_best_target() -> CharacterBody2D:
 			best_distance = distance
 
 	return best
+
+func _get_local_allies(radius: float) -> Array:
+	var allies: Array = []
+	var radius_squared: float = maxf(radius, 0.0) * maxf(radius, 0.0)
+
+	for candidate in get_tree().get_nodes_in_group("SimCells"):
+		if candidate == self or not is_instance_valid(candidate):
+			continue
+		if not candidate is CharacterBody2D:
+			continue
+		if String(candidate.get("species_id")) != cell_data.species_id:
+			continue
+		if global_position.distance_squared_to((candidate as CharacterBody2D).global_position) <= radius_squared:
+			allies.append(candidate)
+
+	return allies
 
 func _find_nearest_resource() -> Area2D:
 	var nearest: Area2D = null
@@ -292,7 +329,9 @@ func get_inspection_data() -> Dictionary:
 		"next_mitosis_cost": mitosis.get_resource_cost(),
 		"genes": lineage.get("genes", {}),
 		"environment": adaptation.last_environment if adaptation != null else {},
-		"environment_stress": adaptation.get_stress() if adaptation != null else 0.0
+		"environment_stress": adaptation.get_stress() if adaptation != null else 0.0,
+		"fear": behavior.fear,
+		"nearby_allies": _get_local_allies(group_perception_radius).size()
 	}
 
 func _process_collisions() -> void:
@@ -409,7 +448,6 @@ func take_damage(amount: float, attacker: Node = null) -> bool:
 		if not species_id.is_empty() and species_id == attacker_species:
 			return false
 
-	var was_alive: bool = cell_data.alive
 	var damage_applied: bool = cell_data.take_damage(amount, attacker)
 	if not damage_applied:
 		return false
@@ -428,12 +466,16 @@ func _update_collision_shape() -> void:
 		return
 	circle_shape.radius = cell_data.size + combat_contact_margin
 
-func _wander() -> void:
-	if _retarget_timer <= -0.5 or _direction.length_squared() < 0.01:
+func _wander(delta: float, ally_positions: Array[Vector2], ally_velocities: Array[Vector2]) -> void:
+	if _wander_direction_timer <= 0.0 or _direction.length_squared() < 0.01:
 		_direction = Vector2.from_angle(randf_range(0.0, TAU))
-		_retarget_timer = 0.5
+		_wander_direction_timer = randf_range(0.8, 1.8)
 	else:
-		_direction = _direction.lerp(Vector2.from_angle(randf_range(0.0, TAU)), 0.03).normalized()
+		var random_direction: Vector2 = Vector2.from_angle(randf_range(0.0, TAU))
+		_direction = _direction.lerp(random_direction, 0.025).normalized()
+
+	if not ally_positions.is_empty():
+		_direction = behavior.calculate_social_steering(global_position, _direction, ally_positions, ally_velocities)
 
 func _draw() -> void:
 	var visible_color: Color = _base_color
