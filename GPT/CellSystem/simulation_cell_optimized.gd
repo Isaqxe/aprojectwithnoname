@@ -33,11 +33,19 @@ func _ready() -> void:
 
 	_spatial_index = get_tree().get_first_node_in_group(SPATIAL_INDEX_GROUP)
 	_resource_spatial_index = get_tree().get_first_node_in_group(RESOURCE_INDEX_GROUP)
+	_sync_energy_capacity()
 
 func _physics_process(delta: float) -> void:
 	super._physics_process(delta)
-	if cell_data != null and is_instance_valid(cell_data) and not cell_data.alive:
-		_die_as_organism()
+	if cell_data != null and is_instance_valid(cell_data):
+		if not cell_data.alive:
+			_die_as_organism()
+			return
+		if cell_data.has_method("set_activity_level"):
+			var movement_ratio: float = 0.0
+			if cell_data.speed > 0.0:
+				movement_ratio = clampf(velocity.length() / cell_data.speed, 0.0, 1.0)
+			cell_data.set_activity_level(movement_ratio)
 
 func get_species_id() -> String:
 	if genetics != null and is_instance_valid(genetics):
@@ -56,9 +64,18 @@ func set_species_id(value: String) -> void:
 	species_id = resolved
 	initial_species_id = resolved
 	if cell_data != null and is_instance_valid(cell_data):
-		cell_data.species_id = resolved
+		cell_data.set_species_id(resolved) if cell_data.has_method("set_species_id") else null
 	if genetics != null and is_instance_valid(genetics):
 		genetics.species_id = resolved
+
+func _sync_energy_capacity() -> void:
+	if cell_data == null or not is_instance_valid(cell_data) or mitosis == null or not is_instance_valid(mitosis):
+		return
+	if not mitosis.has_method("get_resource_cost"):
+		return
+	var next_cost: float = float(mitosis.get_resource_cost())
+	var required_capacity: float = next_cost * 1.25
+	cell_data.resource_capacity = maxf(cell_data.resource_capacity, required_capacity)
 
 func _refresh_perception() -> void:
 	_apply_behavior_genes()
@@ -149,3 +166,7 @@ func _calculate_collective_flee_direction() -> Vector2:
 	if weighted_away.length_squared() > 0.0001:
 		return weighted_away.normalized()
 	return _direction.normalized()
+
+func _finish_mitosis() -> void:
+	super._finish_mitosis()
+	_sync_energy_capacity()
