@@ -5,6 +5,8 @@ extends Node2D
 ## ExperimentalDomain defines the circular laboratory-slide simulation area.
 ## Space spawns the player at world position (0, 0) for debugging.
 
+const MICROSCOPE_SHADER := preload("res://GPT/CellSystem/microscope_overlay.gdshader")
+
 @onready var cell_manager: Node = $CellManager
 @onready var resource_spawner: Node2D = $ResourceSpawner
 @onready var simulation_camera: Camera2D = $SimulationCamera
@@ -18,6 +20,11 @@ extends Node2D
 
 var _debug_timer: float = 0.0
 var presentation_mode: bool = false
+var _microscope_layer: CanvasLayer
+var _microscope_overlay: ColorRect
+
+func _ready() -> void:
+	_create_microscope_overlay()
 
 func _process(delta: float) -> void:
 	if Input.is_key_pressed(KEY_SPACE):
@@ -75,4 +82,23 @@ func _toggle_presentation_mode() -> void:
 	debug_layer.visible = not presentation_mode
 	if cell_inspector != null and is_instance_valid(cell_inspector) and cell_inspector.has_method("set_presentation_mode"):
 		cell_inspector.set_presentation_mode(presentation_mode)
+	if is_instance_valid(_microscope_overlay):
+		_microscope_overlay.visible = presentation_mode
 	_debug_timer = 0.0
+
+func _create_microscope_overlay() -> void:
+	_microscope_layer = CanvasLayer.new()
+	_microscope_layer.name = "MicroscopeLayer"
+	_microscope_layer.layer = 100
+	add_child(_microscope_layer)
+
+	_microscope_overlay = ColorRect.new()
+	_microscope_overlay.name = "MicroscopeOverlay"
+	_microscope_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_microscope_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_microscope_overlay.visible = presentation_mode
+
+	var shader_material := ShaderMaterial.new()
+	shader_material.shader = MICROSCOPE_SHADER
+	_microscope_overlay.material = shader_material
+	_microscope_layer.add_child(_microscope_overlay)
