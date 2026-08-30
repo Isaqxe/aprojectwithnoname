@@ -88,11 +88,24 @@ func _update_collision_shape() -> void:
 	var circle_shape: CircleShape2D = _collision_shape.shape as CircleShape2D
 	if circle_shape == null:
 		return
-	# The procedural membrane can expand beyond its biological radius because
-	# of its per-point variation and motion deformation. Keep physics cheap by
-	# using a conservative circle that encloses the visual envelope.
 	var visual_envelope_factor: float = 1.20
 	circle_shape.radius = maxf(cell_data.size * visual_envelope_factor, 4.0) + combat_contact_margin
+
+func _process_ai(delta: float) -> void:
+	if cell_data != null and is_instance_valid(cell_data) and cell_data.has_method("needs_food") and cell_data.needs_food():
+		if is_instance_valid(_resource_target):
+			behavior.evaluate_resource(cell_data)
+			_direction = global_position.direction_to(_resource_target.global_position)
+			_wander_time = 0.0
+			return
+		_resource_target = _find_nearest_resource()
+		if is_instance_valid(_resource_target):
+			behavior.evaluate_resource(cell_data)
+			_direction = global_position.direction_to(_resource_target.global_position)
+			_wander_time = 0.0
+			return
+
+	super._process_ai(delta)
 
 func _refresh_perception() -> void:
 	_apply_behavior_genes()
@@ -183,6 +196,13 @@ func _calculate_collective_flee_direction() -> Vector2:
 		return weighted_away.normalized()
 	return _direction.normalized()
 
+func get_inspection_data() -> Dictionary:
+	var data: Dictionary = super.get_inspection_data()
+	if cell_data != null and is_instance_valid(cell_data):
+		data["hunger_state"] = cell_data.get_hunger_state() if cell_data.has_method("get_hunger_state") else "UNKNOWN"
+		data["energy_ratio"] = cell_data.get_energy_ratio() if cell_data.has_method("get_energy_ratio") else 0.0
+	return data
+
 func _finish_mitosis() -> void:
 	super._finish_mitosis()
 	_sync_energy_capacity()
@@ -198,5 +218,4 @@ func _die_as_organism() -> void:
 	queue_free()
 
 func _draw() -> void:
-	## Rendering is delegated to the child CellVisual node.
 	return
