@@ -17,6 +17,9 @@ enum BehaviorState {
 var state: BehaviorState = BehaviorState.WANDER
 var fear: float = 0.0
 var aggression: float = 0.0
+var threat_level: float = 0.0
+var group_strength: float = 0.0
+var ally_count: int = 0
 
 @export_category("Social Steering")
 @export var cohesion_weight: float = 0.55
@@ -24,6 +27,11 @@ var aggression: float = 0.0
 @export var separation_weight: float = 0.70
 @export var cohesion_radius: float = 150.0
 @export var separation_radius: float = 42.0
+
+@export_category("Collective Defense")
+@export var defense_advantage: float = 1.10
+@export var minimum_defenders: int = 2
+@export var threat_memory: float = 0.75
 
 func set_state(new_state: BehaviorState) -> void:
 	state = new_state
@@ -43,15 +51,31 @@ func calculate_strength(cell) -> float:
 		strength += cell.size
 	return strength
 
-func evaluate_cell(my_cell, other_cell) -> BehaviorState:
+func is_same_species(my_cell, other_cell) -> bool:
 	if my_cell == null or other_cell == null:
+		return false
+	return String(my_cell.get("species_id")) == String(other_cell.get("species_id"))
+
+func is_valid_enemy(my_cell, other_cell) -> bool:
+	if my_cell == null or other_cell == null or my_cell == other_cell:
+		return false
+	if is_same_species(my_cell, other_cell):
+		return false
+	if "alive" in other_cell and not other_cell.alive:
+		return false
+	return true
+
+func evaluate_cell(my_cell, other_cell) -> BehaviorState:
+	if not is_valid_enemy(my_cell, other_cell):
 		state = BehaviorState.WANDER
 		fear = 0.0
+		threat_level = 0.0
 		return state
 
 	var my_strength: float = calculate_strength(my_cell)
 	var other_strength: float = calculate_strength(other_cell)
 	fear = other_strength - my_strength
+	threat_level = clampf(fear / maxf(my_strength, 0.001), 0.0, 10.0)
 
 	if other_strength > my_strength:
 		state = BehaviorState.FLEE
@@ -60,29 +84,40 @@ func evaluate_cell(my_cell, other_cell) -> BehaviorState:
 	return state
 
 func evaluate_collective_cell(my_cell, other_cell, ally_cells: Array) -> BehaviorState:
-	if my_cell == null or other_cell == null:
+	if not is_valid_enemy(my_cell, other_cell):
 		state = BehaviorState.WANDER
 		fear = 0.0
+		threat_level = 0.0
+		group_strength = calculate_strength(my_cell)
+		ally_count = 0
 		return state
 
 	var individual_strength: float = calculate_strength(my_cell)
 	var threat_strength: float = calculate_strength(other_cell)
-	var group_strength: float = individual_strength
+	group_strength = individual_strength
+	ally_count = 0
 
 	for ally in ally_cells:
 		if ally == null or ally == my_cell or not is_instance_valid(ally):
 			continue
+		if not is_same_species(my_cell, ally):
+			continue
+		if "alive" in ally and not ally.alive:
+			continue
 		group_strength += calculate_strength(ally)
+		ally_count += 1
 
 	fear = threat_strength - individual_strength
+	threat_level = clampf(fear / maxf(individual_strength, 0.001), 0.0, 10.0)
 
-	if threat_strength > individual_strength:
-		if group_strength >= threat_strength * 1.10:
-			state = BehaviorState.HUNT
-		else:
-			state = BehaviorState.FLEE
+	var enough_defenders: bool = ally_count + 1 >= minimum_defenders
+	var collective_advantage: bool = group_strength >= threat_strength * defense_advantage
+
+	if threat_strength > individual_strength and not (enough_defenders and collective_advantage):
+		state = BehaviorState.FLEE
 	else:
 		state = BehaviorState.HUNT
+
 	return state
 
 func evaluate_resource(my_cell) -> BehaviorState:
@@ -91,19 +126,12 @@ func evaluate_resource(my_cell) -> BehaviorState:
 		return state
 
 	if my_cell.has_method("can_accept_resources"):
-		if my_cell.can_accept_resources():
-			state = BehaviorState.SEEK_RESOURCE
-		else:
-			state = BehaviorState.WANDER
+		state = BehaviorState.SEEK_RESOURCE if my_cell.can_accept_resources() else BehaviorState.WANDER
 		return state
 
 	var current_resources: float = float(my_cell.resources)
 	var capacity: float = maxf(float(my_cell.resource_capacity), 0.001)
-
-	if current_resources < capacity:
-		state = BehaviorState.SEEK_RESOURCE
-	else:
-		state = BehaviorState.WANDER
+	state = BehaviorState.SEEK_RESOURCE if current_resources < capacity else BehaviorState.WANDER
 	return state
 
 func calculate_social_steering(origin: Vector2, desired_direction: Vector2, ally_positions: Array[Vector2], ally_velocities: Array[Vector2]) -> Vector2:
