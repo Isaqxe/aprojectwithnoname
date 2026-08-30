@@ -10,14 +10,14 @@
 [ext_resource type="Script" uid="uid://c5of7nos3dgpy" path="res://GPT/CellSystem/simulation_camera.gd" id="9_camera"]
 [ext_resource type="Script" uid="uid://fnf4thui28ve" path="res://GPT/CellSystem/experimental_domain.gd" id="10_domain"]
 [ext_resource type="Script" uid="uid://bagxfxq1batif" path="res://GPT/CellSystem/cell_spatial_index.gd" id="11_spatial"]
-[ext_resource type="Script" path="res://GPT/CellSystem/resource_spatial_index.gd" id="12_resource_spatial"]
+[ext_resource type="Script" uid="uid://bdyg5gv58m06p" path="res://GPT/CellSystem/resource_spatial_index.gd" id="12_resource_spatial"]
 
 [node name="CellSystemTest" type="Node2D" unique_id=442408827]
 script = ExtResource("1_test")
 
 [node name="ExperimentalDomain" type="Node2D" parent="." unique_id=2036286132]
 script = ExtResource("10_domain")
-radius = 10000.0
+radius = 3000.0
 
 [node name="CellSpatialIndex" type="Node" parent="." unique_id=2036286135]
 script = ExtResource("11_spatial")
