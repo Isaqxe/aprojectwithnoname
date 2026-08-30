@@ -37,15 +37,16 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	super._physics_process(delta)
-	if cell_data != null and is_instance_valid(cell_data):
-		if not cell_data.alive:
-			_die_as_organism()
-			return
-		if cell_data.has_method("set_activity_level"):
-			var movement_ratio: float = 0.0
-			if cell_data.speed > 0.0:
-				movement_ratio = clampf(velocity.length() / cell_data.speed, 0.0, 1.0)
-			cell_data.set_activity_level(movement_ratio)
+	if cell_data == null or not is_instance_valid(cell_data):
+		return
+	if not cell_data.alive:
+		_die_as_organism()
+		return
+	if cell_data.has_method("set_activity_level"):
+		var movement_ratio: float = 0.0
+		if cell_data.speed > 0.0:
+			movement_ratio = clampf(velocity.length() / cell_data.speed, 0.0, 1.0)
+		cell_data.set_activity_level(movement_ratio)
 
 func get_species_id() -> String:
 	if genetics != null and is_instance_valid(genetics):
@@ -84,7 +85,6 @@ func _refresh_perception() -> void:
 	_apply_behavior_genes()
 	_target = _find_best_target()
 	_resource_target = null if is_instance_valid(_target) else _find_nearest_resource()
-
 	_cached_allies.clear()
 	_cached_ally_positions.clear()
 	_cached_ally_velocities.clear()
@@ -149,7 +149,7 @@ func _query_cells(radius: float) -> Array:
 	return get_tree().get_nodes_in_group("SimCells")
 
 func _calculate_collective_flee_direction() -> Vector2:
-	var weighted_away := Vector2.ZERO
+	var weighted_away: Vector2 = Vector2.ZERO
 	for candidate in _query_cells(defense_radius):
 		if not is_instance_valid(candidate) or not candidate is CharacterBody2D:
 			continue
@@ -173,6 +173,16 @@ func _calculate_collective_flee_direction() -> Vector2:
 func _finish_mitosis() -> void:
 	super._finish_mitosis()
 	_sync_energy_capacity()
+
+func _die_as_organism() -> void:
+	if is_queued_for_deletion():
+		return
+	if _cell_manager != null and is_instance_valid(_cell_manager) and _cell_manager.has_method("unregister_cell"):
+		_cell_manager.unregister_cell(self)
+	velocity = Vector2.ZERO
+	set_physics_process(false)
+	set_process(false)
+	queue_free()
 
 func _draw() -> void:
 	## Rendering is delegated to the child CellVisual node.
