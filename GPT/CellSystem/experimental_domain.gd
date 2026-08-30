@@ -15,6 +15,7 @@ class_name ExperimentalDomain
 @export_range(0.0, 1.0) var base_food_density: float = 1.00
 
 func _ready() -> void:
+	add_to_group("ExperimentalDomains")
 	queue_redraw()
 
 func get_center() -> Vector2:
