@@ -17,10 +17,10 @@ extends CharacterBody2D
 
 @export_category("Energy / Hunger")
 @export var use_resource_capacity: bool = true
-@export var resource_capacity: float = 100.0
-@export var starting_energy_ratio: float = 0.60
-@export var base_energy_drain: float = 0.35
-@export var movement_energy_drain: float = 0.18
+@export var resource_capacity: float = 500.0
+@export var starting_energy_ratio: float = 0.35
+@export var base_energy_drain: float = 0.70
+@export var movement_energy_drain: float = 0.30
 @export var size_energy_drain: float = 0.008
 @export var hungry_threshold: float = 0.45
 @export var starving_threshold: float = 0.20
