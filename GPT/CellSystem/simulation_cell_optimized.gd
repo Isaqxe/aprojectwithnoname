@@ -10,6 +10,10 @@ const SPATIAL_BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior_spa
 var initial_species_id: String = ""
 var _spatial_index: Node = null
 var _resource_spatial_index: Node = null
+var _spawn_grace_time: float = 0.0
+
+@export_category("Behavior")
+@export var spawn_grace_duration: float = 3.0
 
 func _ready() -> void:
 	if not inherited_data.is_empty():
@@ -35,8 +39,10 @@ func _ready() -> void:
 	_resource_spatial_index = get_tree().get_first_node_in_group(RESOURCE_INDEX_GROUP)
 	_sync_energy_capacity()
 	_update_collision_shape()
+	_spawn_grace_time = maxf(spawn_grace_duration, 0.0)
 
 func _physics_process(delta: float) -> void:
+	_spawn_grace_time = maxf(_spawn_grace_time - delta, 0.0)
 	super._physics_process(delta)
 	if cell_data == null or not is_instance_valid(cell_data):
 		return
@@ -105,6 +111,11 @@ func _process_ai(delta: float) -> void:
 			_wander_time = 0.0
 			return
 
+	if _spawn_grace_time > 0.0:
+		_direction = _direction.normalized() if _direction.length_squared() > 0.0001 else Vector2.from_angle(randf_range(0.0, TAU))
+		_wander_time = 0.0
+		return
+
 	super._process_ai(delta)
 
 func _refresh_perception() -> void:
@@ -131,6 +142,11 @@ func _refresh_perception() -> void:
 		_cached_ally_velocities.append(ally.velocity)
 
 func _find_best_target() -> CharacterBody2D:
+	if behavior != null and behavior.has_method("is_neutral") and behavior.is_neutral(self):
+		return null
+	if _spawn_grace_time > 0.0:
+		return null
+
 	var best: CharacterBody2D = null
 	var best_score: float = -INF
 	for candidate in _query_cells(perception_radius):
@@ -201,6 +217,7 @@ func get_inspection_data() -> Dictionary:
 	if cell_data != null and is_instance_valid(cell_data):
 		data["hunger_state"] = cell_data.get_hunger_state() if cell_data.has_method("get_hunger_state") else "UNKNOWN"
 		data["energy_ratio"] = cell_data.get_energy_ratio() if cell_data.has_method("get_energy_ratio") else 0.0
+		data["neutral"] = behavior.is_neutral(self) if behavior != null and behavior.has_method("is_neutral") else false
 	return data
 
 func _finish_mitosis() -> void:
