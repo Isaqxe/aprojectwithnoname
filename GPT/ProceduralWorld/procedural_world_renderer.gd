@@ -1,14 +1,18 @@
 extends Node2D
 class_name ProceduralWorldRenderer
 
-## Lightweight renderer for the new ProceduralWorld prototype.
-## It displays the same GPU EnvironmentMap used by gameplay queries.
+## Visual layer for the new ProceduralWorld prototype.
+## It samples the GPU-generated environment data and turns it into a smooth biome image.
 
 @export var world_provider: ProceduralWorld
 @export var display_scale: float = 1.0
 @export var z_index_value: int = -100
+@export var edge_softness: float = 0.10
+@export var edge_detail_frequency: float = 0.010
+@export var edge_detail_strength: float = 0.05
 
 var _display: Sprite2D
+var _visual_material: ShaderMaterial
 
 func _ready() -> void:
 	if world_provider == null:
@@ -20,19 +24,39 @@ func _process(_delta: float) -> void:
 		return
 	if world_provider == null or not is_instance_valid(world_provider):
 		return
+
 	var map_texture: Texture2D = world_provider.get_environment_texture()
 	if map_texture == null:
 		return
+
 	if _display.texture != map_texture:
 		_display.texture = map_texture
+
 	_display.position = world_provider.get_environment_center()
 	_display.scale = Vector2.ONE * display_scale
 	_display.z_index = z_index_value
 
+	_visual_material.set_shader_parameter("environment_map", map_texture)
+	_visual_material.set_shader_parameter("void_threshold", world_provider.void_threshold)
+	_visual_material.set_shader_parameter("cold_temperature", world_provider.cold_temperature)
+	_visual_material.set_shader_parameter("hot_temperature", world_provider.hot_temperature)
+	_visual_material.set_shader_parameter("green_humidity", world_provider.green_humidity)
+	_visual_material.set_shader_parameter("edge_softness", edge_softness)
+	_visual_material.set_shader_parameter("edge_detail_frequency", edge_detail_frequency)
+	_visual_material.set_shader_parameter("edge_detail_strength", edge_detail_strength)
+
 func _create_display() -> void:
 	_display = Sprite2D.new()
 	_display.name = "EnvironmentDisplay"
-	_display.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_display.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_display.centered = true
 	_display.z_index = z_index_value
+
+	_visual_material = ShaderMaterial.new()
+	var visual_shader := load("res://GPT/ProceduralWorld/procedural_world_visual.gdshader") as Shader
+	if visual_shader == null:
+		push_error("ProceduralWorldRenderer: procedural_world_visual.gdshader not found.")
+		return
+	_visual_material.shader = visual_shader
+	_display.material = _visual_material
 	add_child(_display)
