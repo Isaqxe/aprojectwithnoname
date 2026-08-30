@@ -23,7 +23,7 @@ func evaluate(environment: Dictionary, genetics: Node) -> float:
 		last_stress = 0.0
 		return 0.0
 
-	if not bool(environment.get("inside_domain", false)):
+	if not environment.get("inside_domain", false):
 		last_stress = 1.0
 		return last_stress
 
@@ -35,7 +35,7 @@ func evaluate(environment: Dictionary, genetics: Node) -> float:
 	var heat_adaptation: float = clampf(genetics.get_gene("heat_adaptation", 0.5), 0.0, 1.0)
 	var humidity_adaptation: float = clampf(genetics.get_gene("humidity_adaptation", 0.5), 0.0, 1.0)
 
-	var cold_weight: float = smoothstep(0.55, 0.0, temperature)
+	var cold_weight: float = 1.0 - smoothstep(0.0, 0.55, temperature)
 	var heat_weight: float = smoothstep(0.45, 1.0, temperature)
 	var temperate_weight: float = 1.0 - clampf(cold_weight + heat_weight, 0.0, 1.0)
 
@@ -44,8 +44,9 @@ func evaluate(environment: Dictionary, genetics: Node) -> float:
 		temperate_adaptation * temperate_weight +
 		heat_adaptation * heat_weight
 	)
+
 	var humidity_extremeness: float = absf(humidity - 0.5) * 2.0
-	var humidity_fitness: float = humidity_adaptation * (1.0 - humidity_extremeness) + 0.5 * humidity_extremeness
+	var humidity_fitness: float = lerpf(humidity_adaptation, 0.5, humidity_extremeness)
 	var overall_fitness: float = clampf(temperature_fitness * 0.75 + humidity_fitness * 0.25, 0.0, 1.0)
 
 	last_stress = clampf(1.0 - overall_fitness, 0.0, 1.0)
