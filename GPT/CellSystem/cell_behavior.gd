@@ -20,6 +20,8 @@ var aggression: float = 0.0
 var threat_level: float = 0.0
 var group_strength: float = 0.0
 var ally_count: int = 0
+var threat_count: int = 0
+var total_threat_strength: float = 0.0
 
 @export_category("Social Steering")
 @export var cohesion_weight: float = 0.55
@@ -31,7 +33,6 @@ var ally_count: int = 0
 @export_category("Collective Defense")
 @export var defense_advantage: float = 1.10
 @export var minimum_defenders: int = 2
-@export var threat_memory: float = 0.75
 
 func set_state(new_state: BehaviorState) -> void:
 	state = new_state
@@ -50,6 +51,15 @@ func calculate_strength(cell) -> float:
 	if "size" in cell:
 		strength += cell.size
 	return strength
+
+func _get_behavior_gene(gene_name: String, fallback: float) -> float:
+	var owner_cell: Node = get_parent()
+	if owner_cell == null or not is_instance_valid(owner_cell):
+		return fallback
+	var genetics: Node = owner_cell.get("genetics") as Node
+	if genetics != null and genetics.has_method("get_gene"):
+		return clampf(float(genetics.get_gene(gene_name, fallback)), 0.0, 1.0)
+	return fallback
 
 func is_same_species(my_cell, other_cell) -> bool:
 	if my_cell == null or other_cell == null:
@@ -77,25 +87,34 @@ func evaluate_cell(my_cell, other_cell) -> BehaviorState:
 	fear = other_strength - my_strength
 	threat_level = clampf(fear / maxf(my_strength, 0.001), 0.0, 10.0)
 
-	if other_strength > my_strength:
+	var caution: float = _get_behavior_gene("caution", 0.5)
+	var aggression_gene: float = _get_behavior_gene("aggression", 0.5)
+	aggression = aggression_gene
+	var flee_threshold: float = 1.0 + caution * 0.35
+	var hunt_threshold: float = 1.0 - aggression_gene * 0.25
+
+	if other_strength > my_strength * flee_threshold:
 		state = BehaviorState.FLEE
-	else:
+	elif other_strength <= my_strength * hunt_threshold:
 		state = BehaviorState.HUNT
+	else:
+		state = BehaviorState.FLEE
 	return state
 
+## Evaluates the local combat situation using all nearby enemies rather than
+## only the currently selected target. Ally support is weighted by group_response.
 func evaluate_collective_cell(my_cell, other_cell, ally_cells: Array) -> BehaviorState:
-	if not is_valid_enemy(my_cell, other_cell):
+	if my_cell == null:
 		state = BehaviorState.WANDER
 		fear = 0.0
 		threat_level = 0.0
-		group_strength = calculate_strength(my_cell)
-		ally_count = 0
 		return state
 
 	var individual_strength: float = calculate_strength(my_cell)
-	var threat_strength: float = calculate_strength(other_cell)
 	group_strength = individual_strength
 	ally_count = 0
+	threat_count = 0
+	total_threat_strength = 0.0
 
 	for ally in ally_cells:
 		if ally == null or ally == my_cell or not is_instance_valid(ally):
@@ -107,16 +126,62 @@ func evaluate_collective_cell(my_cell, other_cell, ally_cells: Array) -> Behavio
 		group_strength += calculate_strength(ally)
 		ally_count += 1
 
-	fear = threat_strength - individual_strength
+	var perception: float = 180.0
+	var owner_cell: Node = get_parent()
+	if owner_cell != null and is_instance_valid(owner_cell):
+		perception = maxf(float(owner_cell.get("perception_radius")), 1.0)
+
+	var enemies: Array = []
+	if owner_cell != null and is_instance_valid(owner_cell):
+		for candidate in owner_cell.get_tree().get_nodes_in_group("SimCells"):
+			if candidate == owner_cell or not is_instance_valid(candidate):
+				continue
+			if not is_valid_enemy(my_cell, candidate):
+				continue
+			if not candidate is Node2D:
+				continue
+
+			var distance: float = owner_cell.global_position.distance_to((candidate as Node2D).global_position)
+			if distance > perception:
+				continue
+
+			var proximity: float = 1.0 - clampf(distance / perception, 0.0, 1.0)
+			var weighted_strength: float = calculate_strength(candidate) * maxf(proximity, 0.20)
+			if weighted_strength <= 0.0:
+				continue
+			enemies.append(candidate)
+			total_threat_strength += weighted_strength
+			threat_count += 1
+
+	if enemies.is_empty() and is_valid_enemy(my_cell, other_cell):
+		total_threat_strength = calculate_strength(other_cell)
+		threat_count = 1
+
+	fear = total_threat_strength - individual_strength
 	threat_level = clampf(fear / maxf(individual_strength, 0.001), 0.0, 10.0)
 
-	var enough_defenders: bool = ally_count + 1 >= minimum_defenders
-	var collective_advantage: bool = group_strength >= threat_strength * defense_advantage
+	var caution: float = _get_behavior_gene("caution", 0.5)
+	var aggression_gene: float = _get_behavior_gene("aggression", 0.5)
+	var group_response: float = _get_behavior_gene("group_response", 0.5)
+	aggression = aggression_gene
 
-	if threat_strength > individual_strength and not (enough_defenders and collective_advantage):
-		state = BehaviorState.FLEE
+	var flee_multiplier: float = 1.0 + caution * 0.35
+	var collective_defense_multiplier: float = defense_advantage - group_response * 0.20
+	var enough_defenders: bool = ally_count + 1 >= minimum_defenders
+	var has_collective_advantage: bool = group_strength >= total_threat_strength * maxf(collective_defense_multiplier, 0.85)
+
+	if threat_count <= 0:
+		state = BehaviorState.WANDER
+		return state
+
+	if total_threat_strength > individual_strength * flee_multiplier:
+		if enough_defenders and has_collective_advantage and group_response >= 0.45:
+			state = BehaviorState.HUNT
+		else:
+			state = BehaviorState.FLEE
 	else:
-		state = BehaviorState.HUNT
+		var hunt_multiplier: float = 1.0 - aggression_gene * 0.25
+		state = BehaviorState.HUNT if total_threat_strength <= individual_strength * hunt_multiplier else BehaviorState.FLEE
 
 	return state
 
@@ -138,6 +203,11 @@ func calculate_social_steering(origin: Vector2, desired_direction: Vector2, ally
 	var result: Vector2 = desired_direction
 	if ally_positions.is_empty():
 		return result.normalized() if result.length_squared() > 0.0001 else Vector2.ZERO
+
+	var sociality: float = _get_behavior_gene("sociality", 0.5)
+	var cohesion_factor: float = cohesion_weight * (0.35 + sociality * 0.65)
+	var alignment_factor: float = alignment_weight * (0.35 + sociality * 0.65)
+	var separation_factor: float = separation_weight
 
 	var cohesion_vector := Vector2.ZERO
 	var separation_vector := Vector2.ZERO
@@ -166,13 +236,13 @@ func calculate_social_steering(origin: Vector2, desired_direction: Vector2, ally
 	if nearby_count > 0:
 		cohesion_vector /= float(nearby_count)
 		if cohesion_vector.length_squared() > 0.0001:
-			result += cohesion_vector.normalized() * cohesion_weight
+			result += cohesion_vector.normalized() * cohesion_factor
 
 	if separation_vector.length_squared() > 0.0001:
-		result += separation_vector * separation_weight
+		result += separation_vector * separation_factor
 
 	if alignment_count > 0 and alignment_vector.length_squared() > 0.001:
 		alignment_vector /= float(alignment_count)
-		result += alignment_vector.normalized() * alignment_weight
+		result += alignment_vector.normalized() * alignment_factor
 
 	return result.normalized() if result.length_squared() > 0.0001 else Vector2.ZERO
