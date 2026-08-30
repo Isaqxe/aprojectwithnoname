@@ -1,8 +1,7 @@
 extends CharacterBody2D
 
 ## Integrated organism used by the CellSystem simulation.
-## Combines generic cell data, behavior, fear, combat, mitosis, genetics and adaptation.
-## Behavior also supports lightweight social steering and collective defense.
+## Biology, genetics, behavior, social perception, combat, resources and mitosis.
 
 const CELL_SCRIPT := preload("res://GPT/CellSystem/cell.gd")
 const BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior.gd")
@@ -16,7 +15,6 @@ const ADAPTATION_SCRIPT := preload("res://GPT/CellSystem/cell_adaptation.gd")
 @export var is_player_controlled: bool = false
 @export var species_id: String = ""
 @export var elimination_resource_reward: float = 35.0
-@export var wander_speed_factor: float = 0.35
 @export var perception_radius: float = 180.0
 @export var resource_perception_radius: float = 220.0
 @export var resource_collect_radius: float = 18.0
@@ -36,14 +34,15 @@ var combat: Node
 var mitosis: Node
 var genetics: Node
 var adaptation: Node
+
 var _target: CharacterBody2D
 var _resource_target: Area2D
-var _direction := Vector2.ZERO
-var _retarget_timer := 0.0
+var _direction: Vector2 = Vector2.ZERO
+var _retarget_timer: float = 0.0
 var _wander_time: float = 0.0
 var _wander_direction_timer: float = 0.0
-var _base_color := Color.WHITE
-var _flash_timer := 0.0
+var _base_color: Color = Color.WHITE
+var _flash_timer: float = 0.0
 var _collision_shape: CollisionShape2D
 var _cell_manager: Node
 
@@ -54,11 +53,10 @@ func _ready() -> void:
 
 	behavior = BEHAVIOR_SCRIPT.new()
 	add_child(behavior)
-	behavior.cohesion_radius = group_perception_radius
 
 	social_behavior = SOCIAL_SCRIPT.new()
-	add_child(social_behavior)
 	social_behavior.cohesion_radius = group_perception_radius
+	add_child(social_behavior)
 
 	fear_system = FEAR_SCRIPT.new()
 	add_child(fear_system)
@@ -92,7 +90,6 @@ func _ready() -> void:
 		else:
 			genetics.mutate_genes()
 			_apply_genes_to_biology()
-
 	add_child(genetics)
 
 	adaptation = ADAPTATION_SCRIPT.new()
@@ -108,7 +105,6 @@ func _ready() -> void:
 	_update_collision_shape()
 
 	_cell_manager = get_tree().get_first_node_in_group("CellManagers")
-
 	add_to_group("SimCells")
 	if is_player_controlled:
 		add_to_group("PlayerCharacter")
@@ -185,24 +181,34 @@ func _apply_genes_to_biology() -> void:
 	cell_data.regeneration_rate = maxf(genetics.get_gene("regeneration_rate", cell_data.regeneration_rate), 0.0)
 	cell_data.health = cell_data.max_health
 
-func _process_player(delta: float) -> void:
+func _apply_behavior_genes() -> void:
+	if genetics == null:
+		return
+	behavior.sociality = genetics.get_gene("sociality", 0.5)
+	behavior.aggression = genetics.get_gene("aggression", 0.5)
+	behavior.caution = genetics.get_gene("caution", 0.5)
+	behavior.group_response = genetics.get_gene("group_response", 0.5)
+
+func _process_player(_delta: float) -> void:
 	behavior.set_state(CellBehavior.BehaviorState.WANDER)
-	_wander_time += delta
+	_wander_time += get_physics_process_delta_time()
 	var input_direction: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	_direction = input_direction.normalized()
 	if input_direction.length_squared() > 0.01:
 		_wander_time = 0.0
 
 func _process_ai(delta: float) -> void:
+	_apply_behavior_genes()
+
 	if _retarget_timer <= 0.0 or (not is_instance_valid(_target) and not is_instance_valid(_resource_target)):
 		_target = _find_best_target()
 		_resource_target = _find_nearest_resource() if not is_instance_valid(_target) else null
 		_retarget_timer = 0.18
 
-	var ally_cells: Array = _get_local_allies(group_perception_radius)
+	var local_allies: Array = _get_local_allies(group_perception_radius)
 	var ally_positions: Array[Vector2] = []
 	var ally_velocities: Array[Vector2] = []
-	for ally in ally_cells:
+	for ally in local_allies:
 		if not is_instance_valid(ally) or not ally is CharacterBody2D:
 			continue
 		var ally_node: CharacterBody2D = ally as CharacterBody2D
@@ -210,24 +216,17 @@ func _process_ai(delta: float) -> void:
 		ally_velocities.append(ally_node.velocity)
 
 	if is_instance_valid(_target):
-		_wander_time = 0.0
-		var target_data = _target.get("cell_data")
-		if target_data == null or not target_data.alive or not social_behavior.is_valid_enemy(self, _target):
+		var target_data: Node = _target.get("cell_data") as Node
+		if target_data == null or not bool(target_data.get("alive")) or not social_behavior.is_valid_enemy(self, _target):
 			_target = null
 			behavior.set_state(CellBehavior.BehaviorState.WANDER)
 			_wander(delta, ally_positions, ally_velocities)
 			return
 
-		var decision: CellBehavior.BehaviorState = behavior.evaluate_collective_cell(cell_data, target_data, ally_cells)
-		if not social_behavior.is_valid_enemy(self, _target):
-			_target = null
-			behavior.set_state(CellBehavior.BehaviorState.WANDER)
-			_wander(delta, ally_positions, ally_velocities)
-			return
-
+		var decision: CellBehavior.BehaviorState = behavior.evaluate_collective_cell(cell_data, target_data, local_allies)
 		var desired_direction: Vector2
 		if decision == CellBehavior.BehaviorState.FLEE:
-			desired_direction = _target.global_position.direction_to(global_position)
+			desired_direction = _calculate_collective_flee_direction()
 		else:
 			desired_direction = global_position.direction_to(_target.global_position)
 
@@ -239,32 +238,35 @@ func _process_ai(delta: float) -> void:
 		var desired_resource_direction: Vector2 = global_position.direction_to(_resource_target.global_position)
 		_direction = social_behavior.calculate_social_steering(global_position, desired_resource_direction, ally_positions, ally_velocities, true)
 		_wander_time = 0.0
-	else:
-		_resource_target = null
-		behavior.set_state(CellBehavior.BehaviorState.WANDER)
-		_wander(delta, ally_positions, ally_velocities)
-		_wander_time += delta
+		return
+
+	_resource_target = null
+	behavior.set_state(CellBehavior.BehaviorState.WANDER)
+	_wander(delta, ally_positions, ally_velocities)
+	_wander_time += delta
 
 func _find_best_target() -> CharacterBody2D:
 	var best: CharacterBody2D = null
-	var best_distance: float = perception_radius
+	var best_score: float = -INF
 
 	for candidate in get_tree().get_nodes_in_group("SimCells"):
-		if candidate == self or not is_instance_valid(candidate):
+		if candidate == self or not is_instance_valid(candidate) or not candidate is CharacterBody2D:
 			continue
-		if not candidate is CharacterBody2D:
-			continue
-		if String(candidate.get("species_id")) == String(species_id):
-			continue
-		if not social_behavior.is_valid_enemy(self, candidate):
+		if not social_behavior.is_valid_enemy(self, candidate as CharacterBody2D):
 			continue
 		if not candidate.has_method("get_cell_power"):
 			continue
 
 		var distance: float = global_position.distance_to(candidate.global_position)
-		if distance < best_distance:
+		if distance > perception_radius:
+			continue
+
+		var proximity: float = 1.0 - clampf(distance / maxf(perception_radius, 0.001), 0.0, 1.0)
+		var candidate_power: float = float(candidate.get_cell_power())
+		var score: float = proximity * 100.0 - candidate_power * 0.01 * behavior.aggression
+		if score > best_score:
 			best = candidate
-			best_distance = distance
+			best_score = score
 
 	return best
 
@@ -284,6 +286,33 @@ func _get_local_allies(radius: float) -> Array:
 
 	return allies
 
+func _calculate_collective_flee_direction() -> Vector2:
+	var enemies: Array[CharacterBody2D] = []
+	var weighted_away := Vector2.ZERO
+	var radius_squared: float = defense_radius * defense_radius
+
+	for candidate in get_tree().get_nodes_in_group("SimCells"):
+		if not is_instance_valid(candidate) or not candidate is CharacterBody2D:
+			continue
+		if not social_behavior.is_valid_enemy(self, candidate as CharacterBody2D):
+			continue
+
+		var offset: Vector2 = candidate.global_position - global_position
+		var distance_squared: float = offset.length_squared()
+		if distance_squared <= 0.001 or distance_squared > radius_squared:
+			continue
+
+		var distance: float = sqrt(distance_squared)
+		var proximity: float = 1.0 - clampf(distance / defense_radius, 0.0, 1.0)
+		weighted_away -= offset.normalized() * proximity
+		enemies.append(candidate as CharacterBody2D)
+
+	if weighted_away.length_squared() > 0.0001:
+		return weighted_away.normalized()
+	if is_instance_valid(_target):
+		return _target.global_position.direction_to(global_position)
+	return _direction.normalized()
+
 func _find_nearest_resource() -> Area2D:
 	var nearest: Area2D = null
 	var nearest_distance: float = resource_perception_radius
@@ -291,12 +320,10 @@ func _find_nearest_resource() -> Area2D:
 	for candidate in get_tree().get_nodes_in_group("WorldResources"):
 		if not is_instance_valid(candidate) or not candidate is Area2D:
 			continue
-
 		var distance: float = global_position.distance_to(candidate.global_position)
 		if distance < nearest_distance:
 			nearest = candidate
 			nearest_distance = distance
-
 	return nearest
 
 func get_cell_power() -> float:
@@ -307,7 +334,6 @@ func get_cell_power() -> float:
 func get_heredity_data() -> Dictionary:
 	if cell_data == null or genetics == null:
 		return {}
-
 	return {
 		"max_health": cell_data.max_health,
 		"damage": cell_data.damage,
@@ -324,7 +350,6 @@ func get_heredity_data() -> Dictionary:
 func get_inspection_data() -> Dictionary:
 	if cell_data == null or genetics == null or mitosis == null or behavior == null:
 		return {}
-
 	var lineage: Dictionary = genetics.get_lineage_data()
 	return {
 		"cell_id": lineage.get("cell_id", "unknown"),
@@ -356,20 +381,15 @@ func _process_collisions() -> void:
 		var collider: Object = collision.get_collider()
 		if collider == null or collider == self:
 			continue
-		if not collider is CharacterBody2D:
-			continue
-		if not collider.is_in_group("SimCells"):
-			continue
-		if not collider.has_method("take_damage"):
+		if not collider is CharacterBody2D or not collider.is_in_group("SimCells"):
 			continue
 		if not social_behavior.is_valid_enemy(self, collider as CharacterBody2D):
 			continue
 
-		var target_data = collider.get("cell_data")
-		var was_alive: bool = target_data != null and target_data.alive
+		var target_data: Node = collider.get("cell_data") as Node
+		var was_alive: bool = target_data != null and bool(target_data.get("alive"))
 		var attack_succeeded: bool = combat.attack(collider)
-
-		if attack_succeeded and was_alive and target_data != null and not target_data.alive:
+		if attack_succeeded and was_alive and target_data != null and not bool(target_data.get("alive")):
 			cell_data.add_resources(elimination_resource_reward)
 			if _target == collider:
 				_target = null
@@ -385,7 +405,6 @@ func _process_resources() -> void:
 
 	if not is_instance_valid(_resource_target):
 		return
-
 	if global_position.distance_to(_resource_target.global_position) <= cell_data.size + resource_collect_radius:
 		_collect_resource(_resource_target)
 
@@ -400,7 +419,6 @@ func _collect_nearby_resource() -> void:
 func _collect_resource(resource_node: Area2D) -> void:
 	if not resource_node.has_method("collect"):
 		return
-
 	var collected: float = resource_node.collect()
 	if collected > 0.0:
 		cell_data.add_resources(collected)
@@ -412,9 +430,7 @@ func _process_environment(delta: float) -> void:
 	adaptation.apply_stress(delta, genetics)
 
 func _process_mitosis() -> void:
-	if mitosis.active:
-		return
-	if behavior.state != CellBehavior.BehaviorState.WANDER:
+	if mitosis.active or behavior.state != CellBehavior.BehaviorState.WANDER:
 		return
 	if _wander_time < mitosis.required_wander_time:
 		return
@@ -426,7 +442,6 @@ func _process_mitosis() -> void:
 		return
 	if _cell_manager.get_population() >= _cell_manager.max_population:
 		return
-
 	_start_mitosis()
 
 func _start_mitosis() -> void:
@@ -435,7 +450,6 @@ func _start_mitosis() -> void:
 	var cost: float = mitosis.get_resource_cost()
 	if not cell_data.consume_resources(cost):
 		return
-
 	_wander_time = 0.0
 	_direction = Vector2.ZERO
 	behavior.set_state(CellBehavior.BehaviorState.MITOSIS)
@@ -445,12 +459,10 @@ func _finish_mitosis() -> void:
 	var child: Node = null
 	if _cell_manager != null and is_instance_valid(_cell_manager):
 		child = _cell_manager.spawn_mitosis_child(self)
-
 	if child != null:
 		mitosis.complete_generation()
 	else:
 		cell_data.add_resources(mitosis.get_resource_cost())
-
 	behavior.set_state(CellBehavior.BehaviorState.WANDER)
 	_wander_time = 0.0
 	mitosis.reset()
@@ -458,18 +470,15 @@ func _finish_mitosis() -> void:
 func take_damage(amount: float, attacker: Node = null) -> bool:
 	if cell_data == null:
 		return false
-
 	if attacker != null and is_instance_valid(attacker):
 		if not social_behavior.is_valid_enemy(self, attacker):
 			return false
-
 	var damage_applied: bool = cell_data.take_damage(amount, attacker)
 	if not damage_applied:
 		return false
 	if cell_data.alive:
 		_flash_timer = 0.08
 		return true
-
 	queue_free()
 	return true
 
