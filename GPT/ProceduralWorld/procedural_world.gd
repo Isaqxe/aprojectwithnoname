@@ -93,13 +93,13 @@ func _create_environment_map() -> void:
 	map_rect.size = Vector2(environment_resolution)
 	map_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	var material := ShaderMaterial.new()
+	var field_material := ShaderMaterial.new()
 	var shader := load("res://GPT/ProceduralWorld/procedural_environment.gdshader") as Shader
 	if shader == null:
 		push_error("ProceduralWorld: procedural_environment.gdshader not found.")
 		return
-	material.shader = shader
-	map_rect.material = material
+	field_material.shader = shader
+	map_rect.material = field_material
 	_environment_viewport.add_child(map_rect)
 
 func _apply_environment_parameters() -> void:
@@ -110,22 +110,22 @@ func _apply_environment_parameters() -> void:
 	if field == null or field.material == null:
 		return
 
-	var material: ShaderMaterial = field.material as ShaderMaterial
-	material.set_shader_parameter("world_seed", float(world_seed))
-	material.set_shader_parameter("world_size", world_size)
-	material.set_shader_parameter("macro_frequency", macro_frequency)
-	material.set_shader_parameter("temperature_frequency", temperature_frequency)
-	material.set_shader_parameter("humidity_frequency", humidity_frequency)
-	material.set_shader_parameter("warp_frequency", warp_frequency)
-	material.set_shader_parameter("warp_strength", warp_strength)
-	material.set_shader_parameter("border_detail_frequency", border_detail_frequency)
-	material.set_shader_parameter("border_detail_strength", border_detail_strength)
-	material.set_shader_parameter("border_micro_frequency", border_micro_frequency)
-	material.set_shader_parameter("border_micro_strength", border_micro_strength)
-	material.set_shader_parameter("void_threshold", void_threshold)
-	material.set_shader_parameter("cold_temperature", cold_temperature)
-	material.set_shader_parameter("hot_temperature", hot_temperature)
-	material.set_shader_parameter("green_humidity", green_humidity)
+	var field_material: ShaderMaterial = field.material as ShaderMaterial
+	field_material.set_shader_parameter("world_seed", float(world_seed))
+	field_material.set_shader_parameter("world_size", world_size)
+	field_material.set_shader_parameter("macro_frequency", macro_frequency)
+	field_material.set_shader_parameter("temperature_frequency", temperature_frequency)
+	field_material.set_shader_parameter("humidity_frequency", humidity_frequency)
+	field_material.set_shader_parameter("warp_frequency", warp_frequency)
+	field_material.set_shader_parameter("warp_strength", warp_strength)
+	field_material.set_shader_parameter("border_detail_frequency", border_detail_frequency)
+	field_material.set_shader_parameter("border_detail_strength", border_detail_strength)
+	field_material.set_shader_parameter("border_micro_frequency", border_micro_frequency)
+	field_material.set_shader_parameter("border_micro_strength", border_micro_strength)
+	field_material.set_shader_parameter("void_threshold", void_threshold)
+	field_material.set_shader_parameter("cold_temperature", cold_temperature)
+	field_material.set_shader_parameter("hot_temperature", hot_temperature)
+	field_material.set_shader_parameter("green_humidity", green_humidity)
 
 func _update_environment_transform() -> void:
 	if _environment_viewport == null or stream_center == null:
@@ -141,9 +141,9 @@ func _update_environment_transform() -> void:
 	if field == null or field.material == null:
 		return
 
-	var material: ShaderMaterial = field.material as ShaderMaterial
-	material.set_shader_parameter("world_center", center)
-	material.set_shader_parameter("world_extent", Vector2(load_radius * 2.0, load_radius * 2.0))
+	var field_material: ShaderMaterial = field.material as ShaderMaterial
+	field_material.set_shader_parameter("world_center", center)
+	field_material.set_shader_parameter("world_extent", Vector2(load_radius * 2.0, load_radius * 2.0))
 
 func _refresh_cpu_cache() -> void:
 	if _environment_viewport == null:
