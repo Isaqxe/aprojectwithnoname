@@ -5,11 +5,11 @@ class_name ProceduralWorldRenderer
 ## It samples the GPU-generated environment data and turns it into a smooth biome image.
 
 @export var world_provider: ProceduralWorld
-@export var display_scale: float = 1.0
 @export var z_index_value: int = -100
-@export var edge_softness: float = 0.10
-@export var edge_detail_frequency: float = 0.010
-@export var edge_detail_strength: float = 0.05
+@export var edge_softness: float = 0.16
+@export var edge_detail_frequency: float = 0.018
+@export var edge_detail_strength: float = 0.035
+@export var surface_variation_strength: float = 0.04
 
 var _display: Sprite2D
 var _visual_material: ShaderMaterial
@@ -33,7 +33,9 @@ func _process(_delta: float) -> void:
 		_display.texture = map_texture
 
 	_display.position = world_provider.get_environment_center()
-	_display.scale = Vector2.ONE * display_scale
+	var texture_size: Vector2 = Vector2(map_texture.get_width(), map_texture.get_height())
+	var extent: Vector2 = world_provider.get_environment_extent()
+	_display.scale = extent / texture_size
 	_display.z_index = z_index_value
 
 	_visual_material.set_shader_parameter("environment_map", map_texture)
@@ -44,6 +46,7 @@ func _process(_delta: float) -> void:
 	_visual_material.set_shader_parameter("edge_softness", edge_softness)
 	_visual_material.set_shader_parameter("edge_detail_frequency", edge_detail_frequency)
 	_visual_material.set_shader_parameter("edge_detail_strength", edge_detail_strength)
+	_visual_material.set_shader_parameter("surface_variation_strength", surface_variation_strength)
 
 func _create_display() -> void:
 	_display = Sprite2D.new()
