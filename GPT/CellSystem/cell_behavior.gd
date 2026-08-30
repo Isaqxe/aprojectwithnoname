@@ -88,6 +88,10 @@ func evaluate_cell(my_cell, other_cell) -> BehaviorState:
 		threat_level = 0.0
 		return state
 
+	if my_cell.has_method("needs_food") and my_cell.needs_food():
+		state = BehaviorState.SEEK_RESOURCE
+		return state
+
 	var my_strength: float = calculate_strength(my_cell)
 	var other_strength: float = calculate_strength(other_cell)
 	fear = other_strength - my_strength
@@ -114,6 +118,10 @@ func evaluate_collective_cell(my_cell, other_cell, ally_cells: Array) -> Behavio
 		threat_level = 0.0
 		return state
 
+	if my_cell.has_method("needs_food") and my_cell.needs_food():
+		state = BehaviorState.SEEK_RESOURCE
+		return state
+
 	var individual_strength: float = calculate_strength(my_cell)
 	group_strength = individual_strength
 	ally_count = 0
@@ -137,25 +145,26 @@ func evaluate_collective_cell(my_cell, other_cell, ally_cells: Array) -> Behavio
 
 	var enemies: Array = []
 	if owner_cell != null and is_instance_valid(owner_cell):
-		for candidate in owner_cell.get_tree().get_nodes_in_group("SimCells"):
-			if candidate == owner_cell or not is_instance_valid(candidate):
-				continue
-			if not is_valid_enemy(my_cell, candidate):
-				continue
-			if not candidate is Node2D:
-				continue
+		if owner_cell.has_method("_query_cells"):
+			for candidate in owner_cell._query_cells(perception):
+				if candidate == owner_cell or not is_instance_valid(candidate):
+					continue
+				if not is_valid_enemy(my_cell, candidate):
+					continue
+				if not candidate is Node2D:
+					continue
 
-			var distance: float = owner_cell.global_position.distance_to((candidate as Node2D).global_position)
-			if distance > perception:
-				continue
+				var distance: float = owner_cell.global_position.distance_to((candidate as Node2D).global_position)
+				if distance > perception:
+					continue
 
-			var proximity: float = 1.0 - clampf(distance / perception, 0.0, 1.0)
-			var weighted_strength: float = calculate_strength(candidate) * maxf(proximity, 0.20)
-			if weighted_strength <= 0.0:
-				continue
-			enemies.append(candidate)
-			total_threat_strength += weighted_strength
-			threat_count += 1
+				var proximity: float = 1.0 - clampf(distance / perception, 0.0, 1.0)
+				var weighted_strength: float = calculate_strength(candidate) * maxf(proximity, 0.20)
+				if weighted_strength <= 0.0:
+					continue
+				enemies.append(candidate)
+				total_threat_strength += weighted_strength
+				threat_count += 1
 
 	if enemies.is_empty() and is_valid_enemy(my_cell, other_cell):
 		total_threat_strength = calculate_strength(other_cell)
