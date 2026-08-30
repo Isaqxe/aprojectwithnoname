@@ -194,6 +194,10 @@ func evaluate_resource(my_cell) -> BehaviorState:
 		state = BehaviorState.WANDER
 		return state
 
+	if my_cell.has_method("needs_food") and my_cell.needs_food():
+		state = BehaviorState.SEEK_RESOURCE
+		return state
+
 	if my_cell.has_method("can_accept_resources"):
 		state = BehaviorState.SEEK_RESOURCE if my_cell.can_accept_resources() else BehaviorState.WANDER
 		return state
