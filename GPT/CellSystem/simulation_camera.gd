@@ -1,7 +1,7 @@
 extends Camera2D
 
 ## Central spatial controller for the CellSystem simulation.
-## Follows the Player through CellManager or a selected cell.
+## Follows the Player or a selected cell, with optional manual mouse panning.
 
 @export_category("Following")
 @export var follow_player: bool = true
@@ -12,15 +12,25 @@ extends Camera2D
 @export var unload_radius: float = 650.0
 @export var spawn_radius: float = 425.0
 
+@export_category("Mouse Pan")
+@export var pan_enabled: bool = true
+@export var pan_button: MouseButton = MOUSE_BUTTON_MIDDLE
+@export var pan_speed: float = 1.0
+
 var follow_target: Node2D = null
 var selected_target: Node2D = null
+var _manual_pan_active: bool = false
 
 func _ready() -> void:
 	add_to_group("SimulationCameras")
 	position_smoothing_enabled = false
 	_find_player()
+	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 
 func _process(delta: float) -> void:
+	if _manual_pan_active:
+		return
+
 	if not is_instance_valid(selected_target):
 		selected_target = null
 
@@ -36,11 +46,47 @@ func _process(delta: float) -> void:
 			var weight: float = clampf(follow_smoothing * delta, 0.0, 1.0)
 			global_position = global_position.lerp(follow_target.global_position, weight)
 
+func _unhandled_input(event: InputEvent) -> void:
+	if not pan_enabled or not event is InputEventMouseButton:
+		return
+
+	var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+	if mouse_event.button_index != pan_button:
+		return
+
+	if mouse_event.pressed:
+		_manual_pan_active = true
+		follow_target = null
+		selected_target = null
+		Input.set_default_cursor_shape(Input.CURSOR_DRAG)
+	else:
+		_manual_pan_active = false
+		Input.set_default_cursor_shape(Input.CURSOR_ARROW)
+
+func _input(event: InputEvent) -> void:
+	if not pan_enabled or not _manual_pan_active or not event is InputEventMouseMotion:
+		return
+
+	var motion: InputEventMouseMotion = event as InputEventMouseMotion
+	var zoom_scale: Vector2 = zoom
+	if zoom_scale.x <= 0.0:
+		zoom_scale.x = 1.0
+	if zoom_scale.y <= 0.0:
+		zoom_scale.y = 1.0
+	global_position -= Vector2(
+		motion.relative.x / zoom_scale.x,
+		motion.relative.y / zoom_scale.y
+	) * pan_speed
+
 func set_follow_target(target: Node2D) -> void:
+	_manual_pan_active = false
+	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 	selected_target = target
 	_set_target(target)
 
 func clear_selected_target() -> void:
+	_manual_pan_active = false
+	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 	selected_target = null
 	_find_player()
 
