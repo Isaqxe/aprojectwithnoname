@@ -8,6 +8,8 @@ extends Node2D
 @export var spring_strength: float = 16.0
 @export var damping: float = 8.0
 @export var idle_wobble: float = 0.035
+@export var impact_strength: float = 0.85
+@export var impact_radius: float = 0.70
 @export var health_bar_width: float = 42.0
 @export var health_bar_height: float = 5.0
 @export var health_bar_offset: float = 8.0
@@ -17,6 +19,9 @@ var _velocities: Array[Vector2] = []
 var _radii: Array[float] = []
 var _seed: int = 1
 var _time: float = 0.0
+var _elongation: Vector2 = Vector2.ONE
+var _asymmetry: Vector2 = Vector2.ZERO
+var _impact_offset: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
 	var parent_cell: Node = get_parent()
@@ -37,12 +42,26 @@ func _build_shape() -> void:
 	_radii.clear()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = _seed
+	_elongation = Vector2(rng.randf_range(0.94, 1.08), rng.randf_range(0.94, 1.08))
+	_asymmetry = Vector2(rng.randf_range(-0.035, 0.035), rng.randf_range(-0.035, 0.035))
 	for i in range(point_count):
 		var angle: float = TAU * float(i) / float(point_count)
-		var radius_factor: float = rng.randf_range(0.92, 1.08)
+		var radius_factor: float = rng.randf_range(0.93, 1.07)
 		_radii.append(radius_factor)
 		_points.append(Vector2.from_angle(angle) * radius_factor)
 		_velocities.append(Vector2.ZERO)
+
+func apply_impact(world_direction: Vector2, strength: float) -> void:
+	var direction: Vector2 = -world_direction.normalized()
+	if direction.length_squared() <= 0.001:
+		return
+	var impulse: float = clampf(strength, 0.0, 2.0) * impact_strength
+	_impact_offset += direction * impulse
+	for i in range(_velocities.size()):
+		var angle: float = TAU * float(i) / float(maxi(_velocities.size(), 1))
+		var radial_direction: Vector2 = Vector2.from_angle(angle)
+		var facing: float = maxf(radial_direction.dot(direction), 0.0)
+		_velocities[i] += direction * facing * impulse * 1.8
 
 func _process(delta: float) -> void:
 	_time += delta
@@ -60,6 +79,8 @@ func _process(delta: float) -> void:
 	if speed_value > 0.0:
 		movement_ratio = clampf(movement_velocity.length() / speed_value, 0.0, 1.0)
 
+	_impact_offset = _impact_offset.lerp(Vector2.ZERO, 1.0 - exp(-9.0 * delta))
+
 	for i in range(_points.size()):
 		var angle: float = TAU * float(i) / float(_points.size())
 		var direction: Vector2 = Vector2.from_angle(angle)
@@ -67,8 +88,11 @@ func _process(delta: float) -> void:
 		var directional_push: float = 0.0
 		if movement_ratio > 0.01 and movement_velocity.length_squared() > 0.001:
 			directional_push = direction.dot(movement_velocity.normalized()) * deformation_strength * movement_ratio
-		var target_radius: float = radius * (_radii[i] + local_wobble + directional_push)
-		var target: Vector2 = direction * target_radius
+		var morphology_factor: float = 1.0 + direction.x * _asymmetry.x + direction.y * _asymmetry.y
+		var target_radius: float = radius * (_radii[i] + local_wobble + directional_push) * morphology_factor
+		var target: Vector2 = Vector2(direction.x * _elongation.x, direction.y * _elongation.y) * target_radius
+		var impact_blend: float = clampf(1.0 - absf(angle - _impact_offset.angle()) / PI, 0.0, 1.0)
+		target += _impact_offset * impact_blend * radius
 		var displacement: Vector2 = target - _points[i]
 		_velocities[i] += displacement * spring_strength * delta
 		_velocities[i] *= exp(-damping * delta)
