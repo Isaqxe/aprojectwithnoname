@@ -7,17 +7,19 @@ extends Node2D
 @export var experimental_domain: Node
 @export var simulation_camera: Node
 @export var spawn_area: Rect2 = Rect2(-425.0, -425.0, 850.0, 850.0)
-@export var initial_resources: int = 75
+@export var initial_resources: int = 140
 @export var max_resources: int = 500
-@export var spawn_interval: float = 1.5
+@export var spawn_interval: float = 0.75
 @export var minimum_spacing: float = 28.0
 @export var max_spawn_attempts: int = 12
 
 @export_category("Resource Distribution")
-@export var base_spawn_multiplier: float = 1.0
-@export var min_spawn_amount_multiplier: float = 0.50
-@export var max_spawn_amount_multiplier: float = 1.35
-@export var respawn_when_below_fraction: float = 0.70
+@export var base_spawn_multiplier: float = 1.15
+@export var min_spawn_amount_multiplier: float = 0.75
+@export var max_spawn_amount_multiplier: float = 1.60
+@export var respawn_when_below_fraction: float = 0.60
+@export var emergency_spawn_fraction: float = 0.25
+@export var emergency_spawn_interval: float = 0.30
 
 var spawn_timer: float = 0.0
 var resources: Array[Node] = []
@@ -36,7 +38,17 @@ func _process(delta: float) -> void:
 	_update_spawn_area()
 	spawn_timer -= delta
 
-	if spawn_timer <= 0.0 and get_resource_count() < int(float(max_resources) * 0.95):
+	var count: int = resources.size()
+	var emergency_threshold: int = maxi(1, int(float(max_resources) * emergency_spawn_fraction))
+	var normal_threshold: int = maxi(emergency_threshold, int(float(max_resources) * respawn_when_below_fraction))
+
+	if count < emergency_threshold:
+		if spawn_timer <= 0.0:
+			spawn_resource()
+			spawn_timer = emergency_spawn_interval
+		return
+
+	if count < normal_threshold and spawn_timer <= 0.0:
 		spawn_resource()
 		spawn_timer = spawn_interval
 
@@ -47,11 +59,12 @@ func _resolve_nodes() -> void:
 		simulation_camera = get_tree().get_first_node_in_group("SimulationCameras")
 
 func _update_spawn_area() -> void:
-	if simulation_camera != null and is_instance_valid(simulation_camera) and simulation_camera.has_method("get_spawn_bounds"):
-		spawn_area = simulation_camera.get_spawn_bounds()
+	## Intentionally does not copy camera bounds.
+	## Resources belong to the whole experimental domain.
+	return
 
 func spawn_resource() -> Node:
-	if resource_scene == null or get_resource_count() >= max_resources:
+	if resource_scene == null or resources.size() >= max_resources:
 		return null
 
 	var spawn_position: Vector2 = Vector2.INF
