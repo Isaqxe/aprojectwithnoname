@@ -11,7 +11,6 @@ extends Node
 var cell_id: String = ""
 var parent_id: String = ""
 var generation: int = 0
-
 var genes: Dictionary = {}
 
 static var _next_id: int = 1
@@ -32,6 +31,7 @@ func initialize_random() -> void:
 		"temperate_adaptation": randf_range(0.25, 0.75),
 		"heat_adaptation": randf_range(0.25, 0.75),
 		"void_adaptation": randf_range(0.25, 0.75),
+		"humidity_adaptation": randf_range(0.25, 0.75),
 		"sociality": randf_range(0.20, 0.80),
 		"aggression": randf_range(0.20, 0.80),
 		"caution": randf_range(0.20, 0.80),
@@ -51,13 +51,14 @@ func initialize_from_parent(parent_genetics: Node, inherited_genes: Dictionary) 
 		species_id = String(parent_genetics.get("species_id"))
 
 	_ensure_behavior_genes()
+	_ensure_environment_genes()
 
 func set_gene(gene_name: String, value: float) -> void:
 	genes[gene_name] = clampf(value, 0.0, 1.0) if gene_name in BEHAVIOR_GENES else value
 
 func get_gene(gene_name: String, fallback: float = 0.0) -> float:
 	var value: float = float(genes.get(gene_name, fallback))
-	if gene_name in BEHAVIOR_GENES:
+	if gene_name in BEHAVIOR_GENES or gene_name == "humidity_adaptation":
 		return clampf(value, 0.0, 1.0)
 	return value
 
@@ -71,7 +72,7 @@ func mutate_genes() -> Array[String]:
 		var current_value: float = float(genes[gene_name])
 		var variation: float = randf_range(-mutation_strength, mutation_strength)
 		var mutated_value: float = current_value * (1.0 + variation)
-		if String(gene_name) in BEHAVIOR_GENES:
+		if String(gene_name) in BEHAVIOR_GENES or String(gene_name) == "humidity_adaptation":
 			mutated_value = clampf(mutated_value, 0.0, 1.0)
 		else:
 			mutated_value = maxf(mutated_value, 0.0)
@@ -79,6 +80,7 @@ func mutate_genes() -> Array[String]:
 		mutated_genes.append(String(gene_name))
 
 	_ensure_behavior_genes()
+	_ensure_environment_genes()
 	return mutated_genes
 
 func get_lineage_data() -> Dictionary:
@@ -94,6 +96,10 @@ func _ensure_behavior_genes() -> void:
 	for gene_name in BEHAVIOR_GENES:
 		if not genes.has(gene_name):
 			genes[gene_name] = 0.5
+
+func _ensure_environment_genes() -> void:
+	if not genes.has("humidity_adaptation"):
+		genes["humidity_adaptation"] = 0.5
 
 func _generate_id() -> String:
 	var new_id: String = "cell_%08d" % _next_id
