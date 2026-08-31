@@ -14,6 +14,7 @@ var _spawn_grace_time: float = 0.0
 
 @export_category("Behavior")
 @export var spawn_grace_duration: float = 15.0
+@export var hungry_resource_perception_multiplier: float = 2.0
 
 func _ready() -> void:
 	if not inherited_data.is_empty():
@@ -103,13 +104,14 @@ func _update_collision_shape() -> void:
 	circle_shape.radius = maxf(cell_data.size * visual_envelope_factor, 4.0) + combat_contact_margin
 
 func _process_ai(delta: float) -> void:
-	if cell_data != null and is_instance_valid(cell_data) and cell_data.has_method("needs_food") and cell_data.needs_food():
-		if is_instance_valid(_resource_target):
-			behavior.evaluate_resource(cell_data)
-			_direction = global_position.direction_to(_resource_target.global_position)
-			_wander_time = 0.0
-			return
-		_resource_target = _find_nearest_resource()
+	var hungry: bool = false
+	if cell_data != null and is_instance_valid(cell_data) and cell_data.has_method("needs_food"):
+		hungry = cell_data.needs_food()
+
+	if hungry:
+		var hungry_radius: float = resource_perception_radius * maxf(hungry_resource_perception_multiplier, 1.0)
+		if not is_instance_valid(_resource_target) or global_position.distance_to(_resource_target.global_position) > hungry_radius:
+			_resource_target = _find_nearest_resource(hungry_radius)
 		if is_instance_valid(_resource_target):
 			behavior.evaluate_resource(cell_data)
 			_direction = global_position.direction_to(_resource_target.global_position)
@@ -127,7 +129,10 @@ func _process_ai(delta: float) -> void:
 func _refresh_perception() -> void:
 	_apply_behavior_genes()
 	_target = _find_best_target()
-	_resource_target = null if is_instance_valid(_target) else _find_nearest_resource()
+	var search_radius: float = resource_perception_radius
+	if cell_data != null and is_instance_valid(cell_data) and cell_data.has_method("needs_food") and cell_data.needs_food():
+		search_radius *= maxf(hungry_resource_perception_multiplier, 1.0)
+	_resource_target = null if is_instance_valid(_target) else _find_nearest_resource(search_radius)
 	_cached_allies.clear()
 	_cached_ally_positions.clear()
 	_cached_ally_velocities.clear()
@@ -166,15 +171,16 @@ func _find_best_target() -> CharacterBody2D:
 			best_score = score
 	return best
 
-func _find_nearest_resource() -> Area2D:
+func _find_nearest_resource(search_radius: float = -1.0) -> Area2D:
 	if _resource_spatial_index == null or not is_instance_valid(_resource_spatial_index):
 		_resource_spatial_index = get_tree().get_first_node_in_group(RESOURCE_INDEX_GROUP)
+	var effective_radius: float = resource_perception_radius if search_radius <= 0.0 else search_radius
 	if _resource_spatial_index == null or not _resource_spatial_index.has_method("query_circle"):
 		return super._find_nearest_resource()
 
 	var nearest: Area2D = null
-	var nearest_distance: float = resource_perception_radius
-	for candidate in _resource_spatial_index.query_circle(global_position, resource_perception_radius):
+	var nearest_distance: float = effective_radius
+	for candidate in _resource_spatial_index.query_circle(global_position, effective_radius):
 		if not is_instance_valid(candidate) or not candidate is Area2D:
 			continue
 		var resource: Area2D = candidate as Area2D
