@@ -1,9 +1,9 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3 uid="uid://ce6nxi4yv4gvu"]
 
-[ext_resource type="Script" path="res://GPT/UI/main_menu.gd" id="1_menu"]
-[ext_resource type="Script" path="res://GPT/UI/main_menu_background.gd" id="2_background"]
+[ext_resource type="Script" uid="uid://dcqmuid5tewlv" path="res://GPT/UI/main_menu.gd" id="1_menu"]
+[ext_resource type="Script" uid="uid://mei2ycju1lnc" path="res://GPT/UI/main_menu_background.gd" id="2_background"]
 
-[node name="MainMenu" type="Control"]
+[node name="MainMenu" type="Control" unique_id=1615090185]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -13,7 +13,7 @@ grow_vertical = 2
 mouse_filter = 1
 script = ExtResource("1_menu")
 
-[node name="Background" type="Control" parent="."]
+[node name="Background" type="Control" parent="." unique_id=239979919]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -23,62 +23,54 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("2_background")
 
-[node name="MenuPanel" type="PanelContainer" parent="."]
+[node name="MenuPanel" type="PanelContainer" parent="." unique_id=1909907409]
 layout_mode = 0
-offset_left = 64.0
-offset_top = 64.0
-offset_right = 494.0
-offset_bottom = 930.0
+offset_left = 14.0
+offset_top = 15.0
+offset_right = 709.0
+offset_bottom = 1081.0
 mouse_filter = 1
 
-[node name="MenuColumn" type="VBoxContainer" parent="MenuPanel"]
+[node name="MenuColumn" type="VBoxContainer" parent="MenuPanel" unique_id=1646774990]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="Title" type="Label" parent="MenuPanel/MenuColumn"]
+[node name="Title" type="Label" parent="MenuPanel/MenuColumn" unique_id=672572382]
 layout_mode = 2
-text = "Alive Cells"
 theme_override_font_sizes/font_size = 56
+text = "Alive Cells"
+horizontal_alignment = 1
 
-[node name="Subtitle" type="Label" parent="MenuPanel/MenuColumn"]
-layout_mode = 2
-text = "Um pequeno ecossistema, infinitas histórias."
-theme_override_font_sizes/font_size = 18
-
-[node name="Spacer" type="Control" parent="MenuPanel/MenuColumn"]
+[node name="Spacer" type="Control" parent="MenuPanel/MenuColumn" unique_id=1926761465]
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 
-[node name="SimulationButton" type="Button" parent="MenuPanel/MenuColumn"]
+[node name="SimulationButton" type="Button" parent="MenuPanel/MenuColumn" unique_id=1116439427]
 custom_minimum_size = Vector2(0, 62)
 layout_mode = 2
+theme_override_font_sizes/font_size = 24
 text = "Simular"
-alignment = 0
-theme_override_font_sizes/font_size = 24
 
-[node name="OptionsButton" type="Button" parent="MenuPanel/MenuColumn"]
+[node name="OptionsButton" type="Button" parent="MenuPanel/MenuColumn" unique_id=1423103875]
 custom_minimum_size = Vector2(0, 62)
 layout_mode = 2
+theme_override_font_sizes/font_size = 24
 text = "Opções"
-alignment = 0
-theme_override_font_sizes/font_size = 24
 
-[node name="QuitButton" type="Button" parent="MenuPanel/MenuColumn"]
+[node name="QuitButton" type="Button" parent="MenuPanel/MenuColumn" unique_id=316514591]
 custom_minimum_size = Vector2(0, 62)
 layout_mode = 2
-text = "Sair"
-alignment = 0
 theme_override_font_sizes/font_size = 24
+text = "Sair"
 
-[node name="StatusLabel" type="Label" parent="MenuPanel/MenuColumn"]
+[node name="StatusLabel" type="Label" parent="MenuPanel/MenuColumn" unique_id=1489635513]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 
-[node name="InputHint" type="Label" parent="."]
+[node name="InputHint" type="Label" parent="." unique_id=1551049969]
 layout_mode = 0
 offset_left = 68.0
 offset_top = 950.0
 offset_right = 600.0
 offset_bottom = 980.0
-text = ""
 theme_override_font_sizes/font_size = 13

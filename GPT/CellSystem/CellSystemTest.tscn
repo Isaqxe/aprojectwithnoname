@@ -50,8 +50,9 @@ script = ExtResource("7_inspector")
 
 [node name="SimulationCamera" type="Camera2D" parent="." unique_id=7919634]
 script = ExtResource("9_camera")
-load_radius = 2000.0
-unload_radius = 3000.0
+load_radius = 30000.0
+unload_radius = 34000.0
+min_zoom = 0.001
 
 [node name="FirstTimeEvents" type="Node" parent="." unique_id=2036286140]
 script = ExtResource("13_first_events")
@@ -65,10 +66,10 @@ offset_right = 500.0
 offset_bottom = 220.0
 text = "CellSystem Simulation"
 
-[node name="SimulationTime" type="Label" parent="DebugLayer"]
+[node name="SimulationTime" type="Label" parent="DebugLayer" unique_id=1129613714]
 offset_left = 20.0
 offset_top = 230.0
 offset_right = 260.0
 offset_bottom = 260.0
-text = "Tempo: 00:00"
 theme_override_font_sizes/font_size = 20
+text = "Tempo: 00:00"
