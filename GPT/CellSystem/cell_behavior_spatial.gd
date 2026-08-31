@@ -2,12 +2,18 @@ extends "res://GPT/CellSystem/cell_behavior.gd"
 
 const SPATIAL_INDEX_GROUP := "CellSpatialIndexes"
 
+var _spatial_index: Node = null
+
+func _ready() -> void:
+	_spatial_index = get_tree().get_first_node_in_group(SPATIAL_INDEX_GROUP)
+
 func _query_cells(radius: float) -> Array:
-	var index_node: Node = get_tree().get_first_node_in_group(SPATIAL_INDEX_GROUP)
-	if index_node != null and index_node.has_method("query_circle"):
+	if _spatial_index == null or not is_instance_valid(_spatial_index):
+		_spatial_index = get_tree().get_first_node_in_group(SPATIAL_INDEX_GROUP)
+	if _spatial_index != null and _spatial_index.has_method("query_circle"):
 		var owner_cell: Node = get_parent()
 		if owner_cell is Node2D:
-			return index_node.query_circle((owner_cell as Node2D).global_position, radius)
+			return _spatial_index.query_circle((owner_cell as Node2D).global_position, radius)
 	return get_tree().get_nodes_in_group("SimCells")
 
 func evaluate_collective_cell(my_cell, other_cell, ally_cells: Array) -> BehaviorState:
