@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://GPT/UI/main_menu.gd" id="1_menu"]
+[ext_resource type="Script" path="res://GPT/UI/main_menu_background.gd" id="2_background"]
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -12,12 +13,72 @@ grow_vertical = 2
 mouse_filter = 1
 script = ExtResource("1_menu")
 
+[node name="Background" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_background")
+
+[node name="MenuPanel" type="PanelContainer" parent="."]
+layout_mode = 0
+offset_left = 64.0
+offset_top = 64.0
+offset_right = 494.0
+offset_bottom = 930.0
+mouse_filter = 1
+
+[node name="MenuColumn" type="VBoxContainer" parent="MenuPanel"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="MenuPanel/MenuColumn"]
+layout_mode = 2
+text = "Alive Cells"
+theme_override_font_sizes/font_size = 56
+
+[node name="Subtitle" type="Label" parent="MenuPanel/MenuColumn"]
+layout_mode = 2
+text = "Um pequeno ecossistema, infinitas histórias."
+theme_override_font_sizes/font_size = 18
+
+[node name="Spacer" type="Control" parent="MenuPanel/MenuColumn"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="SimulationButton" type="Button" parent="MenuPanel/MenuColumn"]
+custom_minimum_size = Vector2(0, 62)
+layout_mode = 2
+text = "Simular"
+alignment = 0
+theme_override_font_sizes/font_size = 24
+
+[node name="OptionsButton" type="Button" parent="MenuPanel/MenuColumn"]
+custom_minimum_size = Vector2(0, 62)
+layout_mode = 2
+text = "Opções"
+alignment = 0
+theme_override_font_sizes/font_size = 24
+
+[node name="QuitButton" type="Button" parent="MenuPanel/MenuColumn"]
+custom_minimum_size = Vector2(0, 62)
+layout_mode = 2
+text = "Sair"
+alignment = 0
+theme_override_font_sizes/font_size = 24
+
+[node name="StatusLabel" type="Label" parent="MenuPanel/MenuColumn"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+
 [node name="InputHint" type="Label" parent="."]
 layout_mode = 0
-offset_left = 84.0
-offset_top = 930.0
-offset_right = 500.0
-offset_bottom = 960.0
-text = "Alive Cells"
-theme_override_colors/font_color = Color(0.45, 0.56, 0.60, 1)
+offset_left = 68.0
+offset_top = 950.0
+offset_right = 600.0
+offset_bottom = 980.0
+text = ""
 theme_override_font_sizes/font_size = 13
