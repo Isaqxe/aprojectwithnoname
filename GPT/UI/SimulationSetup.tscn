@@ -1,0 +1,151 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://GPT/UI/simulation_setup.gd" id="1_setup"]
+
+[node name="SimulationSetup" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_setup")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.025, 0.055, 0.075, 1)
+mouse_filter = 2
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(620, 0)
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 28
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Configurar Simulação"
+theme_override_font_sizes/font_size = 32
+
+[node name="Separator" type="HSeparator" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="AutoSpawn" type="CheckBox" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Gerar novas células automaticamente"
+button_pressed = false
+
+[node name="Population" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBox/Population"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+text = "População inicial"
+
+[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/Population"]
+layout_mode = 2
+value = 500
+min_value = 1
+max_value = 10000
+step = 1
+
+[node name="MaxPopulation" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBox/MaxPopulation"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+text = "População máxima"
+
+[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/MaxPopulation"]
+layout_mode = 2
+value = 10000
+min_value = 10
+max_value = 50000
+step = 10
+
+[node name="Resources" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBox/Resources"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+text = "Recursos iniciais"
+
+[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/Resources"]
+layout_mode = 2
+value = 1000
+min_value = 0
+max_value = 50000
+step = 50
+
+[node name="MaxResources" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBox/MaxResources"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+text = "Recursos máximos"
+
+[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/MaxResources"]
+layout_mode = 2
+value = 2302
+min_value = 1
+max_value = 100000
+step = 50
+
+[node name="Radius" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBox/Radius"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+text = "Raio do domínio"
+
+[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/Radius"]
+layout_mode = 2
+value = 3000
+min_value = 500
+max_value = 30000
+step = 100
+
+[node name="Hint" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Os valores são aplicados apenas ao iniciar uma nova simulação."
+autowrap_mode = 2
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Back" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
+custom_minimum_size = Vector2(220, 50)
+layout_mode = 2
+text = "Voltar"
+
+[node name="Start" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
+custom_minimum_size = Vector2(300, 50)
+layout_mode = 2
+text = "Iniciar Simulação"
