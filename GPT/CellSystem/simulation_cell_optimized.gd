@@ -11,10 +11,12 @@ var initial_species_id: String = ""
 var _spatial_index: Node = null
 var _resource_spatial_index: Node = null
 var _spawn_grace_time: float = 0.0
+var _ai_decision_timer: float = 0.0
 
 @export_category("Behavior")
 @export var spawn_grace_duration: float = 15.0
 @export var hungry_resource_perception_multiplier: float = 2.0
+@export var ai_decision_interval: float = 0.15
 
 func _ready() -> void:
 	if not inherited_data.is_empty():
@@ -41,6 +43,7 @@ func _ready() -> void:
 	_sync_energy_capacity()
 	_update_collision_shape()
 	_spawn_grace_time = maxf(spawn_grace_duration, 0.0)
+	_ai_decision_timer = randf_range(0.0, maxf(ai_decision_interval, 0.01))
 
 	if genetics != null and is_instance_valid(genetics) and _cell_manager != null and is_instance_valid(_cell_manager):
 		var mutation_count: int = int(genetics.get("last_mutation_count"))
@@ -104,6 +107,11 @@ func _update_collision_shape() -> void:
 	circle_shape.radius = maxf(cell_data.size * visual_envelope_factor, 4.0) + combat_contact_margin
 
 func _process_ai(delta: float) -> void:
+	_ai_decision_timer -= delta
+	if _ai_decision_timer > 0.0:
+		return
+	_ai_decision_timer = randf_range(maxf(ai_decision_interval * 0.8, 0.05), maxf(ai_decision_interval * 1.2, 0.06))
+
 	var hungry: bool = false
 	if cell_data != null and is_instance_valid(cell_data) and cell_data.has_method("needs_food"):
 		hungry = cell_data.needs_food()
