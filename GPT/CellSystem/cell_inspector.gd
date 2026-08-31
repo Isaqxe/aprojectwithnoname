@@ -139,20 +139,36 @@ func _update_ui_from_selected() -> void:
 	var hunger_state: String = String(data.get("hunger_state", "UNKNOWN"))
 	var energy_ratio: float = float(data.get("energy_ratio", resources / resource_capacity))
 	var environment_stress: float = float(data.get("environment_stress", 0.0))
+	var genes: Dictionary = data.get("genes", {})
 
 	_title_label.text = "%s  •  Gen %d" % [species, generation]
 	_details_label.text = (
 		"ID: %s\n" % String(data.get("cell_id", "unknown")) +
 		"Parent: %s\n" % String(data.get("parent_id", "none")) +
 		"State: %s\n" % String(data.get("state", "unknown")) +
-		"Energy: %.1f / %.1f  (%d%%)\n" % [resources, resource_capacity, roundi(energy_ratio * 100.0)] +
-		"Hunger: %s\n" % hunger_state +
+		"\nBIOLOGY\n" +
 		"Damage: %.1f\n" % float(data.get("damage", 0.0)) +
 		"Speed: %.1f\n" % float(data.get("speed", 0.0)) +
 		"Size: %.1f\n" % float(data.get("size", 0.0)) +
-		"Mitosis: %d  |  Next cost: %.1f\n" % [int(data.get("mitosis_count", 0)), float(data.get("next_mitosis_cost", 0.0))] +
-		"Allies nearby: %d\n" % int(data.get("nearby_allies", 0)) +
-		"Fear: %.2f  |  Env. stress: %.2f" % [float(data.get("fear", 0.0)), environment_stress]
+		"Regeneration: %.1f\n" % float(data.get("regeneration_rate", 0.0)) +
+		"\nENERGY\n" +
+		"Energy: %.1f / %.1f  (%d%%)\n" % [resources, resource_capacity, roundi(energy_ratio * 100.0)] +
+		"Hunger: %s\n" % hunger_state +
+		"\nGENETICS\n" +
+		"Health gene: %.1f\n" % float(genes.get("health", data.get("max_health", 0.0))) +
+		"Damage gene: %.1f\n" % float(genes.get("damage", data.get("damage", 0.0))) +
+		"Speed gene: %.1f\n" % float(genes.get("speed", data.get("speed", 0.0))) +
+		"Size gene: %.1f\n" % float(genes.get("size", data.get("size", 0.0))) +
+		"Aggression: %.2f\n" % float(genes.get("aggression", 0.5)) +
+		"Sociality: %.2f\n" % float(genes.get("sociality", 0.5)) +
+		"Caution: %.2f\n" % float(genes.get("caution", 0.5)) +
+		"Group response: %.2f\n" % float(genes.get("group_response", 0.5)) +
+		"Cold adaptation: %.2f\n" % float(genes.get("cold_adaptation", 0.5)) +
+		"Heat adaptation: %.2f\n" % float(genes.get("heat_adaptation", 0.5)) +
+		"\nMITOSIS\n" +
+		"Mitoses: %d  |  Next cost: %.1f\n" % [int(data.get("mitosis_count", 0)), float(data.get("next_mitosis_cost", 0.0))] +
+		"\nENVIRONMENT\n" +
+		"Env. stress: %.2f" % environment_stress
 	)
 
 	if health < max_health - 0.01:
