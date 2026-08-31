@@ -5,6 +5,7 @@ extends Node2D
 
 @export var point_count: int = 20
 @export var idle_wobble: float = 0.018
+@export var visual_update_hz: float = 20.0
 @export var health_bar_width: float = 42.0
 @export var health_bar_height: float = 5.0
 @export var health_bar_offset: float = 8.0
@@ -13,6 +14,7 @@ var _points: Array[Vector2] = []
 var _radii: Array[float] = []
 var _seed: int = 1
 var _time: float = 0.0
+var _visual_timer: float = 0.0
 var _elongation: Vector2 = Vector2.ONE
 var _asymmetry: Vector2 = Vector2.ZERO
 
@@ -26,7 +28,7 @@ func _ready() -> void:
 		else:
 			_seed = abs(int(parent_cell.get_instance_id())) + 1
 	_build_shape()
-	set_process(true)
+	set_process(visual_update_hz > 0.0)
 	queue_redraw()
 
 func _build_shape() -> void:
@@ -44,6 +46,12 @@ func _build_shape() -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
+	_visual_timer += delta
+	var update_interval: float = 1.0 / maxf(visual_update_hz, 1.0)
+	if _visual_timer < update_interval:
+		return
+	_visual_timer = 0.0
+
 	var parent_cell: Node2D = get_parent() as Node2D
 	if parent_cell == null or not is_instance_valid(parent_cell):
 		return
