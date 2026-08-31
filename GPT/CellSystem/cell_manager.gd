@@ -68,6 +68,7 @@ func _ready() -> void:
 	randomize()
 	add_to_group("CellManagers")
 	_resolve_scene_nodes()
+	_apply_simulation_config()
 	_initialize_species()
 	spawn_timer = spawn_interval
 	maintenance_timer = 0.0
@@ -124,6 +125,14 @@ func _resolve_scene_nodes() -> void:
 		experimental_domain = get_tree().get_first_node_in_group("ExperimentalDomains")
 	if simulation_camera == null:
 		simulation_camera = get_tree().get_first_node_in_group("SimulationCameras")
+
+func _apply_simulation_config() -> void:
+	var config: Node = get_node_or_null("/root/SimulationConfig")
+	if config == null:
+		return
+	auto_spawn = bool(config.get("auto_spawn_cells"))
+	initial_population = int(config.get("initial_population"))
+	max_population = int(config.get("max_population"))
 
 func register_cell(cell: Node) -> void:
 	if cell == null or not is_instance_valid(cell) or registered_cells.has(cell):
@@ -518,13 +527,6 @@ func _cleanup_invalid_cells() -> void:
 
 	for cell in registered_cells:
 		if not is_instance_valid(cell):
-			var dead_species: String = String(_tracked_species.get(cell, "")).strip_edges()
-			var dead_generation: int = int(_tracked_generations.get(cell, 0))
-			if not _tracked_deaths.has(cell):
-				_tracked_deaths[cell] = true
-				_record_death(dead_species, dead_generation)
-			if cell == player_cell:
-				player_cell = null
 			continue
 
 		var cell_data: Node = cell.get("cell_data") as Node
