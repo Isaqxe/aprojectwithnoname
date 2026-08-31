@@ -73,3 +73,12 @@ offset_right = 260.0
 offset_bottom = 260.0
 theme_override_font_sizes/font_size = 20
 text = "Tempo: 00:00"
+
+[node name="FPS" type="Label" parent="DebugLayer" unique_id=1129613715]
+offset_left = 20.0
+offset_top = 265.0
+offset_right = 260.0
+offset_bottom = 295.0
+theme_override_font_sizes/font_size = 18
+text = "FPS: --"
+visible = false
