@@ -41,6 +41,11 @@ func _ready() -> void:
 	_update_collision_shape()
 	_spawn_grace_time = maxf(spawn_grace_duration, 0.0)
 
+	if genetics != null and is_instance_valid(genetics) and _cell_manager != null and is_instance_valid(_cell_manager):
+		var mutation_count: int = int(genetics.get("last_mutation_count"))
+		if mutation_count > 0 and _cell_manager.has_method("record_mutations"):
+			_cell_manager.record_mutations(get_species_id(), mutation_count)
+
 func _physics_process(delta: float) -> void:
 	_spawn_grace_time = maxf(_spawn_grace_time - delta, 0.0)
 	super._physics_process(delta)
