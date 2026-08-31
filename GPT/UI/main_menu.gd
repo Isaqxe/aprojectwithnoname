@@ -2,7 +2,7 @@ extends Control
 
 ## Main menu controller. UI is authored as scene nodes; this script only handles navigation.
 
-const SIMULATION_SCENE := preload("res://GPT/CellSystem/CellSystemTest.tscn")
+const SIMULATION_SETUP_SCENE := preload("res://GPT/UI/SimulationSetup.tscn")
 
 @onready var simulation_button: Button = $MenuPanel/MenuColumn/SimulationButton
 @onready var options_button: Button = $MenuPanel/MenuColumn/OptionsButton
@@ -15,10 +15,10 @@ func _ready() -> void:
 	quit_button.pressed.connect(_on_quit_pressed)
 
 func _on_simulate_pressed() -> void:
-	get_tree().change_scene_to_packed(SIMULATION_SCENE)
+	get_tree().change_scene_to_packed(SIMULATION_SETUP_SCENE)
 
 func _on_options_pressed() -> void:
-	status_label.text = "Configurações da simulação chegarão em breve."
+	status_label.text = "Opções gerais chegarão em uma próxima versão."
 
 func _on_quit_pressed() -> void:
 	get_tree().quit()
