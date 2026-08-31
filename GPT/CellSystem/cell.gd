@@ -26,6 +26,7 @@ extends CharacterBody2D
 @export var starving_threshold: float = 0.20
 @export var critical_energy_threshold: float = 0.05
 @export var starvation_damage_per_second: float = 3.0
+@export var critical_food_heal: float = 12.0
 
 var resources: float = 0.0
 var health: float
@@ -129,7 +130,10 @@ func can_accept_resources() -> bool:
 func add_resources(amount: float) -> void:
 	if not alive or amount <= 0.0:
 		return
+	var was_critical: bool = get_energy_ratio() <= critical_energy_threshold
 	resources = minf(resources + amount, resource_capacity)
+	if was_critical and critical_food_heal > 0.0 and alive:
+		health = minf(health + critical_food_heal, max_health)
 
 func consume_resources(amount: float) -> bool:
 	if not alive or amount <= 0.0 or resources < amount:
