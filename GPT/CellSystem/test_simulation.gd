@@ -61,26 +61,43 @@ func _process(delta: float) -> void:
 	if cell_manager.has_method("get_telemetry_snapshot"):
 		telemetry = cell_manager.get_telemetry_snapshot()
 
-	var species_stats: Dictionary = {}
-	if cell_manager.has_method("get_species_statistics"):
-		species_stats = cell_manager.get_species_statistics()
+	var current_population: int = int(telemetry.get("population", 0))
+	var created_population: int = int(telemetry.get("total_births", 0))
+	var configured_initial: int = int(telemetry.get("initial_population", 500))
+	var new_births: int = maxi(created_population - configured_initial, 0)
+	var derived_deaths: int = maxi(created_population - current_population, 0)
 
-	var living_species_count: int = 0
-	for species_key in species_stats.keys():
-		var stats: Dictionary = species_stats.get(species_key, {})
-		if int(stats.get("population", 0)) > 0:
-			living_species_count += 1
+	var living_species: Dictionary = {}
+	for cell in cell_manager.registered_cells:
+		if not is_instance_valid(cell):
+			continue
+		var data: Node = cell.get("cell_data") as Node
+		if data == null or not is_instance_valid(data) or not bool(data.get("alive")):
+			continue
+		var species_id: String = ""
+		if cell.has_method("get_species_id"):
+			species_id = String(cell.get_species_id()).strip_edges()
+		else:
+			species_id = String(cell.get("species_id")).strip_edges()
+		if species_id.is_empty() or species_id == "default":
+			continue
+		living_species[species_id] = int(living_species.get(species_id, 0)) + 1
 
-	var dominant_species: String = String(telemetry.get("dominant_species", "none"))
+	var living_species_count: int = living_species.size()
+	var dominant_species: String = "none"
 	var dominant_population: int = 0
-	if not dominant_species.is_empty() and species_stats.has(dominant_species):
-		dominant_population = int(species_stats[dominant_species].get("population", 0))
+	for species_key in living_species.keys():
+		var species_population: int = int(living_species[species_key])
+		if species_population > dominant_population:
+			dominant_population = species_population
+			dominant_species = String(species_key)
 
 	debug_label.text = "CellSystem Simulation\n" + \
-		"Population: %d | Peak: %d\n" % [int(telemetry.get("population", 0)), int(telemetry.get("peak_population", 0))] + \
-		"Births: %d | Deaths: %d | Mutations: %d\n" % [int(telemetry.get("total_births", 0)), int(telemetry.get("total_deaths", 0)), int(telemetry.get("total_mutations", 0))] + \
+		"Population: %d | Peak: %d\n" % [current_population, int(telemetry.get("peak_population", 0))] + \
+		"Births: %d | Created: %d | Deaths: %d\n" % [new_births, created_population, derived_deaths] + \
+		"Mutations: %d\n" % int(telemetry.get("total_mutations", 0)) + \
 		"Generation: %d | Species alive: %d\n" % [int(telemetry.get("highest_generation", 0)), living_species_count] + \
-		"Dominant: %s (%d)\n" % [dominant_species if not dominant_species.is_empty() else "none", dominant_population] + \
+		"Dominant: %s (%d)\n" % [dominant_species, dominant_population] + \
 		"Player: %s\n" % ["Spawned" if cell_manager.get_player() != null else "Not spawned"] + \
 		"Camera: (%.0f, %.0f) | Domain R: %.0f\n" % [simulation_camera.global_position.x, simulation_camera.global_position.y, float(experimental_domain.get("radius"))] + \
 		"Temp: %.2f | Humidity: %.2f | Food: %.2f" % [float(environment.get("temperature", 0.5)), float(environment.get("humidity", 0.5)), float(environment.get("food_density", 1.0))]
@@ -111,7 +128,6 @@ func _apply_simulation_config() -> void:
 	var config: Node = get_node_or_null("/root/SimulationConfig")
 	if config == null:
 		return
-
 	cell_manager.auto_spawn = bool(config.get("auto_spawn_cells"))
 	cell_manager.initial_population = int(config.get("initial_population"))
 	cell_manager.max_population = int(config.get("max_population"))
