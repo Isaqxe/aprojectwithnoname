@@ -27,6 +27,7 @@ var resources: Array[Node] = []
 func _ready() -> void:
 	randomize()
 	_resolve_nodes()
+	_apply_simulation_config()
 	_update_spawn_area()
 	spawn_timer = spawn_interval
 	for _i in range(initial_resources):
@@ -57,6 +58,13 @@ func _resolve_nodes() -> void:
 		experimental_domain = get_tree().get_first_node_in_group("ExperimentalDomains")
 	if simulation_camera == null or not is_instance_valid(simulation_camera):
 		simulation_camera = get_tree().get_first_node_in_group("SimulationCameras")
+
+func _apply_simulation_config() -> void:
+	var config: Node = get_node_or_null("/root/SimulationConfig")
+	if config == null:
+		return
+	initial_resources = int(config.get("initial_resources"))
+	max_resources = int(config.get("max_resources"))
 
 func _update_spawn_area() -> void:
 	## Intentionally does not copy camera bounds.
