@@ -12,6 +12,7 @@ var cell_id: String = ""
 var parent_id: String = ""
 var generation: int = 0
 var genes: Dictionary = {}
+var last_mutation_count: int = 0
 
 static var _next_id: int = 1
 
@@ -26,6 +27,7 @@ func initialize_random() -> void:
 	cell_id = _generate_id()
 	generation = 0
 	parent_id = ""
+	last_mutation_count = 0
 	genes = {
 		"cold_adaptation": randf_range(0.25, 0.75),
 		"temperate_adaptation": randf_range(0.25, 0.75),
@@ -43,6 +45,7 @@ func initialize_from_parent(parent_genetics: Node, inherited_genes: Dictionary) 
 	parent_id = ""
 	generation = 0
 	species_id = ""
+	last_mutation_count = 0
 	genes = inherited_genes.duplicate(true)
 
 	if parent_genetics != null:
@@ -79,6 +82,7 @@ func mutate_genes() -> Array[String]:
 		genes[gene_name] = mutated_value
 		mutated_genes.append(String(gene_name))
 
+	last_mutation_count = mutated_genes.size()
 	_ensure_behavior_genes()
 	_ensure_environment_genes()
 	return mutated_genes
