@@ -151,11 +151,21 @@ func register_cell(cell: Node) -> void:
 		highest_generation = maxi(highest_generation, generation)
 
 func unregister_cell(cell: Node) -> void:
-	if is_instance_valid(cell):
-		registered_cells.erase(cell)
-		_tracked_species.erase(cell)
-		_tracked_generations.erase(cell)
-		_tracked_deaths.erase(cell)
+	if cell == null:
+		return
+
+	var species_id: String = String(_tracked_species.get(cell, "")).strip_edges()
+	var generation: int = int(_tracked_generations.get(cell, 0))
+
+	if not _tracked_deaths.has(cell) and not species_id.is_empty() and species_id != "default":
+		_tracked_deaths[cell] = true
+		_record_death(species_id, generation)
+
+	registered_cells.erase(cell)
+	_tracked_species.erase(cell)
+	_tracked_generations.erase(cell)
+	_tracked_deaths.erase(cell)
+
 	if player_cell == cell:
 		player_cell = null
 
@@ -228,10 +238,18 @@ func get_player() -> Node:
 		player_cell = null
 	return player_cell
 
+func get_living_species_count() -> int:
+	var count: int = 0
+	for species_key in species_statistics.keys():
+		var stats: Dictionary = species_statistics.get(species_key, {})
+		if int(stats.get("population", 0)) > 0:
+			count += 1
+	return count
+
 func get_dominant_species() -> String:
 	var best_species: String = ""
 	var best_population: int = 0
-	for species_key in known_species.keys():
+	for species_key in species_statistics.keys():
 		var species_id: String = String(species_key)
 		var stats: Dictionary = species_statistics.get(species_id, {})
 		var population: int = int(stats.get("population", 0))
@@ -249,9 +267,9 @@ func get_telemetry_snapshot() -> Dictionary:
 		"total_deaths": total_deaths,
 		"highest_generation": highest_generation,
 		"total_mutations": total_mutations,
-		"species_count": known_species.size(),
+		"species_count": get_living_species_count(),
 		"dominant_species": get_dominant_species()
-	}
+		}
 
 func create_cell(position: Vector2, is_player: bool = false, species_id_override: String = "") -> Node:
 	if cell_factory == null or not is_instance_valid(cell_factory):
@@ -424,6 +442,9 @@ func _record_death(species_id: String, generation: int) -> void:
 	stats["population"] = maxi(int(stats.get("population", 0)) - 1, 0)
 	species_statistics[normalized_id] = stats
 	_record_event("Death: %s (gen %d)" % [normalized_id, generation])
+	if int(stats.get("population", 0)) == 0:
+		record_elimination(normalized_id)
+		_record_event("Extinction: %s" % normalized_id)
 
 func _sample_population() -> void:
 	var current_population: int = registered_cells.size()
@@ -479,10 +500,6 @@ func _clamp_to_domain(position: Vector2, margin: float = 0.0) -> Vector2:
 func _update_simulation_area() -> void:
 	if simulation_camera == null or not is_instance_valid(simulation_camera):
 		simulation_camera = get_tree().get_first_node_in_group("SimulationCameras")
-	if simulation_camera == null or not is_instance_valid(simulation_camera):
-		return
-	# Camera bounds are used only for streaming/debug visualization.
-	# Cell spawning is controlled by the ExperimentalDomain.
 
 func _update_cell_processing() -> void:
 	if not stream_cells_from_camera:
@@ -533,7 +550,7 @@ func _cleanup_invalid_cells() -> void:
 		if cell_data == null or not is_instance_valid(cell_data) or not bool(cell_data.get("alive")):
 			var species_id: String = String(_tracked_species.get(cell, _get_cell_species_id(cell))).strip_edges()
 			var generation: int = int(_tracked_generations.get(cell, _get_cell_generation(cell)))
-			if not _tracked_deaths.has(cell):
+			if not _tracked_deaths.has(cell) and not species_id.is_empty() and species_id != "default":
 				_tracked_deaths[cell] = true
 				_record_death(species_id, generation)
 			if cell == player_cell:
