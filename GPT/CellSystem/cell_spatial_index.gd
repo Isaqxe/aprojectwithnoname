@@ -5,7 +5,7 @@ extends Node
 class_name CellSpatialIndex
 
 @export var cell_size: float = 256.0
-@export var rebuild_interval: float = 0.15
+@export var rebuild_interval: float = 0.25
 
 var _timer: float = 0.0
 var _buckets: Dictionary = {}
