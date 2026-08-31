@@ -19,7 +19,14 @@ class_name ExperimentalDomain
 
 func _ready() -> void:
 	add_to_group("ExperimentalDomains")
+	_apply_simulation_config()
 	queue_redraw()
+
+func _apply_simulation_config() -> void:
+	var config: Node = get_node_or_null("/root/SimulationConfig")
+	if config == null:
+		return
+	radius = float(config.get("domain_radius"))
 
 func get_center() -> Vector2:
 	return global_position if use_node_position_as_center else domain_center
