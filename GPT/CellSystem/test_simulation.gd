@@ -12,19 +12,25 @@ extends Node2D
 @onready var debug_layer: CanvasLayer = $DebugLayer
 @onready var debug_label: Label = $DebugLayer/Debug
 @onready var simulation_time_label: Label = $DebugLayer/SimulationTime
+@onready var fps_label: Label = $DebugLayer/FPS
 @onready var cell_inspector: Node = $CellInspector
 
 @export var debug_update_interval: float = 0.25
 @export var presentation_toggle_key: Key = KEY_P
+@export var fps_toggle_key: Key = KEY_F3
 
 var _debug_timer: float = 0.0
 var presentation_mode: bool = false
 var simulation_elapsed: float = 0.0
+var fps_visible: bool = false
 
 func _ready() -> void:
 	_apply_simulation_config()
 	if simulation_time_label != null:
 		simulation_time_label.text = "Tempo: 00:00"
+	if fps_label != null:
+		fps_label.text = "FPS: --"
+		fps_label.visible = false
 
 func _process(delta: float) -> void:
 	simulation_elapsed += delta
@@ -33,6 +39,8 @@ func _process(delta: float) -> void:
 		var minutes: int = total_seconds / 60
 		var seconds: int = total_seconds % 60
 		simulation_time_label.text = "Tempo: %02d:%02d" % [minutes, seconds]
+	if fps_visible and fps_label != null:
+		fps_label.text = "FPS: %d" % Engine.get_frames_per_second()
 
 	if Input.is_key_pressed(KEY_SPACE):
 		cell_manager.spawn_player(Vector2.ZERO)
@@ -81,14 +89,22 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey:
 		return
 	var key_event: InputEventKey = event as InputEventKey
-	if key_event.pressed and not key_event.echo and key_event.keycode == presentation_toggle_key:
+	if not key_event.pressed or key_event.echo:
+		return
+	if key_event.keycode == presentation_toggle_key:
 		_toggle_presentation_mode()
+	elif key_event.keycode == fps_toggle_key:
+		fps_visible = not fps_visible
+		if fps_label != null:
+			fps_label.visible = fps_visible and not presentation_mode
 
 func _toggle_presentation_mode() -> void:
 	presentation_mode = not presentation_mode
 	debug_layer.visible = not presentation_mode
 	if cell_inspector != null and is_instance_valid(cell_inspector) and cell_inspector.has_method("set_presentation_mode"):
 		cell_inspector.set_presentation_mode(presentation_mode)
+	if fps_label != null:
+		fps_label.visible = fps_visible and not presentation_mode
 	_debug_timer = 0.0
 
 func _apply_simulation_config() -> void:
