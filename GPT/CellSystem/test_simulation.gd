@@ -11,6 +11,7 @@ extends Node2D
 @onready var experimental_domain: Node2D = $ExperimentalDomain
 @onready var debug_layer: CanvasLayer = $DebugLayer
 @onready var debug_label: Label = $DebugLayer/Debug
+@onready var simulation_time_label: Label = $DebugLayer/SimulationTime
 @onready var cell_inspector: Node = $CellInspector
 
 @export var debug_update_interval: float = 0.25
@@ -18,8 +19,21 @@ extends Node2D
 
 var _debug_timer: float = 0.0
 var presentation_mode: bool = false
+var simulation_elapsed: float = 0.0
+
+func _ready() -> void:
+	_apply_simulation_config()
+	if simulation_time_label != null:
+		simulation_time_label.text = "Tempo: 00:00"
 
 func _process(delta: float) -> void:
+	simulation_elapsed += delta
+	if simulation_time_label != null:
+		var total_seconds: int = int(simulation_elapsed)
+		var minutes: int = total_seconds / 60
+		var seconds: int = total_seconds % 60
+		simulation_time_label.text = "Tempo: %02d:%02d" % [minutes, seconds]
+
 	if Input.is_key_pressed(KEY_SPACE):
 		cell_manager.spawn_player(Vector2.ZERO)
 
@@ -76,3 +90,15 @@ func _toggle_presentation_mode() -> void:
 	if cell_inspector != null and is_instance_valid(cell_inspector) and cell_inspector.has_method("set_presentation_mode"):
 		cell_inspector.set_presentation_mode(presentation_mode)
 	_debug_timer = 0.0
+
+func _apply_simulation_config() -> void:
+	var config: Node = get_node_or_null("/root/SimulationConfig")
+	if config == null:
+		return
+
+	cell_manager.auto_spawn = bool(config.get("auto_spawn_cells"))
+	cell_manager.initial_population = int(config.get("initial_population"))
+	cell_manager.max_population = int(config.get("max_population"))
+	resource_spawner.initial_resources = int(config.get("initial_resources"))
+	resource_spawner.max_resources = int(config.get("max_resources"))
+	experimental_domain.radius = float(config.get("domain_radius"))
