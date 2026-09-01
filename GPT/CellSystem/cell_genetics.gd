@@ -1,7 +1,7 @@
 extends Node
 
 ## NEO genetic system foundation.
-## Attribute genes use two haplotypes composed of four binary loci.
+## Attribute genes use two haplotypes composed of four to six binary loci.
 ## Characteristic genes remain binary.
 ## Reproduction itself remains outside this layer.
 
@@ -25,14 +25,8 @@ const ADAPTATION_GENES: Array[String] = ["cold_adaptation", "temperate_adaptatio
 const CHARACTERISTIC_GENES: Array[String] = ["territorial", "cooperative_hunter", "camouflage", "armor", "toxin", "specialized_feeding"]
 const BEHAVIOR_GENES: Array[String] = ["sociality", "aggression", "caution", "group_response"]
 
-const ATTRIBUTE_LOCUS_COUNTS: Dictionary = {
-	"health": 4,
-	"damage": 4,
-	"speed": 4,
-	"size": 4,
-	"regeneration_rate": 4,
-	"efficiency": 4
-}
+const ATTRIBUTE_MIN_LOCI: int = 4
+const ATTRIBUTE_MAX_LOCI: int = 6
 
 const ATTRIBUTE_RANGES: Dictionary = {
 	"health": [40.0, 120.0],
@@ -112,7 +106,8 @@ func set_attribute_haplotypes(gene_name: String, haplotype_a: String, haplotype_
 	var table: Dictionary = contribution_table
 	if table.is_empty():
 		var range_data: Array = ATTRIBUTE_RANGES.get(gene_name, [0.0, 100.0])
-		table = FORMULAS.get_random_attribute_table(gene_name, ATTRIBUTE_LOCUS_COUNTS.get(gene_name, 4), float(range_data[0]), float(range_data[1]))
+		var locus_count: int = get_attribute_locus_count(gene_name)
+		table = FORMULAS.get_random_attribute_table(gene_name, locus_count, float(range_data[0]), float(range_data[1]))
 	genes[GENE_SCRIPT.CATEGORY_ATTRIBUTE][gene_name] = GENE_SCRIPT.new(
 		gene_name,
 		GENE_SCRIPT.CATEGORY_ATTRIBUTE,
@@ -121,6 +116,10 @@ func set_attribute_haplotypes(gene_name: String, haplotype_a: String, haplotype_
 		GENE_SCRIPT.EXPRESSION_ATTRIBUTE_SEQUENCE,
 		table
 	)
+
+func get_attribute_locus_count(gene_name: String) -> int:
+	var count: int = FORMULAS.get_random_attribute_locus_count(gene_name, ATTRIBUTE_MIN_LOCI, ATTRIBUTE_MAX_LOCI)
+	return max(count, ATTRIBUTE_MIN_LOCI)
 
 func get_combined_genotype(gene_name: String) -> String:
 	var gene: RefCounted = _find_gene(gene_name)
@@ -209,11 +208,12 @@ func get_all_gene_data() -> Dictionary:
 	return _serialize_genes()
 
 func _create_attribute_gene(gene_name: String) -> void:
-	var locus_count: int = int(ATTRIBUTE_LOCUS_COUNTS.get(gene_name, 4))
+	var locus_count: int = get_attribute_locus_count(gene_name)
 	var range_data: Array = ATTRIBUTE_RANGES.get(gene_name, [0.0, 100.0])
 	var haplotype_a: String = _random_haplotype(locus_count)
 	var haplotype_b: String = _random_haplotype(locus_count)
-	set_attribute_haplotypes(gene_name, haplotype_a, haplotype_b, FORMULAS.get_random_attribute_table(gene_name, locus_count, float(range_data[0]), float(range_data[1])))
+	var table: Dictionary = FORMULAS.get_random_attribute_table(gene_name, locus_count, float(range_data[0]), float(range_data[1]))
+	set_attribute_haplotypes(gene_name, haplotype_a, haplotype_b, table)
 
 func _random_haplotype(locus_count: int) -> String:
 	var result: String = ""
