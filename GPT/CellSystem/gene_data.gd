@@ -2,13 +2,17 @@ class_name GeneData
 extends RefCounted
 
 ## Lightweight representation of one genetic locus.
-## This class defines the NEO Gene contract without depending on reproduction.
+## NEO separates genotype (two alleles) from phenotype (expressed value).
+## This class intentionally does not know anything about reproduction.
+
+const FORMULAS := preload("res://GPT/CellSystem/gene_formulas.gd")
 
 const CATEGORY_ATTRIBUTE := "attribute"
 const CATEGORY_ADAPTATION := "adaptation"
 const CATEGORY_CHARACTERISTIC := "characteristic"
 
-const EXPRESSION_AVERAGE := "average"
+const EXPRESSION_AVERAGE := "mean"
+const EXPRESSION_PRESENCE := "presence"
 const EXPRESSION_DOMINANT := "dominant"
 const EXPRESSION_RECESSIVE := "recessive"
 const EXPRESSION_CODOMINANT := "codominant"
@@ -26,36 +30,14 @@ func _init(gene_name: String = "", gene_category: String = CATEGORY_ATTRIBUTE, a
 	allele_b = b
 	expression_mode = mode
 
+func genotype() -> Array:
+	return FORMULAS.genotype(allele_a, allele_b)
+
 func expressed_value() -> Variant:
-	match expression_mode:
-		EXPRESSION_DOMINANT:
-			return allele_a if _is_dominant(allele_a, allele_b) else allele_b
-		EXPRESSION_RECESSIVE:
-			return allele_a if allele_a == allele_b else _recessive_fallback()
-		EXPRESSION_CODOMINANT:
-			return _codominant_value()
-		_:
-			return _average_value()
+	return FORMULAS.evaluate(allele_a, allele_b, expression_mode)
 
-func _average_value() -> Variant:
-	if allele_a is bool or allele_b is bool:
-		return bool(allele_a) or bool(allele_b)
-	return (float(allele_a) + float(allele_b)) * 0.5
-
-func _codominant_value() -> Variant:
-	if allele_a is bool or allele_b is bool:
-		return [bool(allele_a), bool(allele_b)]
-	return [float(allele_a), float(allele_b)]
-
-func _recessive_fallback() -> Variant:
-	if allele_a is bool or allele_b is bool:
-		return false
-	return minf(float(allele_a), float(allele_b))
-
-func _is_dominant(a: Variant, b: Variant) -> bool:
-	if a is bool and b is bool:
-		return bool(a)
-	return float(a) >= float(b)
+func phenotype() -> Variant:
+	return expressed_value()
 
 func to_dictionary() -> Dictionary:
 	return {
@@ -63,15 +45,19 @@ func to_dictionary() -> Dictionary:
 		"category": category,
 		"allele_a": allele_a,
 		"allele_b": allele_b,
+		"genotype": genotype(),
 		"expression_mode": expression_mode,
-		"phenotype": expressed_value()
+		"phenotype": phenotype()
 	}
 
-static func from_dictionary(data: Dictionary) -> GeneData:
+static func from_dictionary(data: Dictionary):
+	var mode: String = String(data.get("expression_mode", EXPRESSION_AVERAGE))
+	if mode == "average":
+		mode = EXPRESSION_AVERAGE
 	return GeneData.new(
 		String(data.get("name", "")),
 		String(data.get("category", CATEGORY_ATTRIBUTE)),
 		data.get("allele_a", 0.5),
 		data.get("allele_b", 0.5),
-		String(data.get("expression_mode", EXPRESSION_AVERAGE))
+		mode
 	)
