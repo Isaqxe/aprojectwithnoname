@@ -44,7 +44,6 @@ func _ready() -> void:
 	_update_collision_shape()
 	_spawn_grace_time = maxf(spawn_grace_duration, 0.0)
 	_ai_decision_timer = randf_range(0.0, maxf(ai_decision_interval, 0.01))
-	_record_lineage_snapshot(true)
 
 	if genetics != null and is_instance_valid(genetics) and _cell_manager != null and is_instance_valid(_cell_manager):
 		var mutation_count: int = int(genetics.get("last_mutation_count"))
@@ -239,25 +238,9 @@ func _finish_mitosis() -> void:
 	super._finish_mitosis()
 	_sync_energy_capacity()
 
-func _record_lineage_snapshot(alive_state: bool) -> void:
-	var config: Node = get_node_or_null("/root/SimulationConfig")
-	if config == null:
-		return
-	var data: Dictionary = get_inspection_data()
-	if data.is_empty():
-		return
-	data["alive"] = alive_state
-	data["position"] = global_position
-	data["species_color"] = species_color
-	if alive_state and config.has_method("record_lineage"):
-		config.record_lineage(data)
-	elif not alive_state and config.has_method("mark_lineage_dead"):
-		config.mark_lineage_dead(String(data.get("cell_id", "")), data)
-
 func _die_as_organism() -> void:
 	if is_queued_for_deletion():
 		return
-	_record_lineage_snapshot(false)
 	if _cell_manager != null and is_instance_valid(_cell_manager) and _cell_manager.has_method("unregister_cell"):
 		_cell_manager.unregister_cell(self)
 	velocity = Vector2.ZERO
