@@ -25,6 +25,9 @@ var simulation_elapsed: float = 0.0
 var fps_visible: bool = false
 
 func _ready() -> void:
+	var config: Node = get_node_or_null("/root/SimulationConfig")
+	if config != null and config.has_method("begin_simulation"):
+		config.begin_simulation()
 	_apply_simulation_config()
 	if simulation_time_label != null:
 		simulation_time_label.text = "Tempo: 00:00"
