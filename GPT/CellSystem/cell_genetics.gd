@@ -81,19 +81,28 @@ func set_characteristic(gene_name: String, present: bool) -> void:
 	_create_boolean_gene(gene_name, present)
 
 func get_gene(gene_name: String, fallback: float = 0.0) -> float:
+	var phenotype: Variant = get_phenotype(gene_name, fallback)
+	if phenotype is bool:
+		return 1.0 if bool(phenotype) else 0.0
+	if phenotype is Array:
+		return fallback
+	return float(phenotype)
+
+func get_genotype(gene_name: String) -> Array:
+	var gene: RefCounted = _find_gene(gene_name)
+	if gene == null:
+		return []
+	var result: Variant = gene.call("genotype")
+	return result if result is Array else []
+
+func get_phenotype(gene_name: String, fallback: Variant = 0.0) -> Variant:
 	var gene: RefCounted = _find_gene(gene_name)
 	if gene == null:
 		return fallback
-	var value: Variant = gene.call("expressed_value")
-	if value is bool:
-		return 1.0 if bool(value) else 0.0
-	return float(value)
+	return gene.call("phenotype")
 
 func has_characteristic(gene_name: String) -> bool:
-	var gene: RefCounted = _find_gene(gene_name)
-	if gene == null:
-		return false
-	var value: Variant = gene.call("expressed_value")
+	var value: Variant = get_phenotype(gene_name, false)
 	return bool(value) if value is bool else float(value) >= 0.5
 
 func get_gene_data(gene_name: String) -> Dictionary:
@@ -151,7 +160,7 @@ func _create_numeric_gene(gene_name: String, value: float, category: String) -> 
 func _create_boolean_gene(gene_name: String, present: bool) -> void:
 	if not genes.has(GENE_SCRIPT.CATEGORY_CHARACTERISTIC):
 		genes[GENE_SCRIPT.CATEGORY_CHARACTERISTIC] = {}
-	genes[GENE_SCRIPT.CATEGORY_CHARACTERISTIC][gene_name] = GENE_SCRIPT.new(gene_name, GENE_SCRIPT.CATEGORY_CHARACTERISTIC, present, present, GENE_SCRIPT.EXPRESSION_AVERAGE)
+	genes[GENE_SCRIPT.CATEGORY_CHARACTERISTIC][gene_name] = GENE_SCRIPT.new(gene_name, GENE_SCRIPT.CATEGORY_CHARACTERISTIC, present, present, GENE_SCRIPT.EXPRESSION_PRESENCE)
 
 func _find_gene(gene_name: String) -> RefCounted:
 	for category_key in genes.keys():
