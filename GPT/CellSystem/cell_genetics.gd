@@ -2,6 +2,7 @@ extends Node
 
 ## NEO genetic system foundation.
 ## Genes are loci with two alleles and an explicit expression rule.
+## Attribute genes use finite allele palettes; characteristic genes are binary.
 ## Reproduction is intentionally independent from this layer for now.
 
 const GENE_SCRIPT := preload("res://GPT/CellSystem/gene_data.gd")
@@ -22,6 +23,23 @@ const ATTRIBUTE_GENES: Array[String] = ["health", "damage", "speed", "size", "re
 const ADAPTATION_GENES: Array[String] = ["cold_adaptation", "temperate_adaptation", "heat_adaptation", "void_adaptation", "humidity_adaptation"]
 const CHARACTERISTIC_GENES: Array[String] = ["territorial", "cooperative_hunter", "camouflage", "armor", "toxin", "specialized_feeding"]
 const BEHAVIOR_GENES: Array[String] = ["sociality", "aggression", "caution", "group_response"]
+
+## Finite allele repertoire for numeric attribute genes.
+## These are the currently defined possible allele values for the NEO layer.
+const ATTRIBUTE_ALLELE_PALETTES: Dictionary = {
+	"health": [40.0, 60.0, 80.0, 100.0, 120.0],
+	"damage": [5.0, 10.0, 15.0, 20.0, 25.0],
+	"speed": [45.0, 58.75, 72.5, 86.25, 100.0],
+	"size": [10.0, 13.5, 17.0, 20.5, 24.0],
+	"regeneration_rate": [2.0, 3.0, 4.0, 5.0, 6.0],
+	"efficiency": [0.20, 0.40, 0.60, 0.80, 1.00]
+}
+
+func get_attribute_allele_palette(gene_name: String) -> Array:
+	var palette: Variant = ATTRIBUTE_ALLELE_PALETTES.get(gene_name, [])
+	if palette is Array:
+		return palette.duplicate()
+	return []
 
 func initialize_random() -> void:
 	cell_id = _generate_id()
