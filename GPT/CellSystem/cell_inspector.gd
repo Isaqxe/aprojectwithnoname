@@ -2,6 +2,10 @@ extends Node
 
 ## Interactive cell inspector.
 ## Right mouse button selects a cell and shows its data in a fixed top-right UI panel.
+## Genetics and lineage open as independent draggable popup windows.
+
+const GENETICS_POPUP_SCRIPT := preload("res://GPT/UI/genetics_popup.gd")
+const LINEAGE_POPUP_SCRIPT := preload("res://GPT/UI/lineage_popup.gd")
 
 @export var collision_mask: int = 1
 @export var panel_width: float = 360.0
@@ -16,6 +20,8 @@ var _title_label: Label
 var _details_label: Label
 var _health_bar: ProgressBar
 var _health_text: Label
+var _genetics_button: Button
+var _lineage_button: Button
 
 func _ready() -> void:
 	_create_ui()
@@ -120,6 +126,20 @@ func _create_ui() -> void:
 	_details_label.add_theme_font_size_override("font_size", 14)
 	column.add_child(_details_label)
 
+	var button_row := HBoxContainer.new()
+	button_row.add_theme_constant_override("separation", 6)
+	column.add_child(button_row)
+
+	_genetics_button = Button.new()
+	_genetics_button.text = "Genética"
+	_genetics_button.pressed.connect(_open_genetics_popup)
+	button_row.add_child(_genetics_button)
+
+	_lineage_button = Button.new()
+	_lineage_button.text = "Árvore genealógica"
+	_lineage_button.pressed.connect(_open_lineage_popup)
+	button_row.add_child(_lineage_button)
+
 func _update_ui_from_selected() -> void:
 	if not is_instance_valid(_selected_cell) or not _selected_cell.has_method("get_inspection_data"):
 		_set_panel_visible(false)
@@ -180,6 +200,27 @@ func _update_ui_from_selected() -> void:
 	else:
 		_health_bar.visible = false
 		_health_text.visible = false
+
+	_genetics_button.disabled = not data.has("genes")
+	_lineage_button.disabled = String(data.get("cell_id", "")).strip_edges().is_empty()
+
+func _open_genetics_popup() -> void:
+	if not is_instance_valid(_selected_cell) or not _selected_cell.has_method("get_inspection_data"):
+		return
+	var popup := GENETICS_POPUP_SCRIPT.new()
+	get_tree().root.add_child(popup)
+	popup.setup(_selected_cell.get_inspection_data())
+
+func _open_lineage_popup() -> void:
+	if not is_instance_valid(_selected_cell) or not _selected_cell.has_method("get_inspection_data"):
+		return
+	var data: Dictionary = _selected_cell.get_inspection_data()
+	var target_id: String = String(data.get("cell_id", "")).strip_edges()
+	if target_id.is_empty():
+		return
+	var popup := LINEAGE_POPUP_SCRIPT.new()
+	get_tree().root.add_child(popup)
+	popup.setup(target_id)
 
 func _set_panel_visible(visible: bool) -> void:
 	if _panel != null:
