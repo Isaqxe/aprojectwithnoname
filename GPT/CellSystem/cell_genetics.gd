@@ -1,11 +1,12 @@
 extends Node
 
 ## NEO genetic system foundation.
-## Attribute genes can represent two haplotypes (for example ABCD + ABCD).
+## Attribute genes use two haplotypes composed of four binary loci.
 ## Characteristic genes remain binary.
-## Reproduction is intentionally independent from this layer for now.
+## Reproduction itself remains outside this layer.
 
 const GENE_SCRIPT := preload("res://GPT/CellSystem/gene_data.gd")
+const FORMULAS := preload("res://GPT/CellSystem/gene_formulas.gd")
 
 @export var species_id: String = ""
 @export_range(0.0, 1.0) var mutation_chance: float = 0.10
@@ -33,6 +34,15 @@ const ATTRIBUTE_LOCUS_COUNTS: Dictionary = {
 	"efficiency": 4
 }
 
+const ATTRIBUTE_RANGES: Dictionary = {
+	"health": [40.0, 120.0],
+	"damage": [5.0, 25.0],
+	"speed": [45.0, 100.0],
+	"size": [10.0, 24.0],
+	"regeneration_rate": [2.0, 6.0],
+	"efficiency": [0.0, 1.0]
+}
+
 func initialize_random() -> void:
 	cell_id = _generate_id()
 	generation = 0
@@ -40,7 +50,7 @@ func initialize_random() -> void:
 	last_mutation_count = 0
 	genes.clear()
 	for gene_name in ATTRIBUTE_GENES:
-		_create_numeric_gene(gene_name, randf_range(0.25, 0.75), GENE_SCRIPT.CATEGORY_ATTRIBUTE)
+		_create_attribute_gene(gene_name)
 	for gene_name in ADAPTATION_GENES:
 		_create_numeric_gene(gene_name, randf_range(0.25, 0.75), GENE_SCRIPT.CATEGORY_ADAPTATION)
 	for gene_name in BEHAVIOR_GENES:
@@ -87,28 +97,31 @@ func set_gene(gene_name: String, value: float) -> void:
 		category = GENE_SCRIPT.CATEGORY_CHARACTERISTIC
 	_create_numeric_gene(gene_name, value, category)
 
-## Assigns the two haplotypes of an attribute gene without changing reproduction.
-## A four-locus example is "ABCD" + "ABCD" -> "AABBCCDD".
+## Assigns the two haplotypes of an attribute gene directly.
+## Example: "ABCD" + "ABCD" -> "AABBCCDD".
 func set_attribute_haplotypes(gene_name: String, haplotype_a: String, haplotype_b: String, contribution_table: Dictionary = {}) -> void:
 	if not gene_name in ATTRIBUTE_GENES:
 		return
 	if not genes.has(GENE_SCRIPT.CATEGORY_ATTRIBUTE):
 		genes[GENE_SCRIPT.CATEGORY_ATTRIBUTE] = {}
+	var table: Dictionary = contribution_table
+	if table.is_empty():
+		var range_data: Array = ATTRIBUTE_RANGES.get(gene_name, [0.0, 100.0])
+		table = FORMULAS.get_random_attribute_table(gene_name, ATTRIBUTE_LOCUS_COUNTS.get(gene_name, 4), float(range_data[0]), float(range_data[1]))
 	genes[GENE_SCRIPT.CATEGORY_ATTRIBUTE][gene_name] = GENE_SCRIPT.new(
 		gene_name,
 		GENE_SCRIPT.CATEGORY_ATTRIBUTE,
 		haplotype_a,
 		haplotype_b,
 		GENE_SCRIPT.EXPRESSION_ATTRIBUTE_SEQUENCE,
-		contribution_table
+		table
 	)
 
 func get_combined_genotype(gene_name: String) -> String:
 	var gene: RefCounted = _find_gene(gene_name)
 	if gene == null:
 		return ""
-	var result: Variant = gene.call("combined_genotype")
-	return String(result)
+	return String(gene.call("combined_genotype"))
 
 func set_characteristic(gene_name: String, present: bool) -> void:
 	_create_boolean_gene(gene_name, present)
@@ -156,6 +169,11 @@ func mutate_genes() -> Array[String]:
 			var gene: Variant = category_data[gene_name]
 			if gene == null or not gene is RefCounted:
 				continue
+			if String(category_key) == GENE_SCRIPT.CATEGORY_ATTRIBUTE and String(gene.get("expression_mode")) == GENE_SCRIPT.EXPRESSION_ATTRIBUTE_SEQUENCE:
+				if _mutate_attribute_sequence(gene):
+					mutated_genes.append(String(gene_name))
+				continue
+
 			var allele_a: Variant = gene.get("allele_a")
 			var allele_b: Variant = gene.get("allele_b")
 			if allele_a is bool or allele_b is bool:
@@ -184,6 +202,40 @@ func get_lineage_data() -> Dictionary:
 
 func get_all_gene_data() -> Dictionary:
 	return _serialize_genes()
+
+func _create_attribute_gene(gene_name: String) -> void:
+	var locus_count: int = int(ATTRIBUTE_LOCUS_COUNTS.get(gene_name, 4))
+	var range_data: Array = ATTRIBUTE_RANGES.get(gene_name, [0.0, 100.0])
+	var haplotype_a: String = _random_haplotype(locus_count)
+	var haplotype_b: String = _random_haplotype(locus_count)
+	set_attribute_haplotypes(gene_name, haplotype_a, haplotype_b, FORMULAS.get_random_attribute_table(gene_name, locus_count, float(range_data[0]), float(range_data[1])))
+
+func _random_haplotype(locus_count: int) -> String:
+	var result: String = ""
+	for _i in range(maxi(locus_count, 1)):
+		result += "A" if randf() < 0.5 else "a"
+	return result
+
+func _mutate_attribute_sequence(gene: RefCounted) -> bool:
+	var haplotype_a: String = String(gene.get("allele_a"))
+	var haplotype_b: String = String(gene.get("allele_b"))
+	var total_loci: int = mini(haplotype_a.length(), haplotype_b.length())
+	if total_loci <= 0:
+		return false
+	var locus: int = randi_range(0, total_loci * 2 - 1)
+	if locus < total_loci:
+		haplotype_a = _toggle_haplotype_position(haplotype_a, locus)
+	else:
+		haplotype_b = _toggle_haplotype_position(haplotype_b, locus - total_loci)
+	gene.set("allele_a", haplotype_a)
+	gene.set("allele_b", haplotype_b)
+	return true
+
+func _toggle_haplotype_position(haplotype: String, index: int) -> String:
+	var result: String = haplotype
+	var current: String = haplotype.substr(index, 1)
+	result = result.substr(0, index) + ("a" if current == "A" else "A") + result.substr(index + 1)
+	return result
 
 func _create_numeric_gene(gene_name: String, value: float, category: String) -> void:
 	if not genes.has(category):
@@ -235,7 +287,7 @@ func _normalize_neo_genes(source: Dictionary) -> Dictionary:
 func _ensure_all_genes() -> void:
 	for gene_name in ATTRIBUTE_GENES:
 		if _find_gene(gene_name) == null:
-			_create_numeric_gene(gene_name, 0.5, GENE_SCRIPT.CATEGORY_ATTRIBUTE)
+			_create_attribute_gene(gene_name)
 	for gene_name in ADAPTATION_GENES:
 		if _find_gene(gene_name) == null:
 			_create_numeric_gene(gene_name, 0.5, GENE_SCRIPT.CATEGORY_ADAPTATION)
