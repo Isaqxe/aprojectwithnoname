@@ -206,7 +206,7 @@ func _ensure_all_genes() -> void:
 
 func _mutate_numeric_allele(value: float) -> float:
 	var variation: float = randf_range(-mutation_strength, mutation_strength)
-	return value * (1.0 + variation)
+	return maxf(value * (1.0 + variation), 0.0)
 
 func _mutate_normalized_allele(value: float) -> float:
 	var variation: float = randf_range(-mutation_strength, mutation_strength)
