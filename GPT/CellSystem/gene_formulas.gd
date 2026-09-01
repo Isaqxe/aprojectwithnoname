@@ -14,6 +14,7 @@ const MODE_PRESENCE := "presence"
 const MODE_ATTRIBUTE_SEQUENCE := "attribute_sequence"
 
 static var _random_attribute_tables: Dictionary = {}
+static var _random_attribute_locus_counts: Dictionary = {}
 
 static func evaluate(allele_a: Variant, allele_b: Variant, mode: String = MODE_MEAN, contribution_table: Dictionary = {}) -> Variant:
 	match mode:
@@ -34,6 +35,18 @@ static func combined_sequence(haplotype_a: String, haplotype_b: String) -> Strin
 		result += haplotype_a.substr(i, 1)
 		result += haplotype_b.substr(i, 1)
 	return result
+
+## Returns one stable random locus count per attribute gene for a simulation.
+## This keeps the NEO architecture consistent: every cell uses the same
+## number of loci for the same attribute gene.
+static func get_random_attribute_locus_count(gene_name: String, minimum_loci: int = 4, maximum_loci: int = 6) -> int:
+	if _random_attribute_locus_counts.has(gene_name):
+		return int(_random_attribute_locus_counts[gene_name])
+	var minimum: int = maxi(minimum_loci, 1)
+	var maximum: int = maxi(maximum_loci, minimum)
+	var count: int = randi_range(minimum, maximum)
+	_random_attribute_locus_counts[gene_name] = count
+	return count
 
 ## Generates one random contribution table per attribute gene.
 ## The table is cached by gene name so every cell in a simulation shares
@@ -78,6 +91,7 @@ static func get_random_attribute_table(gene_name: String, locus_count: int = 4, 
 
 static func clear_random_attribute_tables() -> void:
 	_random_attribute_tables.clear()
+	_random_attribute_locus_counts.clear()
 
 static func evaluate_attribute_sequence(haplotype_a: String, haplotype_b: String, contribution_table: Dictionary = {}) -> float:
 	if haplotype_a.is_empty() or haplotype_b.is_empty():
