@@ -25,6 +25,9 @@ func reset_defaults() -> void:
 	simulation_time_limit = 0.0
 	lineage_records.clear()
 
+func begin_simulation() -> void:
+	lineage_records.clear()
+
 func record_lineage(snapshot: Dictionary) -> void:
 	var cell_id: String = String(snapshot.get("cell_id", "")).strip_edges()
 	if cell_id.is_empty():
