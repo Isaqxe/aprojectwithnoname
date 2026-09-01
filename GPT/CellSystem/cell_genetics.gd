@@ -18,38 +18,10 @@ var last_mutation_count: int = 0
 
 static var _next_id: int = 1
 
-const ATTRIBUTE_GENES: Array[String] = [
-	"health",
-	"damage",
-	"speed",
-	"size",
-	"regeneration_rate",
-	"efficiency"
-]
-
-const ADAPTATION_GENES: Array[String] = [
-	"cold_adaptation",
-	"temperate_adaptation",
-	"heat_adaptation",
-	"void_adaptation",
-	"humidity_adaptation"
-]
-
-const CHARACTERISTIC_GENES: Array[String] = [
-	"territorial",
-	"cooperative_hunter",
-	"camouflage",
-	"armor",
-	"toxin",
-	"specialized_feeding"
-]
-
-const BEHAVIOR_GENES: Array[String] = [
-	"sociality",
-	"aggression",
-	"caution",
-	"group_response"
-]
+const ATTRIBUTE_GENES: Array[String] = ["health", "damage", "speed", "size", "regeneration_rate", "efficiency"]
+const ADAPTATION_GENES: Array[String] = ["cold_adaptation", "temperate_adaptation", "heat_adaptation", "void_adaptation", "humidity_adaptation"]
+const CHARACTERISTIC_GENES: Array[String] = ["territorial", "cooperative_hunter", "camouflage", "armor", "toxin", "specialized_feeding"]
+const BEHAVIOR_GENES: Array[String] = ["sociality", "aggression", "caution", "group_response"]
 
 func initialize_random() -> void:
 	cell_id = _generate_id()
@@ -57,7 +29,6 @@ func initialize_random() -> void:
 	parent_id = ""
 	last_mutation_count = 0
 	genes.clear()
-
 	for gene_name in ATTRIBUTE_GENES:
 		_create_numeric_gene(gene_name, randf_range(0.25, 0.75), GENE_SCRIPT.CATEGORY_ATTRIBUTE)
 	for gene_name in ADAPTATION_GENES:
@@ -83,13 +54,12 @@ func initialize_from_parent(parent_genetics: Node, inherited_genes: Dictionary) 
 	if inherited_genes.has("attribute") or inherited_genes.has("adaptation") or inherited_genes.has("characteristic"):
 		genes = _normalize_neo_genes(inherited_genes)
 	else:
-		# Compatibility path for the previous flat gene dictionary.
 		for gene_name in inherited_genes.keys():
 			var value: Variant = inherited_genes[gene_name]
+			var name: String = String(gene_name)
 			if value is bool:
-				_create_boolean_gene(String(gene_name), bool(value))
+				_create_boolean_gene(name, bool(value))
 			else:
-				var name: String = String(gene_name)
 				var category: String = GENE_SCRIPT.CATEGORY_ADAPTATION
 				if name in ATTRIBUTE_GENES:
 					category = GENE_SCRIPT.CATEGORY_ATTRIBUTE
@@ -111,28 +81,29 @@ func set_characteristic(gene_name: String, present: bool) -> void:
 	_create_boolean_gene(gene_name, present)
 
 func get_gene(gene_name: String, fallback: float = 0.0) -> float:
-	var gene: GeneData = _find_gene(gene_name)
+	var gene: RefCounted = _find_gene(gene_name)
 	if gene == null:
 		return fallback
-	var value: Variant = gene.expressed_value()
+	var value: Variant = gene.call("expressed_value")
 	if value is bool:
 		return 1.0 if bool(value) else 0.0
 	return float(value)
 
 func has_characteristic(gene_name: String) -> bool:
-	var gene: GeneData = _find_gene(gene_name)
+	var gene: RefCounted = _find_gene(gene_name)
 	if gene == null:
 		return false
-	var value: Variant = gene.expressed_value()
+	var value: Variant = gene.call("expressed_value")
 	return bool(value) if value is bool else float(value) >= 0.5
 
 func get_gene_data(gene_name: String) -> Dictionary:
-	var gene: GeneData = _find_gene(gene_name)
-	return {} if gene == null else gene.to_dictionary()
+	var gene: RefCounted = _find_gene(gene_name)
+	if gene == null:
+		return {}
+	return gene.call("to_dictionary")
 
 func mutate_genes() -> Array[String]:
 	var mutated_genes: Array[String] = []
-
 	for category_key in genes.keys():
 		var category_data: Dictionary = genes[category_key]
 		if not category_data is Dictionary:
@@ -141,23 +112,22 @@ func mutate_genes() -> Array[String]:
 			if randf() > mutation_chance:
 				continue
 			var gene: Variant = category_data[gene_name]
-			if gene == null or not gene is GeneData:
+			if gene == null or not gene is RefCounted:
 				continue
-			if gene.allele_a is bool or gene.allele_b is bool:
+			var allele_a: Variant = gene.get("allele_a")
+			var allele_b: Variant = gene.get("allele_b")
+			if allele_a is bool or allele_b is bool:
 				if randf() < 0.5:
-					gene.allele_a = not bool(gene.allele_a)
+					gene.set("allele_a", not bool(allele_a))
 				else:
-					gene.allele_b = not bool(gene.allele_b)
+					gene.set("allele_b", not bool(allele_b))
+			elif String(category_key) == GENE_SCRIPT.CATEGORY_ATTRIBUTE:
+				gene.set("allele_a", _mutate_numeric_allele(float(allele_a)))
+				gene.set("allele_b", _mutate_numeric_allele(float(allele_b)))
 			else:
-				var is_normalized: bool = String(category_key) != GENE_SCRIPT.CATEGORY_ATTRIBUTE
-				if is_normalized:
-					gene.allele_a = _mutate_normalized_allele(float(gene.allele_a))
-					gene.allele_b = _mutate_normalized_allele(float(gene.allele_b))
-				else:
-					gene.allele_a = _mutate_numeric_allele(float(gene.allele_a))
-					gene.allele_b = _mutate_numeric_allele(float(gene.allele_b))
+				gene.set("allele_a", _mutate_normalized_allele(float(allele_a)))
+				gene.set("allele_b", _mutate_normalized_allele(float(allele_b)))
 			mutated_genes.append(String(gene_name))
-
 	last_mutation_count = mutated_genes.size()
 	return mutated_genes
 
@@ -183,12 +153,12 @@ func _create_boolean_gene(gene_name: String, present: bool) -> void:
 		genes[GENE_SCRIPT.CATEGORY_CHARACTERISTIC] = {}
 	genes[GENE_SCRIPT.CATEGORY_CHARACTERISTIC][gene_name] = GENE_SCRIPT.new(gene_name, GENE_SCRIPT.CATEGORY_CHARACTERISTIC, present, present, GENE_SCRIPT.EXPRESSION_AVERAGE)
 
-func _find_gene(gene_name: String) -> GeneData:
+func _find_gene(gene_name: String) -> RefCounted:
 	for category_key in genes.keys():
 		var category_data: Dictionary = genes[category_key]
 		if category_data is Dictionary and category_data.has(gene_name):
 			var gene: Variant = category_data[gene_name]
-			if gene is GeneData:
+			if gene is RefCounted:
 				return gene
 	return null
 
@@ -201,8 +171,8 @@ func _serialize_genes() -> Dictionary:
 			continue
 		for gene_name in category_data.keys():
 			var gene: Variant = category_data[gene_name]
-			if gene is GeneData:
-				result[category_key][gene_name] = gene.to_dictionary()
+			if gene is RefCounted:
+				result[category_key][gene_name] = gene.call("to_dictionary")
 	return result
 
 func _normalize_neo_genes(source: Dictionary) -> Dictionary:
@@ -214,7 +184,7 @@ func _normalize_neo_genes(source: Dictionary) -> Dictionary:
 			continue
 		for gene_name in category_data.keys():
 			var raw: Variant = category_data[gene_name]
-			if raw is GeneData:
+			if raw is RefCounted:
 				result[category_key][gene_name] = raw
 			elif raw is Dictionary:
 				result[category_key][gene_name] = GENE_SCRIPT.from_dictionary(raw)
