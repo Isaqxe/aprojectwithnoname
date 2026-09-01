@@ -5,7 +5,7 @@ const RECORD_POPUP_SCRIPT := preload("res://GPT/UI/cell_record_popup.gd")
 const GRAPH_SCRIPT := preload("res://GPT/UI/lineage_graph.gd")
 
 var cell_id: String = ""
-var _graph: Control
+var _graph: Node = null
 var _family: Dictionary = {}
 
 func setup(target_id: String) -> void:
