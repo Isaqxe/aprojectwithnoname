@@ -1,7 +1,7 @@
 extends "res://GPT/CellSystem/simulation_cell_clean.gd"
 
 ## Optimized cell organism using spatial indexes for local perception.
-## Genetics remains the source of species identity.
+## Genetics remains the source of species identity and biological attributes.
 
 const SPATIAL_INDEX_GROUP := "CellSpatialIndexes"
 const RESOURCE_INDEX_GROUP := "ResourceSpatialIndexes"
@@ -49,6 +49,14 @@ func _ready() -> void:
 		var mutation_count: int = int(genetics.get("last_mutation_count"))
 		if mutation_count > 0 and _cell_manager.has_method("record_mutations"):
 			_cell_manager.record_mutations(get_species_id(), mutation_count)
+
+## Called by simulation_cell_clean during its genetic initialization.
+## The NEO genetics object already contains the attribute genotype at this point.
+## We intentionally ignore the legacy raw biology values and apply the phenotype.
+func _register_biology_genes() -> void:
+	if genetics == null or not is_instance_valid(genetics):
+		return
+	_apply_genes_to_biology()
 
 func _physics_process(delta: float) -> void:
 	_spawn_grace_time = maxf(_spawn_grace_time - delta, 0.0)
