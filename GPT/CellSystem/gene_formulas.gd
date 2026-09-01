@@ -13,6 +13,8 @@ const MODE_MEAN := "mean"
 const MODE_PRESENCE := "presence"
 const MODE_ATTRIBUTE_SEQUENCE := "attribute_sequence"
 
+static var _random_attribute_tables: Dictionary = {}
+
 static func evaluate(allele_a: Variant, allele_b: Variant, mode: String = MODE_MEAN, contribution_table: Dictionary = {}) -> Variant:
 	match mode:
 		MODE_PRESENCE:
@@ -32,6 +34,49 @@ static func combined_sequence(haplotype_a: String, haplotype_b: String) -> Strin
 		result += haplotype_a.substr(i, 1)
 		result += haplotype_b.substr(i, 1)
 	return result
+
+## Creates one random contribution table for an attribute gene.
+## The table is cached by gene name, so every cell in the same run uses
+## the same genetic "alphabet" for that attribute.
+##
+## Each locus has two possible symbols (uppercase/lowercase), and each
+## symbol receives a random contribution. The total is then normalized
+## to the requested phenotype range.
+static func get_random_attribute_table(gene_name: String, locus_count: int = 4, minimum_value: float = 0.0, maximum_value: float = 100.0) -> Dictionary:
+	if _random_attribute_tables.has(gene_name):
+		return _random_attribute_tables[gene_name].duplicate(true)
+
+	var table: Dictionary = {}
+	var minimum_possible: float = 0.0
+	var maximum_possible: float = 0.0
+	var raw_values: Dictionary = {}
+
+	for locus in range(maxi(locus_count, 1)):
+		var locus_key: String = str(locus)
+		var upper_value: float = randf_range(0.35, 1.65)
+		var lower_value: float = randf_range(0.10, 1.45)
+		raw_values[locus_key] = {"A": upper_value, "a": lower_value}
+		minimum_possible += minf(upper_value, lower_value)
+		maximum_possible += maxf(upper_value, lower_value)
+
+	var source_span: float = maxf(maximum_possible - minimum_possible, 0.0001)
+	var target_span: float = maxf(maximum_value - minimum_value, 0.0)
+
+	for locus in range(maxi(locus_count, 1)):
+		var locus_key: String = str(locus)
+		var source_locus: Dictionary = raw_values[locus_key]
+		var normalized_upper: float = (float(source_locus["A"]) - minimum_possible) / source_span
+		var normalized_lower: float = (float(source_locus["a"]) - minimum_possible) / source_span
+		table[locus_key] = {
+			"A": minimum_value + normalized_upper * target_span / maxf(float(locus_count), 1.0),
+			"a": minimum_value + normalized_lower * target_span / maxf(float(locus_count), 1.0)
+		}
+
+	_random_attribute_tables[gene_name] = table.duplicate(true)
+	return table
+
+static func clear_random_attribute_tables() -> void:
+	_random_attribute_tables.clear()
 
 static func evaluate_attribute_sequence(haplotype_a: String, haplotype_b: String, contribution_table: Dictionary = {}) -> float:
 	if haplotype_a.is_empty() or haplotype_b.is_empty():
