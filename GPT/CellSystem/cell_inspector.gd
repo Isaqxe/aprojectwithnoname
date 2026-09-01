@@ -143,7 +143,6 @@ func _update_ui_from_selected() -> void:
 	var hunger_state: String = String(data.get("hunger_state", "UNKNOWN"))
 	var energy_ratio: float = float(data.get("energy_ratio", resources / resource_capacity))
 	var environment_stress: float = float(data.get("environment_stress", 0.0))
-	var genes: Dictionary = data.get("genes", {})
 
 	_title_label.text = "%s  •  Gen %d" % [species, generation]
 	_details_label.text = (
@@ -159,16 +158,15 @@ func _update_ui_from_selected() -> void:
 		"Energy: %.1f / %.1f  (%d%%)\n" % [resources, resource_capacity, roundi(energy_ratio * 100.0)] +
 		"Hunger: %s\n" % hunger_state +
 		"\nGENETICS\n" +
-		"Health gene: %.1f\n" % float(genes.get("health", data.get("max_health", 0.0))) +
-		"Damage gene: %.1f\n" % float(genes.get("damage", data.get("damage", 0.0))) +
-		"Speed gene: %.1f\n" % float(genes.get("speed", data.get("speed", 0.0))) +
-		"Size gene: %.1f\n" % float(genes.get("size", data.get("size", 0.0))) +
-		"Aggression: %.2f\n" % float(genes.get("aggression", 0.5)) +
-		"Sociality: %.2f\n" % float(genes.get("sociality", 0.5)) +
-		"Caution: %.2f\n" % float(genes.get("caution", 0.5)) +
-		"Group response: %.2f\n" % float(genes.get("group_response", 0.5)) +
-		"Cold adaptation: %.2f\n" % float(genes.get("cold_adaptation", 0.5)) +
-		"Heat adaptation: %.2f\n" % float(genes.get("heat_adaptation", 0.5)) +
+		_gene_text(data, "health", "Health") +
+		_gene_text(data, "damage", "Damage") +
+		_gene_text(data, "speed", "Speed") +
+		_gene_text(data, "size", "Size") +
+		_gene_text(data, "regeneration_rate", "Regeneration") +
+		_gene_text(data, "cold_adaptation", "Cold adaptation") +
+		_gene_text(data, "heat_adaptation", "Heat adaptation") +
+		_gene_text(data, "humidity_adaptation", "Humidity adaptation") +
+		"Characteristics: " + _characteristics_text(data) + "\n" +
 		"\nMITOSIS\n" +
 		"Mitoses: %d  |  Next cost: %.1f\n" % [int(data.get("mitosis_count", 0)), float(data.get("next_mitosis_cost", 0.0))] +
 		"\nENVIRONMENT\n" +
@@ -184,6 +182,43 @@ func _update_ui_from_selected() -> void:
 	else:
 		_health_bar.visible = false
 		_health_text.visible = false
+
+func _gene_text(data: Dictionary, gene_name: String, display_name: String) -> String:
+	var genes: Dictionary = data.get("genes", {})
+	var category_data: Dictionary = {}
+	for category_key in genes.keys():
+		var possible_category: Variant = genes[category_key]
+		if possible_category is Dictionary and possible_category.has(gene_name):
+			category_data = possible_category
+			break
+
+	var raw: Variant = category_data.get(gene_name, {})
+	if not raw is Dictionary:
+		return "%s: n/a\n" % display_name
+
+	return "%s: A %.2f | B %.2f | Expr. %.2f\n" % [
+		display_name,
+		float(raw.get("allele_a", 0.0)),
+		float(raw.get("allele_b", 0.0)),
+		float(raw.get("phenotype", 0.0))
+	]
+
+func _characteristics_text(data: Dictionary) -> String:
+	var genes: Dictionary = data.get("genes", {})
+	var category_data: Dictionary = genes.get("characteristic", {})
+	if not category_data is Dictionary:
+		return "none"
+
+	var active: Array[String] = []
+	for gene_name in category_data.keys():
+		var raw: Variant = category_data[gene_name]
+		if not raw is Dictionary:
+			continue
+		var phenotype: Variant = raw.get("phenotype", false)
+		if phenotype is bool and bool(phenotype):
+			active.append(String(gene_name))
+	active.sort()
+	return "none" if active.is_empty() else ", ".join(active)
 
 func _set_panel_visible(visible: bool) -> void:
 	if _panel != null:
