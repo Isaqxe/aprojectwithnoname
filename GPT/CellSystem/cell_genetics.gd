@@ -1,8 +1,8 @@
 extends Node
 
 ## NEO genetic system foundation.
-## Genes are loci with two alleles and an explicit expression rule.
-## Attribute genes use finite allele palettes; characteristic genes are binary.
+## Attribute genes can represent two haplotypes (for example ABCD + ABCD).
+## Characteristic genes remain binary.
 ## Reproduction is intentionally independent from this layer for now.
 
 const GENE_SCRIPT := preload("res://GPT/CellSystem/gene_data.gd")
@@ -24,22 +24,14 @@ const ADAPTATION_GENES: Array[String] = ["cold_adaptation", "temperate_adaptatio
 const CHARACTERISTIC_GENES: Array[String] = ["territorial", "cooperative_hunter", "camouflage", "armor", "toxin", "specialized_feeding"]
 const BEHAVIOR_GENES: Array[String] = ["sociality", "aggression", "caution", "group_response"]
 
-## Finite allele repertoire for numeric attribute genes.
-## These are the currently defined possible allele values for the NEO layer.
-const ATTRIBUTE_ALLELE_PALETTES: Dictionary = {
-	"health": [40.0, 60.0, 80.0, 100.0, 120.0],
-	"damage": [5.0, 10.0, 15.0, 20.0, 25.0],
-	"speed": [45.0, 58.75, 72.5, 86.25, 100.0],
-	"size": [10.0, 13.5, 17.0, 20.5, 24.0],
-	"regeneration_rate": [2.0, 3.0, 4.0, 5.0, 6.0],
-	"efficiency": [0.20, 0.40, 0.60, 0.80, 1.00]
+const ATTRIBUTE_LOCUS_COUNTS: Dictionary = {
+	"health": 4,
+	"damage": 4,
+	"speed": 4,
+	"size": 4,
+	"regeneration_rate": 4,
+	"efficiency": 4
 }
-
-func get_attribute_allele_palette(gene_name: String) -> Array:
-	var palette: Variant = ATTRIBUTE_ALLELE_PALETTES.get(gene_name, [])
-	if palette is Array:
-		return palette.duplicate()
-	return []
 
 func initialize_random() -> void:
 	cell_id = _generate_id()
@@ -94,6 +86,29 @@ func set_gene(gene_name: String, value: float) -> void:
 	elif gene_name in BEHAVIOR_GENES or gene_name in CHARACTERISTIC_GENES:
 		category = GENE_SCRIPT.CATEGORY_CHARACTERISTIC
 	_create_numeric_gene(gene_name, value, category)
+
+## Assigns the two haplotypes of an attribute gene without changing reproduction.
+## A four-locus example is "ABCD" + "ABCD" -> "AABBCCDD".
+func set_attribute_haplotypes(gene_name: String, haplotype_a: String, haplotype_b: String, contribution_table: Dictionary = {}) -> void:
+	if not gene_name in ATTRIBUTE_GENES:
+		return
+	if not genes.has(GENE_SCRIPT.CATEGORY_ATTRIBUTE):
+		genes[GENE_SCRIPT.CATEGORY_ATTRIBUTE] = {}
+	genes[GENE_SCRIPT.CATEGORY_ATTRIBUTE][gene_name] = GENE_SCRIPT.new(
+		gene_name,
+		GENE_SCRIPT.CATEGORY_ATTRIBUTE,
+		haplotype_a,
+		haplotype_b,
+		GENE_SCRIPT.EXPRESSION_ATTRIBUTE_SEQUENCE,
+		contribution_table
+	)
+
+func get_combined_genotype(gene_name: String) -> String:
+	var gene: RefCounted = _find_gene(gene_name)
+	if gene == null:
+		return ""
+	var result: Variant = gene.call("combined_genotype")
+	return String(result)
 
 func set_characteristic(gene_name: String, present: bool) -> void:
 	_create_boolean_gene(gene_name, present)
