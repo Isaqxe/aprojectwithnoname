@@ -36,10 +36,10 @@ static func combined_sequence(haplotype_a: String, haplotype_b: String) -> Strin
 	return result
 
 ## Generates one random contribution table per attribute gene.
-## The result is cached by gene name so every cell in a simulation
-## shares the same genetic alphabet for that attribute.
-## The random table is normalized so the theoretical minimum and
-## maximum phenotype occupy the requested [minimum_value, maximum_value].
+## The table is cached by gene name so every cell in a simulation shares
+## the same genetic alphabet for that attribute.
+## The values are normalized so the theoretical minimum and maximum
+## phenotype match the requested range.
 static func get_random_attribute_table(gene_name: String, locus_count: int = 4, minimum_value: float = 0.0, maximum_value: float = 100.0) -> Dictionary:
 	if _random_attribute_tables.has(gene_name):
 		return _random_attribute_tables[gene_name].duplicate(true)
@@ -47,31 +47,30 @@ static func get_random_attribute_table(gene_name: String, locus_count: int = 4, 
 	var safe_locus_count: int = maxi(locus_count, 1)
 	var table: Dictionary = {}
 	var raw_values: Dictionary = {}
-	var raw_min_sum: float = 0.0
-	var raw_max_sum: float = 0.0
-	var allele_count: float = float(safe_locus_count * 2)
+	var raw_variation_sum: float = 0.0
 
 	for locus in range(safe_locus_count):
 		var locus_key: String = str(locus)
 		var upper_value: float = randf_range(0.35, 1.65)
 		var lower_value: float = randf_range(0.10, 1.45)
-		raw_values[locus_key] = {"A": upper_value, "a": lower_value}
-		raw_min_sum += minf(upper_value, lower_value) * 2.0
-		raw_max_sum += maxf(upper_value, lower_value) * 2.0
+		var locus_min: float = minf(upper_value, lower_value)
+		var locus_max: float = maxf(upper_value, lower_value)
+		raw_values[locus_key] = {"A": upper_value, "a": lower_value, "min": locus_min, "max": locus_max}
+		raw_variation_sum += (locus_max - locus_min) * 2.0
 
-	var source_span: float = maxf(raw_max_sum - raw_min_sum, 0.0001)
 	var target_span: float = maxf(maximum_value - minimum_value, 0.0)
-	var minimum_per_allele: float = minimum_value / allele_count
-	var span_per_allele: float = target_span / allele_count
+	var safe_variation_sum: float = maxf(raw_variation_sum, 0.0001)
+	var baseline_per_allele: float = minimum_value / float(safe_locus_count * 2)
 
 	for locus in range(safe_locus_count):
 		var locus_key: String = str(locus)
 		var source_locus: Dictionary = raw_values[locus_key]
-		var normalized_upper: float = (float(source_locus["A"]) - minf(float(source_locus["A"]), float(source_locus["a"]))) / source_span
-		var normalized_lower: float = (float(source_locus["a"]) - minf(float(source_locus["A"]), float(source_locus["a"]))) / source_span
+		var locus_min: float = float(source_locus["min"])
+		var upper_variation: float = (float(source_locus["A"]) - locus_min) / safe_variation_sum
+		var lower_variation: float = (float(source_locus["a"]) - locus_min) / safe_variation_sum
 		table[locus_key] = {
-			"A": minimum_per_allele + normalized_upper * span_per_allele,
-			"a": minimum_per_allele + normalized_lower * span_per_allele
+			"A": baseline_per_allele + upper_variation * target_span,
+			"a": baseline_per_allele + lower_variation * target_span
 		}
 
 	_random_attribute_tables[gene_name] = table.duplicate(true)
