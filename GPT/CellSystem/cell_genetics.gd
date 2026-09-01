@@ -90,10 +90,15 @@ func initialize_from_parent(parent_genetics: Node, inherited_genes: Dictionary) 
 	_ensure_all_genes()
 
 func set_gene(gene_name: String, value: float) -> void:
-	var category: String = GENE_SCRIPT.CATEGORY_ADAPTATION
 	if gene_name in ATTRIBUTE_GENES:
-		category = GENE_SCRIPT.CATEGORY_ATTRIBUTE
-	elif gene_name in BEHAVIOR_GENES or gene_name in CHARACTERISTIC_GENES:
+		var existing_attribute: RefCounted = _find_gene(gene_name)
+		if existing_attribute != null and String(existing_attribute.get("expression_mode")) == GENE_SCRIPT.EXPRESSION_ATTRIBUTE_SEQUENCE:
+			return
+		_create_attribute_gene(gene_name)
+		return
+
+	var category: String = GENE_SCRIPT.CATEGORY_ADAPTATION
+	if gene_name in BEHAVIOR_GENES or gene_name in CHARACTERISTIC_GENES:
 		category = GENE_SCRIPT.CATEGORY_CHARACTERISTIC
 	_create_numeric_gene(gene_name, value, category)
 
