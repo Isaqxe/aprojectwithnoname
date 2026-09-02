@@ -12,6 +12,7 @@
 [ext_resource type="Script" uid="uid://bagxfxq1batif" path="res://GPT/CellSystem/cell_spatial_index.gd" id="11_spatial"]
 [ext_resource type="Script" uid="uid://bdyg5gv58m06p" path="res://GPT/CellSystem/resource_spatial_index.gd" id="12_resource_spatial"]
 [ext_resource type="Script" uid="uid://53btr0hkguws" path="res://GPT/CellSystem/first_time_events.gd" id="13_first_events"]
+[ext_resource type="Script" path="res://GPT/CellSystem/simulation_tools.gd" id="14_tools"]
 
 [node name="CellSystemTest" type="Node2D" unique_id=442408827]
 script = ExtResource("1_test")
@@ -57,6 +58,10 @@ min_zoom = 0.001
 [node name="FirstTimeEvents" type="Node" parent="." unique_id=2036286140]
 script = ExtResource("13_first_events")
 
+[node name="SimulationTools" type="Node" parent="." unique_id=2036286141]
+process_mode = 3
+script = ExtResource("14_tools")
+
 [node name="DebugLayer" type="CanvasLayer" parent="." unique_id=87415297]
 
 [node name="Debug" type="Label" parent="DebugLayer" unique_id=1227030685]
@@ -69,10 +74,10 @@ text = "CellSystem Simulation"
 [node name="SimulationTime" type="Label" parent="DebugLayer" unique_id=1129613714]
 offset_left = 20.0
 offset_top = 230.0
-offset_right = 260.0
+offset_right = 400.0
 offset_bottom = 260.0
 theme_override_font_sizes/font_size = 20
-text = "Tempo: 00:00"
+text = "Ticks: 0"
 
 [node name="FPS" type="Label" parent="DebugLayer" unique_id=1129613715]
 offset_left = 20.0
