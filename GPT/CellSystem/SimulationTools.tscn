@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://GPT/CellSystem/simulation_tools.gd" id="1_tools"]
+
+[node name="SimulationTools" type="Node"]
+process_mode = 3
+script = ExtResource("1_tools")
