@@ -48,11 +48,11 @@ Provide developer-facing simulation controls for spawning cells and resources, a
 
 ## Architecture
 
-The tools layer is an independent controller/UI that requests actions from existing systems rather than owning biology.
+The tools layer is an independent controller/UI scene that requests actions from existing systems rather than owning biology.
 
 Preferred dependency direction:
 
-`Tools UI -> SimulationTools -> CellManager / WorldResourceSpawner / ExperimentalDomain / simulation clock`
+`Tools Scene/UI -> SimulationTools -> CellManager / WorldResourceSpawner / ExperimentalDomain / simulation clock`
 
 The NEO system remains:
 
@@ -60,11 +60,19 @@ The NEO system remains:
 
 Tools must not rewrite NEO definitions or formulas. A mutation tool may request mutation from the selected cell's existing `CellGenetics`, then request the existing biology application path.
 
+The `CellInspector` remains the authoritative owner of cell selection. Tools obtain the selected cell through the Inspector's public `get_selected_cell()` method instead of reading its private state.
+
+Spawn interaction is explicitly modal:
+
+`Normal -> Spawn Cell` or `Spawn Resource -> click world -> perform spawn`
+
+While a spawn mode is active, the Tools controller consumes left-clicks in the world before the camera can interpret them as pan input. Clicking the active spawn button again returns to Normal mode. Hiding Tools also exits spawn mode.
+
 ## First implementation slice
 
-1. `SimulationTools` controller with a toggleable panel (`F4`).
-2. Spawn-cell and spawn-resource controls.
-3. Mutate-selected-cell control.
+1. `SimulationTools` controller with a separate reusable `SimulationTools.tscn` scene and a toggleable panel (`F4`).
+2. Spawn-cell and spawn-resource controls with explicit world-click modes.
+3. Mutate-selected-cell control using `CellInspector.get_selected_cell()`.
 4. Pause/resume and 1×/2×/4×/8× time-scale controls.
 5. Temperature/humidity/food-density sliders and environment reset.
 6. Lightweight feedback and selected-target display.
