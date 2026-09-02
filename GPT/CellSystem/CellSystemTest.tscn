@@ -10,10 +10,9 @@
 [ext_resource type="Script" uid="uid://c5of7nos3dgpy" path="res://GPT/CellSystem/simulation_camera.gd" id="9_camera"]
 [ext_resource type="Script" uid="uid://fnf4thui28ve" path="res://GPT/CellSystem/experimental_domain.gd" id="10_domain"]
 [ext_resource type="Script" uid="uid://bagxfxq1batif" path="res://GPT/CellSystem/cell_spatial_index.gd" id="11_spatial"]
-[ext_resource type="Script" uid="uid://bdyg5gv58m06p" path="res://GPT/CellSystem/resource_spatial_index.gd" id="12_resource_spatial"]
+[ext_resource type="Script" uid="res://GPT/CellSystem/resource_spatial_index.gd" path="res://GPT/CellSystem/resource_spatial_index.gd" id="12_resource_spatial"]
 [ext_resource type="Script" uid="uid://53btr0hkguws" path="res://GPT/CellSystem/first_time_events.gd" id="13_first_events"]
-[ext_resource type="Script" path="res://GPT/CellSystem/simulation_tools.gd" id="14_tools"]
-[ext_resource type="Script" path="res://GPT/CellSystem/simulation_tools_adapter.gd" id="15_tools_adapter"]
+[ext_resource type="PackedScene" path="res://GPT/CellSystem/SimulationTools.tscn" id="14_tools_scene"]
 
 [node name="CellSystemTest" type="Node2D" unique_id=442408827]
 script = ExtResource("1_test")
@@ -59,9 +58,7 @@ min_zoom = 0.001
 [node name="FirstTimeEvents" type="Node" parent="." unique_id=2036286140]
 script = ExtResource("13_first_events")
 
-[node name="SimulationTools" type="Node" parent="." unique_id=2036286141]
-process_mode = 3
-script = ExtResource("15_tools_adapter")
+[node name="SimulationTools" parent="." instance=ExtResource("14_tools_scene") unique_id=2036286141]
 
 [node name="DebugLayer" type="CanvasLayer" parent="." unique_id=87415297]
 
