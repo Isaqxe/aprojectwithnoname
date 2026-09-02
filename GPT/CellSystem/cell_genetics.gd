@@ -284,7 +284,11 @@ func _normalize_neo_genes(source: Dictionary) -> Dictionary:
 		for gene_name in category_data.keys():
 			var raw: Variant = category_data[gene_name]
 			if raw is RefCounted:
-				result[category_key][gene_name] = raw
+				var raw_data: Variant = raw.call("to_dictionary")
+				if raw_data is Dictionary:
+					result[category_key][gene_name] = GENE_SCRIPT.from_dictionary(raw_data)
+				continue
+			result[category_key][gene_name] = raw
 			elif raw is Dictionary:
 				result[category_key][gene_name] = GENE_SCRIPT.from_dictionary(raw)
 	return result
