@@ -13,63 +13,62 @@ Provide developer-facing simulation controls for spawning cells and resources, a
 ## Rules
 
 - Tools must not modify NEO definitions or formulas.
-- Tools act on the running simulation through public APIs.
+- Tools act on the running simulation through existing simulation interfaces.
 - Tool state is separate from scientific simulation state whenever possible.
-- Normal simulation remains playable without opening the tools UI.
+- Normal simulation remains usable without opening the tools UI.
 - Every tool should be safe to use repeatedly and should fail gracefully when a target is unavailable.
 
 ## Planned groups
 
 ### Population
-- Spawn cell
-- Spawn resource
-- Optional burst/count controls
-- Position mode: mouse position or random valid position
-- Optional species selection for cells
+- Spawn cell at mouse position.
+- Spawn resource at mouse position.
+- Optional burst/count controls.
+- Optional species selection for cells.
 
 ### Genetics
-- Mutate selected cell
-- Mutate selected cell multiple times
-- Mutation result feedback
-- No direct editing of genotype in the first version
+- Mutate selected cell.
+- Repeat mutation passes for controlled experiments.
+- Mutation result feedback.
+- No direct genotype editing in v1.
 
 ### Time
-- Pause/resume
-- Simulation speed presets
-- Step one simulation tick
-- Reset elapsed simulation time
-- Optional time skip
+- Pause/resume.
+- Simulation speed presets.
+- One Tick is defined as `0.1` simulation seconds in the tools layer.
+- Existing elapsed simulation time remains the source clock; the debug display exposes it as integer Ticks.
+- Step-one-Tick is reserved for a later deterministic clock implementation.
 
 ### Environment
-- Temperature control
-- Humidity control
-- Food density control
-- Biome selection or override, if supported by the current environment system
-- Apply to current simulation only; preserve scenario configuration separately
+- Temperature control.
+- Humidity control.
+- Food density control.
+- Changes affect the current laboratory domain only.
+- Reset to baseline environment values.
 
 ## Architecture
 
-The tools layer should be an independent controller/UI that requests actions from existing managers rather than owning biology itself.
+The tools layer is an independent controller/UI that requests actions from existing systems rather than owning biology.
 
 Preferred dependency direction:
 
-`Tools UI -> Tools Controller -> CellManager / WorldResourceSpawner / Environment system / simulation clock`
+`Tools UI -> SimulationTools -> CellManager / WorldResourceSpawner / ExperimentalDomain / simulation clock`
 
 The NEO system remains:
 
 `CellManager -> CellFactory -> Cell -> CellGenetics -> GeneData / GeneFormulas`
 
-Tools should call the CellManager and other existing public interfaces, never reach into GeneData internals to change biology directly.
+Tools must not rewrite NEO definitions or formulas. A mutation tool may request mutation from the selected cell's existing `CellGenetics`, then request the existing biology application path.
 
 ## First implementation slice
 
-1. Create a `SimulationTools` controller.
-2. Add a togglable tools panel/hotkey.
-3. Implement spawn-cell and spawn-resource actions.
-4. Implement mutate-selected-cell action.
-5. Add pause/speed/step controls.
-6. Add temperature/humidity/food-density controls.
-7. Add lightweight on-screen feedback for each action.
+1. `SimulationTools` controller with a toggleable panel (`F4`).
+2. Spawn-cell and spawn-resource controls.
+3. Mutate-selected-cell control.
+4. Pause/resume and 1×/2×/4×/8× time-scale controls.
+5. Temperature/humidity/food-density sliders and environment reset.
+6. Lightweight feedback and selected-target display.
+7. Replace the CellSystemTest elapsed-time display with integer Ticks.
 
 ## Non-goals for v1
 
@@ -78,3 +77,4 @@ Tools should call the CellManager and other existing public interfaces, never re
 - New genetic categories.
 - Reworking NEO inheritance or mutation formulas.
 - Replacing CellManager or the existing resource spawner.
+- Full deterministic single-Tick stepping.
