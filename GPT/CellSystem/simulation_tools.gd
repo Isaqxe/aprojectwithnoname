@@ -39,6 +39,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_resolve_nodes()
 	_create_ui()
+	_sync_selected_cell()
 	_sync_environment_controls()
 	_set_visible(true)
 
@@ -46,6 +47,7 @@ func _process(delta: float) -> void:
 	_feedback_timer = maxf(_feedback_timer - delta, 0.0)
 	if _feedback_timer <= 0.0 and _feedback_label != null:
 		_feedback_label.text = "Ready"
+	_sync_selected_cell()
 	_update_target_label()
 	if _temperature_slider != null:
 		_sync_environment_values_only()
@@ -56,11 +58,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	var key_event: InputEventKey = event as InputEventKey
 	if key_event.pressed and not key_event.echo and key_event.keycode == TOOL_TOGGLE_KEY:
 		_set_visible(not _visible)
-
+		get_viewport().set_input_as_handled()
+		return
 	if not key_event.pressed or key_event.echo:
 		return
 	if key_event.keycode == KEY_ESCAPE and _visible:
 		_set_visible(false)
+		get_viewport().set_input_as_handled()
 
 func _resolve_nodes() -> void:
 	var root: Node = get_parent()
@@ -71,6 +75,19 @@ func _resolve_nodes() -> void:
 	experimental_domain = root.get_node_or_null("ExperimentalDomain")
 	simulation_camera = root.get_node_or_null("SimulationCamera") as Camera2D
 	cell_inspector = root.get_node_or_null("CellInspector")
+
+func _sync_selected_cell() -> void:
+	if cell_inspector == null or not is_instance_valid(cell_inspector):
+		_selected_cell = null
+		return
+	if not cell_inspector.has_method("get_selected_cell"):
+		_selected_cell = null
+		return
+	var selected: Variant = cell_inspector.get_selected_cell()
+	if selected is Node and is_instance_valid(selected):
+		_selected_cell = selected
+	else:
+		_selected_cell = null
 
 func _create_ui() -> void:
 	_canvas = CanvasLayer.new()
@@ -107,7 +124,7 @@ func _create_ui() -> void:
 	column.add_child(spawn_row)
 	_add_button(spawn_row, "Spawn Cell", _on_spawn_cell)
 	_add_button(spawn_row, "+10", _on_spawn_ten_cells)
-	
+
 	var resource_row: HBoxContainer = HBoxContainer.new()
 	column.add_child(resource_row)
 	_add_button(resource_row, "Spawn Resource", _on_spawn_resource)
@@ -285,7 +302,7 @@ func _on_mutate_selected() -> void:
 	var mutated: Array = genetics.mutate_genes()
 	_selected_cell.call("_apply_genes_to_biology")
 	_selected_cell.call("_apply_behavior_genes")
-	if cell_manager.has_method("record_mutations"):
+	if cell_manager != null and is_instance_valid(cell_manager) and cell_manager.has_method("record_mutations"):
 		cell_manager.record_mutations(String(genetics.get("species_id")), mutated.size())
 	_set_feedback("Mutation: %s" % (", ".join(mutated) if not mutated.is_empty() else "none"))
 
@@ -303,7 +320,7 @@ func _on_mutate_selected_five() -> void:
 			total.append(String(gene_name))
 		_selected_cell.call("_apply_genes_to_biology")
 		_selected_cell.call("_apply_behavior_genes")
-	if cell_manager.has_method("record_mutations") and not total.is_empty():
+	if cell_manager != null and is_instance_valid(cell_manager) and cell_manager.has_method("record_mutations") and not total.is_empty():
 		var genetics: Node = _selected_cell.get("genetics") as Node
 		cell_manager.record_mutations(String(genetics.get("species_id")), total.size())
 	_set_feedback("5 mutation passes; %d genes changed" % total.size())
@@ -380,3 +397,9 @@ func _clamp_to_domain(position: Vector2, margin: float) -> Vector2:
 	if experimental_domain != null and is_instance_valid(experimental_domain) and experimental_domain.has_method("clamp_position"):
 		return experimental_domain.clamp_position(position, margin)
 	return position
+
+func _exit_tree() -> void:
+	Engine.time_scale = DEFAULT_TIME_SCALE
+	var tree: SceneTree = get_tree()
+	if tree != null:
+		tree.paused = false
