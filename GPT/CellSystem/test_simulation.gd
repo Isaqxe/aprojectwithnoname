@@ -5,6 +5,8 @@ extends Node2D
 ## ExperimentalDomain defines the circular laboratory-slide simulation area.
 ## Space spawns the player at world position (0, 0) for debugging.
 
+const TICK_DURATION: float = 0.1
+
 @onready var cell_manager: Node = $CellManager
 @onready var resource_spawner: Node2D = $ResourceSpawner
 @onready var simulation_camera: Camera2D = $SimulationCamera
@@ -30,7 +32,7 @@ func _ready() -> void:
 		config.begin_simulation()
 	_apply_simulation_config()
 	if simulation_time_label != null:
-		simulation_time_label.text = "Tempo: 00:00"
+		simulation_time_label.text = "Ticks: 0"
 	if fps_label != null:
 		fps_label.text = "FPS: --"
 		fps_label.visible = false
@@ -38,10 +40,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	simulation_elapsed += delta
 	if simulation_time_label != null:
-		var total_seconds: int = int(simulation_elapsed)
-		var minutes: int = total_seconds / 60
-		var seconds: int = total_seconds % 60
-		simulation_time_label.text = "Tempo: %02d:%02d" % [minutes, seconds]
+		var simulation_ticks: int = floori(simulation_elapsed / TICK_DURATION)
+		simulation_time_label.text = "Ticks: %d" % simulation_ticks
 	if fps_visible and fps_label != null:
 		fps_label.text = "FPS: %d" % Engine.get_frames_per_second()
 
