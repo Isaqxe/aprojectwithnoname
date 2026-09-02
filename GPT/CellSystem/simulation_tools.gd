@@ -8,6 +8,10 @@ const TICK_DURATION: float = 0.1
 const TOOL_TOGGLE_KEY: Key = KEY_F4
 const DEFAULT_TIME_SCALE: float = 1.0
 
+const SPAWN_MODE_NORMAL: int = 0
+const SPAWN_MODE_CELL: int = 1
+const SPAWN_MODE_RESOURCE: int = 2
+
 @export var panel_width: float = 360.0
 @export var panel_margin: float = 20.0
 @export var default_spawn_burst: int = 1
@@ -30,10 +34,14 @@ var _food_slider: HSlider
 var _temperature_value: Label
 var _humidity_value: Label
 var _food_value: Label
+var _spawn_cell_button: Button
+var _spawn_resource_button: Button
+var _mode_label: Label
+
 var _visible: bool = true
 var _feedback_timer: float = 0.0
 var _selected_cell: Node = null
-var _saved_time_scale: float = DEFAULT_TIME_SCALE
+var _spawn_mode: int = SPAWN_MODE_NORMAL
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -41,6 +49,7 @@ func _ready() -> void:
 	_create_ui()
 	_sync_selected_cell()
 	_sync_environment_controls()
+	_set_spawn_mode(SPAWN_MODE_NORMAL)
 	_set_visible(true)
 
 func _process(delta: float) -> void:
@@ -52,16 +61,41 @@ func _process(delta: float) -> void:
 	if _temperature_slider != null:
 		_sync_environment_values_only()
 
+func _input(event: InputEvent) -> void:
+	## Spawn mode owns left-clicks in the world so it cannot conflict with camera panning.
+	if _spawn_mode == SPAWN_MODE_NORMAL:
+		return
+	if not event is InputEventMouseButton:
+		return
+
+	var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+	if not mouse_event.pressed or mouse_event.button_index != MOUSE_BUTTON_LEFT:
+		return
+
+	## Ignore clicks over the Tools panel itself.
+	if _panel != null and _panel.visible and _panel.get_global_rect().has_point(mouse_event.position):
+		return
+
+	if _spawn_mode == SPAWN_MODE_CELL:
+		_spawn_cell_at_mouse()
+	elif _spawn_mode == SPAWN_MODE_RESOURCE:
+		_spawn_resource_at_mouse()
+
+	get_viewport().set_input_as_handled()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey:
 		return
+
 	var key_event: InputEventKey = event as InputEventKey
 	if key_event.pressed and not key_event.echo and key_event.keycode == TOOL_TOGGLE_KEY:
 		_set_visible(not _visible)
 		get_viewport().set_input_as_handled()
 		return
+
 	if not key_event.pressed or key_event.echo:
 		return
+
 	if key_event.keycode == KEY_ESCAPE and _visible:
 		_set_visible(false)
 		get_viewport().set_input_as_handled()
@@ -70,6 +104,7 @@ func _resolve_nodes() -> void:
 	var root: Node = get_parent()
 	if root == null:
 		return
+
 	cell_manager = root.get_node_or_null("CellManager")
 	resource_spawner = root.get_node_or_null("ResourceSpawner") as Node2D
 	experimental_domain = root.get_node_or_null("ExperimentalDomain")
@@ -80,9 +115,11 @@ func _sync_selected_cell() -> void:
 	if cell_inspector == null or not is_instance_valid(cell_inspector):
 		_selected_cell = null
 		return
+
 	if not cell_inspector.has_method("get_selected_cell"):
 		_selected_cell = null
 		return
+
 	var selected: Variant = cell_inspector.get_selected_cell()
 	if selected is Node and is_instance_valid(selected):
 		_selected_cell = selected
@@ -116,18 +153,28 @@ func _create_ui() -> void:
 	title.add_theme_font_size_override("font_size", 20)
 	column.add_child(title)
 
+	_mode_label = Label.new()
+	_mode_label.name = "SpawnModeLabel"
+	_mode_label.text = "Mode: Normal"
+	_mode_label.add_theme_font_size_override("font_size", 12)
+	column.add_child(_mode_label)
+
 	var separator: HSeparator = HSeparator.new()
 	column.add_child(separator)
 
 	_add_section_title(column, "POPULATION")
 	var spawn_row: HBoxContainer = HBoxContainer.new()
 	column.add_child(spawn_row)
-	_add_button(spawn_row, "Spawn Cell", _on_spawn_cell)
+
+	_spawn_cell_button = _add_button(spawn_row, "Spawn Cell", _on_spawn_cell_mode)
+	_spawn_cell_button.toggle_mode = true
 	_add_button(spawn_row, "+10", _on_spawn_ten_cells)
 
 	var resource_row: HBoxContainer = HBoxContainer.new()
 	column.add_child(resource_row)
-	_add_button(resource_row, "Spawn Resource", _on_spawn_resource)
+
+	_spawn_resource_button = _add_button(resource_row, "Spawn Resource", _on_spawn_resource_mode)
+	_spawn_resource_button.toggle_mode = true
 	_add_button(resource_row, "+10", _on_spawn_ten_resources)
 
 	_add_section_title(column, "GENETICS")
@@ -142,7 +189,7 @@ func _create_ui() -> void:
 	_add_button(mutation_row, "Mutate ×5", _on_mutate_selected_five)
 
 	var select_hint: Label = Label.new()
-	select_hint.text = "Right-click a cell to select it."
+	select_hint.text = "Select with RMB using the Inspector."
 	select_hint.add_theme_font_size_override("font_size", 12)
 	column.add_child(select_hint)
 
@@ -154,6 +201,7 @@ func _create_ui() -> void:
 	_add_button(time_row, "2×", func(): _set_time_scale(2.0))
 	_add_button(time_row, "4×", func(): _set_time_scale(4.0))
 	_add_button(time_row, "8×", func(): _set_time_scale(8.0))
+
 	_speed_label = Label.new()
 	_speed_label.text = "Speed: 1×"
 	column.add_child(_speed_label)
@@ -197,6 +245,7 @@ func _add_environment_slider(column: VBoxContainer, label_text: String, callback
 	var label: Label = Label.new()
 	label.text = label_text
 	column.add_child(label)
+
 	var slider: HSlider = HSlider.new()
 	slider.min_value = 0.0
 	slider.max_value = 1.0
@@ -204,6 +253,7 @@ func _add_environment_slider(column: VBoxContainer, label_text: String, callback
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	slider.value_changed.connect(callback)
 	column.add_child(slider)
+
 	var value_label: Label = Label.new()
 	value_label.text = "0.00"
 	value_label.add_theme_font_size_override("font_size", 12)
@@ -216,8 +266,46 @@ func _last_value_label(column: VBoxContainer) -> Label:
 
 func _set_visible(enabled: bool) -> void:
 	_visible = enabled
+	if not enabled:
+		_set_spawn_mode(SPAWN_MODE_NORMAL)
 	if _panel != null:
 		_panel.visible = enabled
+
+func _set_spawn_mode(mode: int) -> void:
+	_spawn_mode = mode
+
+	if _spawn_cell_button != null:
+		_spawn_cell_button.button_pressed = mode == SPAWN_MODE_CELL
+		_spawn_cell_button.text = "Spawn Cell [ON]" if mode == SPAWN_MODE_CELL else "Spawn Cell"
+
+	if _spawn_resource_button != null:
+		_spawn_resource_button.button_pressed = mode == SPAWN_MODE_RESOURCE
+		_spawn_resource_button.text = "Spawn Resource [ON]" if mode == SPAWN_MODE_RESOURCE else "Spawn Resource"
+
+	if _mode_label != null:
+		match mode:
+			SPAWN_MODE_CELL:
+				_mode_label.text = "Mode: Spawn Cell — click the world"
+			SPAWN_MODE_RESOURCE:
+				_mode_label.text = "Mode: Spawn Resource — click the world"
+			_:
+				_mode_label.text = "Mode: Normal"
+
+func _on_spawn_cell_mode() -> void:
+	if _spawn_mode == SPAWN_MODE_CELL:
+		_set_spawn_mode(SPAWN_MODE_NORMAL)
+		_set_feedback("Cell spawn mode disabled")
+	else:
+		_set_spawn_mode(SPAWN_MODE_CELL)
+		_set_feedback("Cell spawn mode: click the world")
+
+func _on_spawn_resource_mode() -> void:
+	if _spawn_mode == SPAWN_MODE_RESOURCE:
+		_set_spawn_mode(SPAWN_MODE_NORMAL)
+		_set_feedback("Resource spawn mode disabled")
+	else:
+		_set_spawn_mode(SPAWN_MODE_RESOURCE)
+		_set_feedback("Resource spawn mode: click the world")
 
 func _set_feedback(text_value: String) -> void:
 	if _feedback_label == null:
@@ -231,6 +319,7 @@ func _update_target_label() -> void:
 		if _target_label != null:
 			_target_label.text = "Target: none"
 		return
+
 	var cell_id_value: Variant = _selected_cell.get("cell_id")
 	var species_id_value: Variant = _selected_cell.get("species_id")
 	var cell_id: String = String(cell_id_value) if cell_id_value != null else "unknown"
@@ -243,37 +332,40 @@ func _mouse_world_position() -> Vector2:
 		return Vector2.ZERO
 	return simulation_camera.get_global_mouse_position()
 
-func _on_spawn_cell() -> void:
+func _spawn_cell_at_mouse() -> void:
 	if cell_manager == null or not is_instance_valid(cell_manager):
 		_set_feedback("CellManager unavailable")
 		return
 	var spawned: Node = cell_manager.create_cell(_mouse_world_position(), false, "")
 	_set_feedback("Cell spawned" if spawned != null else "Could not spawn cell")
 
-func _on_spawn_ten_cells() -> void:
-	var success_count: int = 0
-	if cell_manager == null or not is_instance_valid(cell_manager):
-		_set_feedback("CellManager unavailable")
-		return
-	for _i in range(10):
-		var offset := Vector2(randf_range(-60.0, 60.0), randf_range(-60.0, 60.0))
-		if cell_manager.create_cell(_mouse_world_position() + offset, false, "") != null:
-			success_count += 1
-	_set_feedback("Spawned %d cells" % success_count)
-
-func _on_spawn_resource() -> void:
+func _spawn_resource_at_mouse() -> void:
 	if resource_spawner == null or not is_instance_valid(resource_spawner):
 		_set_feedback("ResourceSpawner unavailable")
 		return
 	if not resource_spawner.has_method("spawn_resource"):
 		_set_feedback("spawn_resource() unavailable")
 		return
+
 	var resource_node: Node = resource_spawner.spawn_resource()
 	if resource_node == null:
 		_set_feedback("Could not spawn resource")
 		return
+
 	resource_node.global_position = _clamp_to_domain(_mouse_world_position(), 8.0)
 	_set_feedback("Resource spawned")
+
+func _on_spawn_ten_cells() -> void:
+	var success_count: int = 0
+	if cell_manager == null or not is_instance_valid(cell_manager):
+		_set_feedback("CellManager unavailable")
+		return
+
+	for _i in range(10):
+		var offset := Vector2(randf_range(-60.0, 60.0), randf_range(-60.0, 60.0))
+		if cell_manager.create_cell(_mouse_world_position() + offset, false, "") != null:
+			success_count += 1
+	_set_feedback("Spawned %d cells" % success_count)
 
 func _on_spawn_ten_resources() -> void:
 	var success_count: int = 0
@@ -283,6 +375,7 @@ func _on_spawn_ten_resources() -> void:
 	if not resource_spawner.has_method("spawn_resource"):
 		_set_feedback("spawn_resource() unavailable")
 		return
+
 	for _i in range(10):
 		var resource_node: Node = resource_spawner.spawn_resource()
 		if resource_node == null:
@@ -292,37 +385,47 @@ func _on_spawn_ten_resources() -> void:
 	_set_feedback("Spawned %d resources" % success_count)
 
 func _on_mutate_selected() -> void:
+	_sync_selected_cell()
 	if not is_instance_valid(_selected_cell):
 		_set_feedback("Select a cell with right-click first")
 		return
+
 	var genetics: Node = _selected_cell.get("genetics") as Node
 	if genetics == null or not is_instance_valid(genetics) or not genetics.has_method("mutate_genes"):
 		_set_feedback("Selected cell has no genetics")
 		return
+
 	var mutated: Array = genetics.mutate_genes()
 	_selected_cell.call("_apply_genes_to_biology")
 	_selected_cell.call("_apply_behavior_genes")
+
 	if cell_manager != null and is_instance_valid(cell_manager) and cell_manager.has_method("record_mutations"):
 		cell_manager.record_mutations(String(genetics.get("species_id")), mutated.size())
+
 	_set_feedback("Mutation: %s" % (", ".join(mutated) if not mutated.is_empty() else "none"))
 
 func _on_mutate_selected_five() -> void:
+	_sync_selected_cell()
 	if not is_instance_valid(_selected_cell):
 		_set_feedback("Select a cell with right-click first")
 		return
+
 	var total: Array[String] = []
 	for _i in range(5):
 		var genetics: Node = _selected_cell.get("genetics") as Node
 		if genetics == null or not is_instance_valid(genetics) or not genetics.has_method("mutate_genes"):
 			break
+
 		var mutated: Array = genetics.mutate_genes()
 		for gene_name in mutated:
 			total.append(String(gene_name))
 		_selected_cell.call("_apply_genes_to_biology")
 		_selected_cell.call("_apply_behavior_genes")
+
 	if cell_manager != null and is_instance_valid(cell_manager) and cell_manager.has_method("record_mutations") and not total.is_empty():
 		var genetics: Node = _selected_cell.get("genetics") as Node
 		cell_manager.record_mutations(String(genetics.get("species_id")), total.size())
+
 	_set_feedback("5 mutation passes; %d genes changed" % total.size())
 
 func _on_toggle_pause() -> void:
@@ -339,7 +442,6 @@ func _on_toggle_pause() -> void:
 func _set_time_scale(value: float) -> void:
 	Engine.time_scale = maxf(value, 0.0)
 	_speed_label.text = "Speed: %.1f×" % Engine.time_scale
-	_saved_time_scale = Engine.time_scale
 	_set_feedback("Speed set to %.1f×" % Engine.time_scale)
 
 func _on_temperature_changed(value: float) -> void:
@@ -397,9 +499,3 @@ func _clamp_to_domain(position: Vector2, margin: float) -> Vector2:
 	if experimental_domain != null and is_instance_valid(experimental_domain) and experimental_domain.has_method("clamp_position"):
 		return experimental_domain.clamp_position(position, margin)
 	return position
-
-func _exit_tree() -> void:
-	Engine.time_scale = DEFAULT_TIME_SCALE
-	var tree: SceneTree = get_tree()
-	if tree != null:
-		tree.paused = false
