@@ -46,6 +46,11 @@ func set_presentation_mode(enabled: bool) -> void:
 	_presentation_mode = enabled
 	_set_panel_visible(not enabled and is_instance_valid(_selected_cell))
 
+func get_selected_cell() -> Node:
+	if not is_instance_valid(_selected_cell):
+		return null
+	return _selected_cell
+
 func inspect_at_mouse() -> void:
 	var viewport: Viewport = get_viewport()
 	var camera: Camera2D = viewport.get_camera_2d()
