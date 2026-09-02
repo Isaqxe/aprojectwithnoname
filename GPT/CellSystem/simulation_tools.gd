@@ -214,8 +214,10 @@ func _update_target_label() -> void:
 		if _target_label != null:
 			_target_label.text = "Target: none"
 		return
-	var cell_id: String = String(_selected_cell.get("cell_id", ""))
-	var species_id: String = String(_selected_cell.get("species_id", "unknown"))
+	var cell_id_value: Variant = _selected_cell.get("cell_id")
+	var species_id_value: Variant = _selected_cell.get("species_id")
+	var cell_id: String = String(cell_id_value) if cell_id_value != null else "unknown"
+	var species_id: String = String(species_id_value) if species_id_value != null else "unknown"
 	if _target_label != null:
 		_target_label.text = "Target: %s (%s)" % [cell_id, species_id]
 
@@ -223,24 +225,6 @@ func _mouse_world_position() -> Vector2:
 	if simulation_camera == null or not is_instance_valid(simulation_camera):
 		return Vector2.ZERO
 	return simulation_camera.get_global_mouse_position()
-
-func _query_cell_at_mouse() -> Node:
-	var viewport: Viewport = get_viewport()
-	if viewport == null or simulation_camera == null:
-		return null
-	var query := PhysicsPointQueryParameters2D.new()
-	query.position = _mouse_world_position()
-	query.collision_mask = 1
-	query.collide_with_bodies = true
-	query.collide_with_areas = false
-	var hits: Array[Dictionary] = viewport.get_world_2d().direct_space_state.intersect_point(query, 16)
-	for hit in hits:
-		var collider: Object = hit.get("collider")
-		if collider is Node:
-			var candidate: Node = collider as Node
-			if candidate.is_in_group("SimCells"):
-				return candidate
-	return null
 
 func _on_spawn_cell() -> void:
 	if cell_manager == null or not is_instance_valid(cell_manager):
@@ -290,13 +274,7 @@ func _on_spawn_ten_resources() -> void:
 		success_count += 1
 	_set_feedback("Spawned %d resources" % success_count)
 
-func _select_target_from_mouse() -> void:
-	var candidate: Node = _query_cell_at_mouse()
-	if candidate != null:
-		_selected_cell = candidate
-
 func _on_mutate_selected() -> void:
-	_select_target_from_mouse()
 	if not is_instance_valid(_selected_cell):
 		_set_feedback("Select a cell with right-click first")
 		return
@@ -312,7 +290,6 @@ func _on_mutate_selected() -> void:
 	_set_feedback("Mutation: %s" % (", ".join(mutated) if not mutated.is_empty() else "none"))
 
 func _on_mutate_selected_five() -> void:
-	_select_target_from_mouse()
 	if not is_instance_valid(_selected_cell):
 		_set_feedback("Select a cell with right-click first")
 		return
