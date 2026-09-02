@@ -12,7 +12,7 @@
 [ext_resource type="Script" uid="uid://bagxfxq1batif" path="res://GPT/CellSystem/cell_spatial_index.gd" id="11_spatial"]
 [ext_resource type="Script" uid="uid://bdyg5gv58m06p" path="res://GPT/CellSystem/resource_spatial_index.gd" id="12_resource_spatial"]
 [ext_resource type="Script" uid="uid://53btr0hkguws" path="res://GPT/CellSystem/first_time_events.gd" id="13_first_events"]
-[ext_resource type="Script" path="res://GPT/CellSystem/simulation_tools_v2.gd" id="14_tools"]
+[ext_resource type="Script" path="res://GPT/CellSystem/simulation_tools.gd" id="14_tools"]
 
 [node name="CellSystemTest" type="Node2D" unique_id=442408827]
 script = ExtResource("1_test")
