@@ -1,0 +1,5 @@
+Alive Cells NEO baseline
+Commit: 7756af0408c33d434f382b07c034570405937ecb
+Date: 2026-09-02
+
+Do not alter NEO genetics while experimental tools are being developed. This commit is the reference state for genes, inheritance, mutation, and phenotype calculation.
