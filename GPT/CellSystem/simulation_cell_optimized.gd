@@ -19,6 +19,10 @@ var _ai_decision_timer: float = 0.0
 @export var ai_decision_interval: float = 0.15
 
 func _ready() -> void:
+	## Death drops replace the old fixed kill reward for the active optimized cell.
+	## This keeps the balance rule centralized in the NEO organism path.
+	elimination_resource_reward = 0.0
+
 	if not inherited_data.is_empty():
 		var inherited_species: String = String(inherited_data.get("species_id", "")).strip_edges()
 		if not inherited_species.is_empty() and inherited_species != "default":

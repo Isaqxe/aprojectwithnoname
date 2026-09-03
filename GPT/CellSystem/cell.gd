@@ -156,6 +156,17 @@ func attack(target: Node) -> void:
 		target.take_damage(damage, self)
 
 func die() -> void:
-	## Lifecycle is owned by the containing simulation cell.
+	if not alive:
+		return
+
+	## Convert stored energy into world resources before lifecycle cleanup removes the organism.
+	## The drop system itself enforces the 1000-energy-per-pile limit and redistributes overflow.
+	var stored_energy: float = maxf(resources, 0.0)
+	var drop_spawner: Node = get_tree().get_first_node_in_group("ResourceSpawners")
+	if stored_energy > 0.0 and drop_spawner != null and is_instance_valid(drop_spawner) and drop_spawner.has_method("spawn_death_drop"):
+		drop_spawner.spawn_death_drop(global_position, stored_energy)
+
+	## Clear the source energy so this death cannot be converted twice.
+	resources = 0.0
 	alive = false
 	health = 0.0

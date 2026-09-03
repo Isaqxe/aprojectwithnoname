@@ -21,11 +21,17 @@ extends Node2D
 @export var emergency_spawn_fraction: float = 0.25
 @export var emergency_spawn_interval: float = 0.30
 
+@export_category("Death Drops")
+@export var death_drop_max_per_node: float = 1000.0
+@export var death_drop_min_spacing: float = 28.0
+@export var death_drop_max_attempts: int = 12
+
 var spawn_timer: float = 0.0
 var resources: Array[Node] = []
 
 func _ready() -> void:
 	randomize()
+	add_to_group("ResourceSpawners")
 	_resolve_nodes()
 	_apply_simulation_config()
 	_update_spawn_area()
@@ -105,6 +111,50 @@ func spawn_resource() -> Node:
 	resources.append(resource_node)
 	return resource_node
 
+## Converts stored cellular energy into collectible resource piles after death.
+## The first pile is placed at the death site, while overflow is redistributed
+## across random valid positions in the experimental domain.
+func spawn_death_drop(death_position: Vector2, stored_energy: float) -> int:
+	var remaining_energy: float = maxf(stored_energy, 0.0)
+	var pile_limit: float = maxf(death_drop_max_per_node, 1.0)
+	if remaining_energy <= 0.0 or resource_scene == null:
+		return 0
+
+	var spawned_count: int = 0
+	var first_pile: float = minf(remaining_energy, pile_limit)
+	var death_site: Vector2 = _clamp_to_domain(death_position, 8.0)
+	if _spawn_resource_pile(death_site, first_pile):
+		spawned_count += 1
+		remaining_energy -= first_pile
+
+	while remaining_energy > 0.0:
+		var pile_amount: float = minf(remaining_energy, pile_limit)
+		var random_position: Vector2 = _random_domain_position()
+		if not _spawn_resource_pile(random_position, pile_amount):
+			break
+		spawned_count += 1
+		remaining_energy -= pile_amount
+
+	return spawned_count
+
+## Death piles intentionally do not use the normal resource spacing rule.
+## Several piles may occupy the same location; their stored energy is still exact.
+func _spawn_resource_pile(spawn_position: Vector2, pile_amount: float) -> bool:
+	if resource_scene == null or pile_amount <= 0.0:
+		return false
+
+	var resource_node: Node = resource_scene.instantiate()
+	resource_node.global_position = _clamp_to_domain(spawn_position, 8.0)
+	if resource_node.get("amount") != null:
+		resource_node.amount = pile_amount
+	else:
+		resource_node.queue_free()
+		return false
+
+	add_child(resource_node)
+	resources.append(resource_node)
+	return true
+
 func _random_domain_position() -> Vector2:
 	if experimental_domain != null and is_instance_valid(experimental_domain) and experimental_domain.has_method("random_position"):
 		return experimental_domain.random_position(8.0)
@@ -112,6 +162,11 @@ func _random_domain_position() -> Vector2:
 		randf_range(spawn_area.position.x, spawn_area.end.x),
 		randf_range(spawn_area.position.y, spawn_area.end.y)
 	)
+
+func _clamp_to_domain(world_position: Vector2, margin: float = 0.0) -> Vector2:
+	if experimental_domain != null and is_instance_valid(experimental_domain) and experimental_domain.has_method("clamp_position"):
+		return experimental_domain.clamp_position(world_position, margin)
+	return world_position
 
 func _get_environment(environment_position: Vector2) -> Dictionary:
 	if experimental_domain != null and is_instance_valid(experimental_domain) and experimental_domain.has_method("get_environment_at"):
