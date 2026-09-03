@@ -122,9 +122,10 @@ func spawn_death_drop(death_position: Vector2, stored_energy: float) -> int:
 
 	var spawned_count: int = 0
 	var first_pile: float = minf(remaining_energy, pile_limit)
-	if _spawn_resource_pile(_clamp_to_domain(death_position, 8.0), first_pile, death_drop_min_spacing):
+	var death_site: Vector2 = _clamp_to_domain(death_position, 8.0)
+	if _spawn_resource_pile(death_site, first_pile, death_drop_min_spacing):
 		spawned_count += 1
-	remaining_energy -= first_pile
+		remaining_energy -= first_pile
 
 	while remaining_energy > 0.0:
 		var pile_amount: float = minf(remaining_energy, pile_limit)
@@ -158,6 +159,7 @@ func _spawn_resource_pile(spawn_position: Vector2, pile_amount: float, spacing: 
 	if resource_node.get("amount") != null:
 		resource_node.amount = pile_amount
 	else:
+		resource_node.queue_free()
 		return false
 
 	add_child(resource_node)
