@@ -19,7 +19,7 @@ script = ExtResource("1_test")
 
 [node name="ExperimentalDomain" type="Node2D" parent="." unique_id=2036286132]
 script = ExtResource("10_domain")
-radius = 3000.0
+radius = 7500.0
 
 [node name="CellSpatialIndex" type="Node" parent="." unique_id=2036286135]
 script = ExtResource("11_spatial")
@@ -71,16 +71,16 @@ text = "CellSystem Simulation"
 
 [node name="SimulationTime" type="Label" parent="DebugLayer" unique_id=1129613714]
 offset_left = 20.0
-offset_top = 281.0
+offset_top = 266.0
 offset_right = 400.0
-offset_bottom = 311.0
+offset_bottom = 296.0
 theme_override_font_sizes/font_size = 20
 text = "Ticks: 0"
 
 [node name="FPS" type="Label" parent="DebugLayer" unique_id=1129613715]
 offset_left = 20.0
-offset_top = 305.0
+offset_top = 289.0
 offset_right = 260.0
-offset_bottom = 335.0
+offset_bottom = 319.0
 theme_override_font_sizes/font_size = 18
 text = "FPS: --"
