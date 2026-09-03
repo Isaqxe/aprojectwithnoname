@@ -187,6 +187,7 @@ func _create_gene_rows() -> void:
 		{"name": "speed", "display": "Speed"},
 		{"name": "size", "display": "Size"},
 		{"name": "regeneration_rate", "display": "Regeneration"},
+		{"name": "mitosis_cost", "display": "Mitosis cost"},
 		{"name": "cold_adaptation", "display": "Cold adaptation"},
 		{"name": "heat_adaptation", "display": "Heat adaptation"},
 		{"name": "humidity_adaptation", "display": "Humidity adaptation"}
@@ -379,6 +380,8 @@ func _display_name_for_gene(gene_name: String) -> String:
 			return "Size"
 		"regeneration_rate":
 			return "Regeneration"
+		"mitosis_cost":
+			return "Mitosis cost"
 		"cold_adaptation":
 			return "Cold adaptation"
 		"heat_adaptation":
