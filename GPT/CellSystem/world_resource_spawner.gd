@@ -123,39 +123,28 @@ func spawn_death_drop(death_position: Vector2, stored_energy: float) -> int:
 	var spawned_count: int = 0
 	var first_pile: float = minf(remaining_energy, pile_limit)
 	var death_site: Vector2 = _clamp_to_domain(death_position, 8.0)
-	if _spawn_resource_pile(death_site, first_pile, death_drop_min_spacing):
+	if _spawn_resource_pile(death_site, first_pile):
 		spawned_count += 1
 		remaining_energy -= first_pile
 
 	while remaining_energy > 0.0:
 		var pile_amount: float = minf(remaining_energy, pile_limit)
-		var random_position: Vector2 = Vector2.INF
-		for _attempt in range(maxi(death_drop_max_attempts, 1)):
-			var candidate: Vector2 = _random_domain_position()
-			if _is_death_drop_position_clear(candidate):
-				random_position = candidate
-				break
-
-		if random_position == Vector2.INF:
-			## The domain is too crowded to find another separated pile safely.
-			## Preserve the remaining energy instead of silently discarding it.
-			break
-
-		if not _spawn_resource_pile(random_position, pile_amount, death_drop_min_spacing):
+		var random_position: Vector2 = _random_domain_position()
+		if not _spawn_resource_pile(random_position, pile_amount):
 			break
 		spawned_count += 1
 		remaining_energy -= pile_amount
 
 	return spawned_count
 
-func _spawn_resource_pile(spawn_position: Vector2, pile_amount: float, spacing: float) -> bool:
+## Death piles intentionally do not use the normal resource spacing rule.
+## Several piles may occupy the same location; their stored energy is still exact.
+func _spawn_resource_pile(spawn_position: Vector2, pile_amount: float) -> bool:
 	if resource_scene == null or pile_amount <= 0.0:
-		return false
-	if not _is_death_drop_position_clear(spawn_position, spacing):
 		return false
 
 	var resource_node: Node = resource_scene.instantiate()
-	resource_node.global_position = spawn_position
+	resource_node.global_position = _clamp_to_domain(spawn_position, 8.0)
 	if resource_node.get("amount") != null:
 		resource_node.amount = pile_amount
 	else:
@@ -164,16 +153,6 @@ func _spawn_resource_pile(spawn_position: Vector2, pile_amount: float, spacing: 
 
 	add_child(resource_node)
 	resources.append(resource_node)
-	return true
-
-func _is_death_drop_position_clear(spawn_position: Vector2, spacing: float = -1.0) -> bool:
-	var effective_spacing: float = death_drop_min_spacing if spacing <= 0.0 else spacing
-	var spacing_squared: float = effective_spacing * effective_spacing
-	for resource_node in resources:
-		if not is_instance_valid(resource_node):
-			continue
-		if spawn_position.distance_squared_to(resource_node.global_position) < spacing_squared:
-			return false
 	return true
 
 func _random_domain_position() -> Vector2:
