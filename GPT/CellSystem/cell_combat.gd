@@ -12,6 +12,9 @@ func update(delta: float) -> void:
 		current_cooldown -= delta
 
 func can_attack() -> bool:
+	var attacker: Node = get_parent()
+	if attacker != null and is_instance_valid(attacker) and attacker.has_method("can_attack"):
+		return bool(attacker.can_attack()) and current_cooldown <= 0.0
 	return current_cooldown <= 0.0
 
 func _get_species_id(node: Node) -> String:
