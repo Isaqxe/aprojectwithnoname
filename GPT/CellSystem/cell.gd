@@ -27,11 +27,13 @@ extends CharacterBody2D
 @export var critical_energy_threshold: float = 0.05
 @export var starvation_damage_per_second: float = 3.0
 @export var critical_food_heal: float = 12.0
+@export var post_mitosis_grace_period: float = 10.0
 
 var resources: float = 0.0
 var health: float
 var alive: bool = true
 var _activity_level: float = 0.0
+var _mitosis_grace_remaining: float = 0.0
 
 func _ready() -> void:
 	health = max_health
@@ -40,6 +42,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not alive:
 		return
+	_mitosis_grace_remaining = maxf(_mitosis_grace_remaining - maxf(delta, 0.0), 0.0)
 	process_metabolism(delta, _activity_level)
 
 func set_activity_level(activity: float) -> void:
@@ -57,8 +60,20 @@ func set_species_id(value: String) -> void:
 		return
 	species_id = resolved
 
+func start_mitosis_grace_period() -> void:
+	_mitosis_grace_remaining = maxf(post_mitosis_grace_period, 0.0)
+
+func get_mitosis_grace_remaining() -> float:
+	return _mitosis_grace_remaining
+
+func is_in_mitosis_grace() -> bool:
+	return _mitosis_grace_remaining > 0.0
+
+func can_attack() -> bool:
+	return alive and not is_in_mitosis_grace()
+
 func take_damage(amount: float, attacker: Node = null) -> bool:
-	if not alive or amount <= 0.0:
+	if not alive or amount <= 0.0 or is_in_mitosis_grace():
 		return false
 
 	if attacker != null and is_instance_valid(attacker):
@@ -101,7 +116,7 @@ func process_metabolism(delta: float, activity: float = 0.0) -> void:
 	var drain: float = base_energy_drain + size_cost + movement_cost
 	resources = maxf(resources - drain * delta, 0.0)
 
-	if resources <= critical_energy_threshold * resource_capacity:
+	if not is_in_mitosis_grace() and resources <= critical_energy_threshold * resource_capacity:
 		take_environmental_damage(starvation_damage_per_second * delta)
 
 func get_energy_ratio() -> float:
@@ -132,7 +147,7 @@ func add_resources(amount: float) -> void:
 		return
 	var was_critical: bool = get_energy_ratio() <= critical_energy_threshold
 	resources = minf(resources + amount, resource_capacity)
-	if was_critical and critical_food_heal > 0.0 and alive:
+	if was_critical and critical_food_heal > 0.0 and alive and not is_in_mitosis_grace():
 		health = minf(health + critical_food_heal, max_health)
 
 func consume_resources(amount: float) -> bool:
@@ -142,7 +157,7 @@ func consume_resources(amount: float) -> bool:
 	return true
 
 func take_environmental_damage(amount: float) -> bool:
-	if not alive or amount <= 0.0:
+	if not alive or amount <= 0.0 or is_in_mitosis_grace():
 		return false
 	health -= amount
 	if health <= 0.0:
@@ -150,7 +165,7 @@ func take_environmental_damage(amount: float) -> bool:
 	return true
 
 func attack(target: Node) -> void:
-	if not alive:
+	if not can_attack():
 		return
 	if target != null and target.has_method("take_damage"):
 		target.take_damage(damage, self)
