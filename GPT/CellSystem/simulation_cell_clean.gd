@@ -282,19 +282,18 @@ func _find_best_target() -> CharacterBody2D:
 			best_score = score
 	return best
 
-func _get_local_allies(radius: float) -> Array:
-	var allies: Array = []
-	var radius_squared: float = maxf(radius, 0.0) * maxf(radius, 0.0)
-	for candidate in get_tree().get_nodes_in_group("SimCells"):
-		if candidate == self or not is_instance_valid(candidate):
+func _find_nearest_resource() -> Area2D:
+	var nearest: Area2D = null
+	var nearest_distance: float = resource_perception_radius
+	for candidate in get_tree().get_nodes_in_group("WorldResources"):
+		if not is_instance_valid(candidate) or not candidate is Area2D:
 			continue
-		if not candidate is CharacterBody2D:
-			continue
-		if String(candidate.get("species_id")) != String(species_id):
-			continue
-		if global_position.distance_squared_to((candidate as CharacterBody2D).global_position) <= radius_squared:
-			allies.append(candidate)
-	return allies
+		var resource: Area2D = candidate as Area2D
+		var distance: float = global_position.distance_to(resource.global_position)
+		if distance < nearest_distance:
+			nearest = resource
+			nearest_distance = distance
+	return nearest
 
 func _calculate_collective_flee_direction() -> Vector2:
 	var weighted_away := Vector2.ZERO
@@ -316,18 +315,83 @@ func _calculate_collective_flee_direction() -> Vector2:
 		return weighted_away.normalized()
 	return _direction.normalized()
 
-func _find_nearest_resource() -> Area2D:
-	var nearest: Area2D = null
-	var nearest_distance: float = resource_perception_radius
-	for candidate in get_tree().get_nodes_in_group("WorldResources"):
-		if not is_instance_valid(candidate) or not candidate is Area2D:
+func _wander(_delta: float) -> void:
+	if _wander_direction_timer <= 0.0 or _direction.length_squared() < 0.01:
+		_direction = Vector2.from_angle(randf_range(0.0, TAU))
+		_wander_direction_timer = randf_range(0.8, 1.8)
+	else:
+		var random_direction: Vector2 = Vector2.from_angle(randf_range(0.0, TAU))
+		_direction = _direction.lerp(random_direction, 0.025).normalized()
+	if not _cached_ally_positions.is_empty():
+		_direction = social_behavior.calculate_social_steering(global_position, _direction, _cached_ally_positions, _cached_ally_velocities)
+
+func get_cell_power() -> float:
+	if cell_data == null:
+		return 0.0
+	return fear_system.get_cell_power(cell_data)
+
+func get_heredity_data() -> Dictionary:
+	if cell_data == null or genetics == null:
+		return {}
+	return {
+		"max_health": cell_data.max_health,
+		"damage": cell_data.damage,
+		"speed": cell_data.speed,
+		"size": cell_data.size,
+		"regeneration_rate": cell_data.regeneration_rate,
+		"species_id": genetics.species_id,
+		"genes": genetics.genes.duplicate(true),
+		"parent_id": genetics.cell_id,
+		"generation": genetics.generation + 1,
+		"mitosis_count": mitosis.mitosis_count + 1
+	}
+
+func get_inspection_data() -> Dictionary:
+	if cell_data == null or genetics == null or mitosis == null or behavior == null:
+		return {}
+	var lineage: Dictionary = genetics.get_lineage_data()
+	return {
+		"cell_id": lineage.get("cell_id", "unknown"),
+		"species_id": lineage.get("species_id", "unknown"),
+		"generation": lineage.get("generation", 0),
+		"parent_id": lineage.get("parent_id", "none"),
+		"player": is_player_controlled,
+		"state": CellBehavior.BehaviorState.keys()[behavior.state],
+		"health": cell_data.health,
+		"max_health": cell_data.max_health,
+		"damage": cell_data.damage,
+		"speed": cell_data.speed,
+		"size": cell_data.size,
+		"regeneration_rate": cell_data.regeneration_rate,
+		"resources": cell_data.resources,
+		"resource_capacity": cell_data.resource_capacity,
+		"mitosis_count": mitosis.mitosis_count,
+		"next_mitosis_cost": mitosis.get_resource_cost(),
+		"genes": lineage.get("genes", {}),
+		"environment": adaptation.last_environment if adaptation != null else {},
+		"environment_stress": adaptation.get_stress() if adaptation != null else 0.0,
+		"fear": behavior.fear,
+		"nearby_allies": _cached_allies.size()
+	}
+
+func _process_collisions() -> void:
+	for index in range(get_slide_collision_count()):
+		var collision: KinematicCollision2D = get_slide_collision(index)
+		var collider: Object = collision.get_collider()
+		if collider == null or collider == self:
 			continue
-		var resource: Area2D = candidate as Area2D
-		var distance: float = global_position.distance_to(resource.global_position)
-		if distance < nearest_distance:
-			nearest = resource
-			nearest_distance = distance
-	return nearest
+		if not collider is CharacterBody2D or not collider.is_in_group("SimCells"):
+			continue
+		if not behavior.is_valid_enemy(self, collider as CharacterBody2D):
+			continue
+
+		var target_data: Node = collider.get("cell_data") as Node
+		var was_alive: bool = target_data != null and bool(target_data.get("alive"))
+		var attack_succeeded: bool = combat.attack(collider)
+		if attack_succeeded and was_alive and target_data != null and not bool(target_data.get("alive")):
+			cell_data.add_resources(elimination_resource_reward)
+			if _target == collider:
+				_target = null
 
 func _process_resources() -> void:
 	if not cell_data.can_accept_resources():
