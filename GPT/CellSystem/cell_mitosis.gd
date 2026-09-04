@@ -36,6 +36,11 @@ func update(delta: float) -> bool:
 
 func complete_generation() -> void:
 	mitosis_count += 1
+	var parent: Node = get_parent()
+	if parent != null and is_instance_valid(parent):
+		var cell_data: Node = parent.get("cell_data") as Node
+		if cell_data != null and is_instance_valid(cell_data) and cell_data.has_method("start_mitosis_grace_period"):
+			cell_data.start_mitosis_grace_period()
 	reset()
 
 func reset() -> void:
