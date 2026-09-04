@@ -68,15 +68,15 @@ Interpretação proposta:
 
 ```text
 medo > 0
-    ↓
+	↓
 Player é mais forte
-    ↓
+	↓
 célula foge
 
 medo <= 0
-    ↓
+	↓
 célula não considera o Player mais forte
-    ↓
+	↓
 comportamento normal de perseguição/ameaça
 ```
 
@@ -84,16 +84,16 @@ Fluxo desejado:
 
 ```text
 Player entra no campo de visão
-          ↓
-      comparar stats
-          ↓
+		  ↓
+	  comparar stats
+		  ↓
    ┌──────┴──────┐
    ↓             ↓
 Player mais     Player não é
 forte           mais forte
    ↓             ↓
 FUGIR           perseguir/
-                comportamento normal
+				comportamento normal
 ```
 
 A intenção é fazer as células parecerem mais orgânicas: nem todo inimigo reage ao Player da mesma forma. Uma célula fraca poderia fugir de um Player muito desenvolvido, enquanto uma célula suficientemente forte poderia persegui-lo.
@@ -106,7 +106,7 @@ Outra possibilidade é usar uma margem de segurança:
 
 ```text
 medo > limiar
-    → fugir
+	→ fugir
 ```
 
 para evitar que uma diferença minúscula entre as células faça o comportamento alternar constantemente.
@@ -136,15 +136,15 @@ Exemplo conceitual:
 
 ```text
 célula livre
-    ↓
+	↓
 forma orgânica
-    ↓
+	↓
 pressionada contra uma parede/outro corpo
-    ↓
+	↓
 forma se comprime e se adapta ao obstáculo
-    ↓
+	↓
 obstáculo deixa de pressionar
-    ↓
+	↓
 forma retorna gradualmente
 ```
 
