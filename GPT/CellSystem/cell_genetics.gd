@@ -20,7 +20,7 @@ var last_mutation_count: int = 0
 
 static var _next_id: int = 1
 
-const ATTRIBUTE_GENES: Array[String] = ["health", "damage", "speed", "size", "regeneration_rate", "efficiency"]
+const ATTRIBUTE_GENES: Array[String] = ["health", "damage", "speed", "size", "regeneration_rate", "efficiency", "mitosis_cost"]
 const ADAPTATION_GENES: Array[String] = ["cold_adaptation", "temperate_adaptation", "heat_adaptation", "void_adaptation", "humidity_adaptation"]
 const CHARACTERISTIC_GENES: Array[String] = ["territorial", "cooperative_hunter", "camouflage", "armor", "toxin", "specialized_feeding"]
 const BEHAVIOR_GENES: Array[String] = ["sociality", "aggression", "caution", "group_response"]
@@ -34,7 +34,8 @@ const ATTRIBUTE_RANGES: Dictionary = {
 	"speed": [45.0, 100.0],
 	"size": [10.0, 24.0],
 	"regeneration_rate": [2.0, 6.0],
-	"efficiency": [0.0, 1.0]
+	"efficiency": [0.0, 1.0],
+	"mitosis_cost": [500.0, 2000.0]
 }
 
 func initialize_random() -> void:
