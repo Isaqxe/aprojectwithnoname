@@ -147,7 +147,7 @@ func add_resources(amount: float) -> void:
 		return
 	var was_critical: bool = get_energy_ratio() <= critical_energy_threshold
 	resources = minf(resources + amount, resource_capacity)
-	if was_critical and critical_food_heal > 0.0 and alive and not is_in_mitosis_grace():
+	if was_critical and critical_food_heal > 0.0 and alive:
 		health = minf(health + critical_food_heal, max_health)
 
 func consume_resources(amount: float) -> bool:
