@@ -10,6 +10,8 @@ var initial_resources: int = 1000
 var max_resources: int = 2302
 var domain_radius: float = 3000.0
 var simulation_time_limit: float = 0.0
+var initial_time_scale: float = 1.0
+var presentation_mode_on_start: bool = true
 
 func reset_defaults() -> void:
 	auto_spawn_cells = false
@@ -19,3 +21,5 @@ func reset_defaults() -> void:
 	max_resources = 2302
 	domain_radius = 3000.0
 	simulation_time_limit = 0.0
+	initial_time_scale = 1.0
+	presentation_mode_on_start = true
