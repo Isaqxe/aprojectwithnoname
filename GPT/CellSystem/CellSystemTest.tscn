@@ -34,7 +34,7 @@ initial_population = 30
 max_population = 10000
 initial_species_count = 30
 
-[node name="CellFactory" type="Node" parent="CellManager" unique_id=680687788]
+[node name="CellFactory" type="Node" parent="CellManager" unique_id=6801978176]
 script = ExtResource("3_factory")
 cell_scene = ExtResource("4_cell")
 
@@ -47,6 +47,7 @@ initial_resources = 1000
 max_resources = 2302
 
 [node name="CellInspector" type="Node" parent="." unique_id=2036286134]
+process_mode = 3
 script = ExtResource("7_inspector")
 
 [node name="SimulationCamera" type="Camera2D" parent="." unique_id=7919634]
