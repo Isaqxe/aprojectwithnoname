@@ -6,6 +6,7 @@ extends "res://GPT/CellSystem/simulation_cell_clean.gd"
 const SPATIAL_INDEX_GROUP := "CellSpatialIndexes"
 const RESOURCE_INDEX_GROUP := "ResourceSpatialIndexes"
 const SPATIAL_BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior_spatial.gd")
+const COMBAT_SCRIPT := preload("res://GPT/CellSystem/cell_combat.gd")
 
 var initial_species_id: String = ""
 var _spatial_index: Node = null
@@ -32,6 +33,21 @@ func _ready() -> void:
 		initial_species_id = species_id.strip_edges()
 
 	super._ready()
+
+	## simulation_cell_clean currently exposes the common behavior helpers but
+	## does not own the optimized runtime dependencies. Initialize them here.
+	if combat == null or not is_instance_valid(combat):
+		combat = COMBAT_SCRIPT.new()
+		combat.damage = cell_data.damage
+		combat.cooldown = randf_range(0.35, 0.65)
+		add_child(combat)
+
+	_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
+	_cell_manager = get_tree().get_first_node_in_group("CellManagers")
+	add_to_group("SimCells")
+	if is_player_controlled:
+		add_to_group("PlayerCharacter")
+	_perception_timer = randf_range(0.0, perception_interval)
 
 	if initial_species_id.is_empty():
 		initial_species_id = species_id.strip_edges()
@@ -64,17 +80,48 @@ func _register_biology_genes() -> void:
 
 func _physics_process(delta: float) -> void:
 	_spawn_grace_time = maxf(_spawn_grace_time - delta, 0.0)
-	super._physics_process(delta)
-	if cell_data == null or not is_instance_valid(cell_data):
-		return
-	if not cell_data.alive:
+	if cell_data == null or not is_instance_valid(cell_data) or not cell_data.alive:
 		_die_as_organism()
 		return
+
+	if combat != null and is_instance_valid(combat) and combat.has_method("update"):
+		combat.update(delta)
+	_flash_timer = maxf(_flash_timer - delta, 0.0)
+
+	if mitosis != null and is_instance_valid(mitosis) and mitosis.active:
+		velocity = Vector2.ZERO
+		if mitosis.update(delta):
+			_finish_mitosis()
+		queue_redraw()
+		return
+
+	_perception_timer -= delta
+	_wander_direction_timer -= delta
+	if _perception_timer <= 0.0:
+		_refresh_perception()
+		_perception_timer = perception_interval
+
+	if is_player_controlled:
+		_process_player(delta)
+	else:
+		_process_ai(delta)
+
+	velocity = _direction * cell_data.speed
+	move_and_slide()
+	_process_collisions()
+	_process_resources()
+	_process_mitosis()
+	_process_environment(delta)
+
+	if behavior.state == CellBehavior.BehaviorState.WANDER:
+		cell_data.regenerate(delta)
+
 	if cell_data.has_method("set_activity_level"):
 		var movement_ratio: float = 0.0
 		if cell_data.speed > 0.0:
 			movement_ratio = clampf(velocity.length() / cell_data.speed, 0.0, 1.0)
 		cell_data.set_activity_level(movement_ratio)
+	queue_redraw()
 
 func get_species_id() -> String:
 	if genetics != null and is_instance_valid(genetics):
