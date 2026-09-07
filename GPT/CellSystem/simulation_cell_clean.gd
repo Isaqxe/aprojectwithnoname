@@ -76,6 +76,7 @@ func _ready() -> void:
 	add_child(mitosis)
 
 	genetics = GENETICS_SCRIPT.new()
+	add_child(genetics)
 	if inherited_data.is_empty():
 		genetics.species_id = cell_data.species_id
 		genetics.initialize_random()
@@ -95,76 +96,11 @@ func _ready() -> void:
 	if genetics != null and is_instance_valid(genetics) and mitosis != null and is_instance_valid(mitosis):
 		mitosis.set_genetic_base_cost(genetics.get_gene("mitosis_cost", mitosis.base_resource_cost))
 
-	add_child(genetics)
-
 	_apply_behavior_genes()
 
 	adaptation = ADAPTATION_SCRIPT.new()
 	adaptation.setup(self)
 	add_child(adaptation)
-
-	combat = COMBAT_SCRIPT.new()
-	combat.damage = cell_data.damage
-	combat.cooldown = randf_range(0.35, 0.65)
-	add_child(combat)
-
-	_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
-	_update_collision_shape()
-
-	_cell_manager = get_tree().get_first_node_in_group("CellManagers")
-	add_to_group("SimCells")
-	if is_player_controlled:
-		add_to_group("PlayerCharacter")
-
-	if _cell_manager != null and _cell_manager.has_method("get_species_color"):
-		set_species_color(_cell_manager.get_species_color(String(species_id)))
-	else:
-		_base_color = Color.from_hsv(randf(), 0.55, 0.95)
-
-	_perception_timer = randf_range(0.0, perception_interval)
-	queue_redraw()
-
-func set_species_color(color: Color) -> void:
-	species_color = color
-	_base_color = color
-	queue_redraw()
-
-func _physics_process(delta: float) -> void:
-	if cell_data == null or not cell_data.alive:
-		return
-
-	combat.update(delta)
-	_flash_timer = maxf(_flash_timer - delta, 0.0)
-
-	if mitosis.active:
-		velocity = Vector2.ZERO
-		if mitosis.update(delta):
-			_finish_mitosis()
-		queue_redraw()
-		return
-
-	_perception_timer -= delta
-	_wander_direction_timer -= delta
-	if _perception_timer <= 0.0:
-		_refresh_perception()
-		_perception_timer = perception_interval
-
-	if is_player_controlled:
-		_process_player(delta)
-	else:
-		_process_ai(delta)
-
-	velocity = _direction * cell_data.speed
-	move_and_slide()
-	_process_collisions()
-	_process_resources()
-	_process_mitosis()
-	_process_environment(delta)
-
-	if behavior.state == CellBehavior.BehaviorState.WANDER:
-		cell_data.regenerate(delta)
-
-	queue_redraw()
 
 func _register_biology_genes() -> void:
 	genetics.set_gene("health", cell_data.max_health)
@@ -365,136 +301,63 @@ func get_inspection_data() -> Dictionary:
 		"regeneration_rate": cell_data.regeneration_rate,
 		"resources": cell_data.resources,
 		"resource_capacity": cell_data.resource_capacity,
+		"hunger_state": cell_data.get_hunger_state() if cell_data.has_method("get_hunger_state") else "UNKNOWN",
+		"energy_ratio": cell_data.get_energy_ratio() if cell_data.has_method("get_energy_ratio") else 0.0,
 		"mitosis_count": mitosis.mitosis_count,
 		"next_mitosis_cost": mitosis.get_resource_cost(),
-		"genes": lineage.get("genes", {}),
-		"environment": adaptation.last_environment if adaptation != null else {},
-		"environment_stress": adaptation.get_stress() if adaptation != null else 0.0,
-		"fear": behavior.fear,
-		"nearby_allies": _cached_allies.size()
+		"genes": genetics.get_all_gene_data(),
+		"environment": adaptation.get_environment_data() if adaptation != null and is_instance_valid(adaptation) and adaptation.has_method("get_environment_data") else {},
+		"environment_stress": adaptation.get_stress_level() if adaptation != null and is_instance_valid(adaptation) and adaptation.has_method("get_stress_level") else 0.0
 	}
 
-func _process_collisions() -> void:
-	for index in range(get_slide_collision_count()):
-		var collision: KinematicCollision2D = get_slide_collision(index)
-		var collider: Object = collision.get_collider()
-		if collider == null or collider == self:
-			continue
-		if not collider is CharacterBody2D or not collider.is_in_group("SimCells"):
-			continue
-		if not behavior.is_valid_enemy(self, collider as CharacterBody2D):
-			continue
-
-		var target_data: Node = collider.get("cell_data") as Node
-		var was_alive: bool = target_data != null and bool(target_data.get("alive"))
-		var attack_succeeded: bool = combat.attack(collider)
-		if attack_succeeded and was_alive and target_data != null and not bool(target_data.get("alive")):
-			cell_data.add_resources(elimination_resource_reward)
-			if _target == collider:
-				_target = null
-
-func _process_resources() -> void:
-	if not cell_data.can_accept_resources():
-		_resource_target = null
-		return
-	if is_player_controlled:
-		_collect_nearby_resource()
-		return
-	if not is_instance_valid(_resource_target):
-		return
-	if global_position.distance_to(_resource_target.global_position) <= cell_data.size + resource_collect_radius:
-		_collect_resource(_resource_target)
-
-func _collect_nearby_resource() -> void:
-	for candidate in get_tree().get_nodes_in_group("WorldResources"):
-		if not is_instance_valid(candidate) or not candidate is Area2D:
-			continue
-		var resource: Area2D = candidate as Area2D
-		if global_position.distance_to(resource.global_position) <= cell_data.size + resource_collect_radius:
-			_collect_resource(resource)
-			return
-
-func _collect_resource(resource_node: Area2D) -> void:
-	if not resource_node.has_method("collect"):
-		return
-	var collected: float = resource_node.collect()
-	if collected > 0.0:
-		cell_data.add_resources(collected)
-	_resource_target = null
-
-func _process_environment(delta: float) -> void:
-	if adaptation == null or not is_instance_valid(adaptation):
-		return
-	adaptation.apply_stress(delta, genetics)
-
-func _process_mitosis() -> void:
-	if mitosis.active or behavior.state != CellBehavior.BehaviorState.WANDER:
-		return
-	if _wander_time < mitosis.required_wander_time:
-		return
-	if cell_data.resources < mitosis.get_resource_cost():
-		return
-	if _cell_manager == null or not is_instance_valid(_cell_manager):
-		_cell_manager = get_tree().get_first_node_in_group("CellManagers")
-	if _cell_manager == null or not _cell_manager.has_method("spawn_mitosis_child"):
-		return
-	if _cell_manager.get_population() >= _cell_manager.max_population:
-		return
-	var cost: float = mitosis.get_resource_cost()
-	if not cell_data.consume_resources(cost):
-		return
-	_wander_time = 0.0
-	_direction = Vector2.ZERO
-	behavior.set_state(CellBehavior.BehaviorState.MITOSIS)
-	mitosis.start()
-
 func _finish_mitosis() -> void:
-	var child: Node = null
-	if _cell_manager != null and is_instance_valid(_cell_manager):
-		child = _cell_manager.spawn_mitosis_child(self)
+	var child: Node = _cell_manager.spawn_mitosis_child(self) if _cell_manager != null and is_instance_valid(_cell_manager) and _cell_manager.has_method("spawn_mitosis_child") else null
 	if child != null:
 		mitosis.complete_generation()
 	else:
-		cell_data.add_resources(mitosis.get_resource_cost())
-	behavior.set_state(CellBehavior.BehaviorState.WANDER)
-	_wander_time = 0.0
-	mitosis.reset()
+		mitosis.reset()
 
-func take_damage(amount: float, attacker: Node = null) -> bool:
-	if cell_data == null:
-		return false
-	if attacker != null and is_instance_valid(attacker) and not behavior.is_valid_enemy(self, attacker):
-		return false
-	var damage_applied: bool = cell_data.take_damage(amount, attacker)
-	if not damage_applied:
-		return false
-	if cell_data.alive:
-		_flash_timer = 0.08
-		return true
-	queue_free()
-	return true
-
-func _update_collision_shape() -> void:
-	if _collision_shape == null or _collision_shape.shape == null or cell_data == null:
+func _process_collisions() -> void:
+	var slide_velocity: Vector2 = velocity
+	if slide_velocity.length_squared() <= 0.01:
 		return
-	var circle_shape: CircleShape2D = _collision_shape.shape as CircleShape2D
-	if circle_shape == null:
+	for index in get_slide_collision_count():
+		var collision := get_slide_collision(index)
+		var collider: Object = collision.get_collider()
+		if collider == null or not collider is Node:
+			continue
+		var other: Node = collider as Node
+		if other.has_method("take_damage") and other != self:
+			combat.try_attack(other)
+
+func _process_resources() -> void:
+	if not is_instance_valid(_resource_target):
 		return
-	circle_shape.radius = cell_data.size + combat_contact_margin
+	if global_position.distance_to(_resource_target.global_position) > resource_collect_radius:
+		return
+	if not _resource_target.has_method("consume"):
+		_resource_target = null
+		return
+	var amount: float = float(_resource_target.get("amount"))
+	if cell_data.can_accept_resources():
+		_resource_target.consume(self)
+		cell_data.add_resources(amount)
+		_resource_target = null
 
-func _draw() -> void:
-	var visible_color: Color = _base_color
-	if _flash_timer > 0.0:
-		visible_color = Color(0.9, 0.95, 1.0, 1.0)
-	var radius: float = cell_data.size if cell_data != null else 16.0
-	draw_circle(Vector2.ZERO, radius, visible_color)
+func _process_mitosis() -> void:
+	if not is_instance_valid(mitosis):
+		return
+	if cell_data.is_in_mitosis_grace():
+		return
+	if mitosis.active:
+		return
+	if cell_data.resources < mitosis.get_resource_cost():
+		return
+	if behavior.state != CellBehavior.BehaviorState.MITOSIS:
+		return
+	cell_data.consume_resources(mitosis.get_resource_cost())
+	mitosis.start()
 
-	if cell_data != null and cell_data.alive and cell_data.health < cell_data.max_health - 0.01:
-		var max_health_value: float = maxf(cell_data.max_health, 0.001)
-		var health_ratio: float = clampf(cell_data.health / max_health_value, 0.0, 1.0)
-		var bar_width: float = maxf(health_bar_width, radius * 1.6)
-		var bar_height: float = maxf(health_bar_height, 2.0)
-		var bar_top: float = -radius - health_bar_offset - bar_height
-		var bar_left: float = -bar_width * 0.5
-		draw_rect(Rect2(bar_left, bar_top, bar_width, bar_height), Color(0.08, 0.08, 0.08, 0.85), true)
-		draw_rect(Rect2(bar_left, bar_top, bar_width * health_ratio, bar_height), Color(0.35, 0.9, 0.35, 1.0), true)
+func _process_environment(_delta: float) -> void:
+	if adaptation != null and is_instance_valid(adaptation) and adaptation.has_method("update_environment"):
+		adaptation.update_environment()
