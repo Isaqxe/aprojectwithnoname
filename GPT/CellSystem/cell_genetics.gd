@@ -71,16 +71,16 @@ func initialize_from_parent(parent_genetics: Node, inherited_genes: Dictionary) 
 	else:
 		for gene_name in inherited_genes.keys():
 			var value: Variant = inherited_genes[gene_name]
-			var name: String = String(gene_name)
+			var gene_key: String = String(gene_name)
 			if value is bool:
-				_create_boolean_gene(name, bool(value))
+				_create_boolean_gene(gene_key, bool(value))
 			else:
 				var category: String = GENE_SCRIPT.CATEGORY_ADAPTATION
-				if name in ATTRIBUTE_GENES:
+				if gene_key in ATTRIBUTE_GENES:
 					category = GENE_SCRIPT.CATEGORY_ATTRIBUTE
-				elif name in BEHAVIOR_GENES:
+				elif gene_key in BEHAVIOR_GENES:
 					category = GENE_SCRIPT.CATEGORY_CHARACTERISTIC
-				_create_numeric_gene(name, float(value), category)
+				_create_numeric_gene(gene_key, float(value), category)
 
 	_ensure_all_genes()
 
