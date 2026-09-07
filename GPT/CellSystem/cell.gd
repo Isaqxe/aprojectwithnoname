@@ -32,6 +32,7 @@ extends CharacterBody2D
 var resources: float = 0.0
 var health: float
 var alive: bool = true
+var death_reason: String = "Desconhecida"
 var _activity_level: float = 0.0
 var _mitosis_grace_remaining: float = 0.0
 
@@ -87,6 +88,7 @@ func take_damage(amount: float, attacker: Node = null) -> bool:
 
 	health -= amount
 	if health <= 0.0:
+		death_reason = "Combate"
 		die()
 	return true
 
@@ -117,7 +119,8 @@ func process_metabolism(delta: float, activity: float = 0.0) -> void:
 	resources = maxf(resources - drain * delta, 0.0)
 
 	if not is_in_mitosis_grace() and resources <= critical_energy_threshold * resource_capacity:
-		take_environmental_damage(starvation_damage_per_second * delta)
+		death_reason = "Fome"
+		take_environmental_damage(starvation_damage_per_second * delta, death_reason)
 
 func get_energy_ratio() -> float:
 	if resource_capacity <= 0.0:
@@ -156,13 +159,17 @@ func consume_resources(amount: float) -> bool:
 	resources -= amount
 	return true
 
-func take_environmental_damage(amount: float) -> bool:
+func take_environmental_damage(amount: float, reason: String = "Estresse ambiental") -> bool:
 	if not alive or amount <= 0.0 or is_in_mitosis_grace():
 		return false
+	death_reason = reason
 	health -= amount
 	if health <= 0.0:
 		die()
 	return true
+
+func get_death_reason() -> String:
+	return death_reason
 
 func attack(target: Node) -> void:
 	if not can_attack():
@@ -185,3 +192,7 @@ func die() -> void:
 	resources = 0.0
 	alive = false
 	health = 0.0
+
+	var death_log: Node = get_node_or_null("/root/SimulationDeathLog")
+	if death_log != null and is_instance_valid(death_log) and death_log.has_method("record_death"):
+		death_log.record_death(cell_id, species_id, death_reason, global_position)
