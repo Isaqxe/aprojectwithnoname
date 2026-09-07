@@ -25,11 +25,10 @@ var _debug_timer: float = 0.0
 var presentation_mode: bool = false
 var simulation_elapsed: float = 0.0
 var fps_visible: bool = false
+var simulation_time_limit: float = 0.0
+var simulation_limit_reached: bool = false
 
 func _ready() -> void:
-	var config: Node = get_node_or_null("/root/SimulationConfig")
-	if config != null and config.has_method("begin_simulation"):
-		config.begin_simulation()
 	_apply_simulation_config()
 	if simulation_time_label != null:
 		simulation_time_label.text = "Ticks: 0"
@@ -37,14 +36,24 @@ func _ready() -> void:
 		fps_label.text = "FPS: --"
 		fps_label.visible = false
 
+	var config: Node = get_node_or_null("/root/SimulationConfig")
 	if config != null and bool(config.get("presentation_mode_on_start")):
 		_set_presentation_mode(true)
 
 func _process(delta: float) -> void:
-	simulation_elapsed += delta
+	if simulation_time_limit > 0.0 and not simulation_limit_reached:
+		simulation_elapsed += maxf(delta, 0.0)
+		if simulation_elapsed >= simulation_time_limit:
+			simulation_limit_reached = true
+			Engine.time_scale = 0.0
+	else:
+		simulation_elapsed += maxf(delta, 0.0)
+
 	if simulation_time_label != null:
 		var simulation_ticks: int = floori(simulation_elapsed / TICK_DURATION)
 		simulation_time_label.text = "Ticks: %d" % simulation_ticks
+		if simulation_limit_reached:
+			simulation_time_label.text += " | LIMITE ATINGIDO"
 	if fps_visible and fps_label != null:
 		fps_label.text = "FPS: %d" % Engine.get_frames_per_second()
 
@@ -136,12 +145,20 @@ func _toggle_presentation_mode() -> void:
 func _apply_simulation_config() -> void:
 	var config: Node = get_node_or_null("/root/SimulationConfig")
 	if config == null:
+		Engine.time_scale = 1.0
 		return
-	cell_manager.auto_spawn = bool(config.get("auto_spawn_cells"))
-	cell_manager.initial_population = int(config.get("initial_population"))
-	cell_manager.max_population = int(config.get("max_population"))
-	resource_spawner.initial_resources = int(config.get("initial_resources"))
-	resource_spawner.max_resources = int(config.get("max_resources"))
-	experimental_domain.radius = float(config.get("domain_radius"))
-	var initial_time_scale: float = float(config.get("initial_time_scale"))
-	Engine.time_scale = clampf(initial_time_scale, 0.25, 32.0)
+
+	Engine.time_scale = clampf(float(config.get("initial_time_scale")), 0.25, 32.0)
+	simulation_time_limit = maxf(float(config.get("simulation_time_limit")), 0.0)
+
+	if cell_manager != null:
+		cell_manager.auto_spawn = bool(config.get("auto_spawn_cells"))
+		cell_manager.initial_population = maxi(int(config.get("initial_population")), 1)
+		cell_manager.max_population = maxi(int(config.get("max_population")), cell_manager.initial_population)
+
+	if resource_spawner != null:
+		resource_spawner.initial_resources = maxi(int(config.get("initial_resources")), 0)
+		resource_spawner.max_resources = maxi(int(config.get("max_resources")), resource_spawner.initial_resources)
+
+	if experimental_domain != null:
+		experimental_domain.radius = maxf(float(config.get("domain_radius")), 500.0)
