@@ -11,6 +11,8 @@ const SIMULATION_SCENE := preload("res://GPT/CellSystem/CellSystemTest.tscn")
 @onready var resources: SpinBox = $Center/Panel/Margin/VBox/Resources/Value
 @onready var max_resources: SpinBox = $Center/Panel/Margin/VBox/MaxResources/Value
 @onready var radius: SpinBox = $Center/Panel/Margin/VBox/Radius/Value
+@onready var initial_time_scale: SpinBox = $Center/Panel/Margin/VBox/InitialTimeScale/Value
+@onready var presentation_mode: CheckBox = $Center/Panel/Margin/VBox/PresentationMode
 @onready var start_button: Button = $Center/Panel/Margin/VBox/Buttons/Start
 @onready var back_button: Button = $Center/Panel/Margin/VBox/Buttons/Back
 
@@ -23,6 +25,8 @@ func _ready() -> void:
 		resources.value = int(config.get("initial_resources"))
 		max_resources.value = int(config.get("max_resources"))
 		radius.value = float(config.get("domain_radius"))
+		initial_time_scale.value = float(config.get("initial_time_scale"))
+		presentation_mode.button_pressed = bool(config.get("presentation_mode_on_start"))
 
 	start_button.pressed.connect(_start_simulation)
 	back_button.pressed.connect(_back_to_main_menu)
@@ -38,6 +42,8 @@ func _start_simulation() -> void:
 	config.set("initial_resources", int(resources.value))
 	config.set("max_resources", int(max_resources.value))
 	config.set("domain_radius", float(radius.value))
+	config.set("initial_time_scale", float(initial_time_scale.value))
+	config.set("presentation_mode_on_start", presentation_mode.button_pressed)
 	get_tree().change_scene_to_packed(SIMULATION_SCENE)
 
 func _back_to_main_menu() -> void:
