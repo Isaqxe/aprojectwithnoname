@@ -40,12 +40,13 @@ func _sync_layout() -> void:
 
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	if toolbar != null and is_instance_valid(toolbar):
-		toolbar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-		toolbar.position = Vector2(0.0, 0.0)
-		toolbar.offset_left = 12.0
-		toolbar.offset_right = -12.0
-		toolbar.offset_top = -96.0
-		toolbar.offset_bottom = -toolbar_bottom_margin
+		if not toolbar.has_meta("simulation_tools_animating"):
+			toolbar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+			toolbar.position = Vector2(0.0, 0.0)
+			toolbar.offset_left = 12.0
+			toolbar.offset_right = -12.0
+			toolbar.offset_top = -96.0
+			toolbar.offset_bottom = -toolbar_bottom_margin
 
 	if popup != null and is_instance_valid(popup) and popup.visible:
 		popup.set_anchors_preset(Control.PRESET_TOP_LEFT)
