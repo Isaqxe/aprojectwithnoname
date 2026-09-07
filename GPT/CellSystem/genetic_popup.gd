@@ -1,8 +1,9 @@
-extends PanelContainer
+extends Panel
 class_name GeneticPopup
 
 ## Persistent genetic profile window.
 ## The Inspector owns the lifetime of each popup and may provide a comparison profile.
+## The window supports continuous dragging and interactive resizing.
 
 signal close_requested(popup: GeneticPopup)
 
@@ -14,10 +15,17 @@ var _species_label: Label
 var _generation_label: Label
 var _mutation_label: Label
 var _body: VBoxContainer
-var _drag_origin: Vector2 = Vector2.ZERO
+var _resize_handle: Control
 var _dragging: bool = false
+var _resizing: bool = false
+var _drag_offset: Vector2 = Vector2.ZERO
+var _resize_origin_mouse: Vector2 = Vector2.ZERO
+var _resize_origin_size: Vector2 = Vector2.ZERO
 
-const POPUP_SIZE := Vector2(390.0, 0.0)
+const DEFAULT_SIZE := Vector2(390.0, 420.0)
+const MIN_SIZE := Vector2(300.0, 260.0)
+const MAX_SIZE := Vector2(760.0, 900.0)
+const EDGE_MARGIN := 8.0
 
 const GENE_GROUPS: Array[Dictionary] = [
 	{"title": "ATRIBUTOS", "genes": [
@@ -51,10 +59,11 @@ const GENE_GROUPS: Array[Dictionary] = [
 ]
 
 func _ready() -> void:
-	custom_minimum_size = POPUP_SIZE
-	size = Vector2(390.0, 420.0)
+	custom_minimum_size = MIN_SIZE
+	size = DEFAULT_SIZE
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	_build_ui()
+	_clamp_to_viewport()
 
 func set_cell(cell: Node) -> void:
 	_cell = cell
@@ -73,10 +82,12 @@ func get_profile_data() -> Dictionary:
 
 func _build_ui() -> void:
 	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 14)
 	margin.add_theme_constant_override("margin_top", 12)
 	margin.add_theme_constant_override("margin_right", 14)
-	margin.add_theme_constant_override("margin_bottom", 12)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(margin)
 
 	var column := VBoxContainer.new()
@@ -85,6 +96,7 @@ func _build_ui() -> void:
 
 	var header := HBoxContainer.new()
 	header.custom_minimum_size = Vector2(0.0, 34.0)
+	header.mouse_default_cursor_shape = Control.CURSOR_MOVE
 	header.gui_input.connect(_on_header_input)
 	column.add_child(header)
 
@@ -114,9 +126,24 @@ func _build_ui() -> void:
 	_mutation_label.add_theme_font_size_override("font_size", 12)
 	column.add_child(_mutation_label)
 
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(scroll)
+
 	_body = VBoxContainer.new()
 	_body.add_theme_constant_override("separation", 5)
-	column.add_child(_body)
+	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_body)
+
+	_resize_handle = Control.new()
+	_resize_handle.name = "ResizeHandle"
+	_resize_handle.custom_minimum_size = Vector2(22.0, 22.0)
+	_resize_handle.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	_resize_handle.mouse_default_cursor_shape = Control.CURSOR_FDIAGSIZE
+	_resize_handle.gui_input.connect(_on_resize_handle_input)
+	_resize_handle.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_resize_handle)
 
 func _refresh_data() -> void:
 	if not is_instance_valid(_cell) or not _cell.has_method("get_inspection_data"):
@@ -163,6 +190,8 @@ func _render() -> void:
 			row.add_child(label)
 
 			var current_data: Dictionary = _get_gene_data(_data, gene_name)
+			var differs: bool = not _comparison_data.is_empty() and _gene_differs(gene_name)
+
 			var phenotype_label := Label.new()
 			phenotype_label.text = _format_phenotype(current_data.get("phenotype", 0.0))
 			phenotype_label.custom_minimum_size = Vector2(70.0, 0.0)
@@ -172,12 +201,12 @@ func _render() -> void:
 
 			var genotype_label := Label.new()
 			genotype_label.text = _format_genotype(current_data)
-			genotype_label.custom_minimum_size = Vector2(88.0, 0.0)
+			genotype_label.custom_minimum_size = Vector2(108.0, 0.0)
 			genotype_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 			genotype_label.add_theme_font_size_override("font_size", 11)
 			row.add_child(genotype_label)
 
-			if not _comparison_data.is_empty() and _gene_differs(gene_name):
+			if differs:
 				label.text += "  ≠"
 				genotype_label.text += "  DIF."
 
@@ -232,26 +261,58 @@ func _request_close() -> void:
 	close_requested.emit(self)
 
 func _on_header_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		var mouse_event := event as InputEventMouseButton
-		if mouse_event.button_index == MOUSE_BUTTON_LEFT:
-			_dragging = mouse_event.pressed
-			if _dragging:
-				_drag_origin = get_global_mouse_position() - global_position
-	elif event is InputEventMouseMotion and _dragging:
-		var motion := event as InputEventMouseMotion
-		global_position = motion.global_position - _drag_origin
-		_clamp_to_viewport()
+	if event is not InputEventMouseButton:
+		return
+	var mouse_event := event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if not mouse_event.pressed:
+		return
+	if _resizing:
+		return
+	_dragging = true
+	_drag_offset = get_global_mouse_position() - global_position
+	accept_event()
+
+func _on_resize_handle_input(event: InputEvent) -> void:
+	if not event is InputEventMouseButton:
+		return
+	var mouse_event := event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if mouse_event.pressed:
+		_resizing = true
+		_resize_origin_mouse = get_global_mouse_position()
+		_resize_origin_size = size
+		accept_event()
+	else:
+		_resizing = false
 
 func _input(event: InputEvent) -> void:
-	if _dragging and event is InputEventMouseButton:
+	if event is InputEventMouseMotion:
+		var motion := event as InputEventMouseMotion
+		if _dragging:
+			global_position = motion.global_position - _drag_offset
+			_clamp_to_viewport()
+			get_viewport().set_input_as_handled()
+		elif _resizing:
+			var delta: Vector2 = motion.global_position - _resize_origin_mouse
+			var new_size: Vector2 = Vector2(
+				clampf(_resize_origin_size.x + delta.x, MIN_SIZE.x, MAX_SIZE.x),
+				clampf(_resize_origin_size.y + delta.y, MIN_SIZE.y, MAX_SIZE.y)
+			)
+			size = new_size
+			_clamp_to_viewport()
+			get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton and not (event as InputEventMouseButton).pressed:
 		var mouse_event := event as InputEventMouseButton
-		if mouse_event.button_index == MOUSE_BUTTON_LEFT and not mouse_event.pressed:
+		if mouse_event.button_index == MOUSE_BUTTON_LEFT:
 			_dragging = false
+			_resizing = false
 
 func _clamp_to_viewport() -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var max_x: float = maxf(8.0, viewport_size.x - size.x - 8.0)
-	var max_y: float = maxf(8.0, viewport_size.y - size.y - 8.0)
-	position.x = clampf(position.x, 8.0, max_x)
-	position.y = clampf(position.y, 8.0, max_y)
+	var max_x: float = maxf(EDGE_MARGIN, viewport_size.x - size.x - EDGE_MARGIN)
+	var max_y: float = maxf(EDGE_MARGIN, viewport_size.y - size.y - EDGE_MARGIN)
+	position.x = clampf(position.x, EDGE_MARGIN, max_x)
+	position.y = clampf(position.y, EDGE_MARGIN, max_y)
