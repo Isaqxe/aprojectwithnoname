@@ -64,7 +64,7 @@ custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 text = "População inicial"
 
-[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/Population"]
+[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/Population]
 layout_mode = 2
 value = 500
 min_value = 1
@@ -89,12 +89,12 @@ step = 10
 [node name="Resources" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/VBox/Resources"]
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBox/Resources]
 custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 text = "Recursos iniciais"
 
-[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/Resources"]
+[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/Resources]
 layout_mode = 2
 value = 1000
 min_value = 0
@@ -104,12 +104,12 @@ step = 50
 [node name="MaxResources" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/VBox/MaxResources"]
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBox/MaxResources]
 custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 text = "Recursos máximos"
 
-[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/MaxResources"]
+[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/MaxResources]
 layout_mode = 2
 value = 2302
 min_value = 1
@@ -124,7 +124,7 @@ custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 text = "Raio do domínio"
 
-[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/Radius"]
+[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/Radius]
 layout_mode = 2
 value = 3000
 min_value = 500
@@ -134,12 +134,12 @@ step = 100
 [node name="InitialTimeScale" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/VBox/InitialTimeScale"]
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBox/InitialTimeScale]
 custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 text = "Velocidade inicial"
 
-[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/InitialTimeScale"]
+[node name="Value" type="SpinBox" parent="Center/Panel/Margin/VBox/InitialTimeScale]
 layout_mode = 2
 value = 1.0
 min_value = 0.25
