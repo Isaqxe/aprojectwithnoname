@@ -45,19 +45,21 @@ func _process(delta: float) -> void:
 	_update_spawn_area()
 	spawn_timer -= delta
 
-	var count: int = resources.size()
 	var emergency_threshold: int = maxi(1, int(float(max_resources) * emergency_spawn_fraction))
 	var normal_threshold: int = maxi(emergency_threshold, int(float(max_resources) * respawn_when_below_fraction))
 
-	if count < emergency_threshold:
-		if spawn_timer <= 0.0:
-			spawn_resource()
-			spawn_timer = emergency_spawn_interval
+	if resources.size() >= max_resources:
 		return
 
-	if count < normal_threshold and spawn_timer <= 0.0:
+	if resources.size() < emergency_threshold:
+		if spawn_timer <= 0.0:
+			spawn_resource()
+			spawn_timer = maxf(emergency_spawn_interval, 0.05)
+		return
+
+	if resources.size() < normal_threshold and spawn_timer <= 0.0:
 		spawn_resource()
-		spawn_timer = spawn_interval
+		spawn_timer = maxf(spawn_interval, 0.05)
 
 func _resolve_nodes() -> void:
 	if experimental_domain == null or not is_instance_valid(experimental_domain):
@@ -69,8 +71,14 @@ func _apply_simulation_config() -> void:
 	var config: Node = get_node_or_null("/root/SimulationConfig")
 	if config == null:
 		return
-	initial_resources = int(config.get("initial_resources"))
-	max_resources = int(config.get("max_resources"))
+	initial_resources = maxi(int(config.get("initial_resources")), 0)
+	max_resources = maxi(int(config.get("max_resources")), initial_resources)
+	spawn_interval = maxf(float(config.get("resource_spawn_interval")), 0.05)
+	respawn_when_below_fraction = clampf(float(config.get("resource_respawn_fraction")), 0.0, 1.0)
+	emergency_spawn_fraction = clampf(float(config.get("resource_emergency_fraction")), 0.0, 1.0)
+	emergency_spawn_interval = maxf(float(config.get("resource_emergency_interval")), 0.05)
+	if emergency_spawn_fraction > respawn_when_below_fraction:
+		emergency_spawn_fraction = respawn_when_below_fraction
 
 func _update_spawn_area() -> void:
 	## Intentionally does not copy camera bounds.
@@ -84,7 +92,7 @@ func spawn_resource() -> Node:
 	var spawn_position: Vector2 = Vector2.INF
 	var chosen_environment: Dictionary = {}
 
-	for _attempt in range(max_spawn_attempts):
+	for _attempt in range(max(max_spawn_attempts, 1)):
 		var candidate: Vector2 = _random_domain_position()
 		if not _is_position_clear(candidate):
 			continue
@@ -127,7 +135,7 @@ func spawn_death_drop(death_position: Vector2, stored_energy: float) -> int:
 		spawned_count += 1
 		remaining_energy -= first_pile
 
-	while remaining_energy > 0.0:
+	while remaining_energy > 0.0 and resources.size() < max_resources:
 		var pile_amount: float = minf(remaining_energy, pile_limit)
 		var random_position: Vector2 = _random_domain_position()
 		if not _spawn_resource_pile(random_position, pile_amount):
@@ -140,7 +148,7 @@ func spawn_death_drop(death_position: Vector2, stored_energy: float) -> int:
 ## Death piles intentionally do not use the normal resource spacing rule.
 ## Several piles may occupy the same location; their stored energy is still exact.
 func _spawn_resource_pile(spawn_position: Vector2, pile_amount: float) -> bool:
-	if resource_scene == null or pile_amount <= 0.0:
+	if resource_scene == null or pile_amount <= 0.0 or resources.size() >= max_resources:
 		return false
 
 	var resource_node: Node = resource_scene.instantiate()
@@ -178,7 +186,7 @@ func get_resource_count() -> int:
 	return resources.size()
 
 func _is_position_clear(spawn_position: Vector2) -> bool:
-	var spacing_squared: float = minimum_spacing * minimum_spacing
+	var spacing_squared: float = maxf(minimum_spacing, 0.0) * maxf(minimum_spacing, 0.0)
 	for resource_node in resources:
 		if not is_instance_valid(resource_node):
 			continue
