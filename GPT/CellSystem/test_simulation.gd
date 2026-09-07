@@ -143,4 +143,5 @@ func _apply_simulation_config() -> void:
 	resource_spawner.initial_resources = int(config.get("initial_resources"))
 	resource_spawner.max_resources = int(config.get("max_resources"))
 	experimental_domain.radius = float(config.get("domain_radius"))
-	Engine.time_scale = clampf(float(config.get("initial_time_scale", 1.0)), 0.25, 32.0)
+	var initial_time_scale: float = float(config.get("initial_time_scale"))
+	Engine.time_scale = clampf(initial_time_scale, 0.25, 32.0)
