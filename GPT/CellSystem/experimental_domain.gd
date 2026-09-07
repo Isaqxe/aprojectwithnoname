@@ -26,7 +26,13 @@ func _apply_simulation_config() -> void:
 	var config: Node = get_node_or_null("/root/SimulationConfig")
 	if config == null:
 		return
-	radius = float(config.get("domain_radius"))
+	radius = maxf(float(config.get("domain_radius")), 500.0)
+	base_temperature = clampf(float(config.get("base_temperature")), 0.0, 1.0)
+	base_humidity = clampf(float(config.get("base_humidity")), 0.0, 1.0)
+	base_food_density = clampf(float(config.get("base_food_density")), 0.0, 1.0)
+	temperature_variation = clampf(float(config.get("temperature_variation")), 0.0, 1.0)
+	humidity_variation = clampf(float(config.get("humidity_variation")), 0.0, 1.0)
+	food_edge_penalty = clampf(float(config.get("food_edge_penalty")), 0.0, 1.0)
 
 func get_center() -> Vector2:
 	return global_position if use_node_position_as_center else domain_center
