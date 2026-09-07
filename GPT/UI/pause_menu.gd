@@ -103,7 +103,7 @@ func _set_menu_visible(enabled: bool) -> void:
 		_status_label.text = "A simulação está congelada. Velocidade anterior: %s×" % _format_speed(_saved_time_scale)
 	else:
 		get_tree().paused = false
-		Engine.time_scale = _saved_time_scale if _saved_time_scale > 0.0 else 1.0
+		Engine.time_scale = _saved_time_scale
 
 func _resume() -> void:
 	_set_menu_visible(false)
