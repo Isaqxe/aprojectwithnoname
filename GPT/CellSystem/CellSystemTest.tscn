@@ -34,7 +34,7 @@ initial_population = 30
 max_population = 10000
 initial_species_count = 30
 
-[node name="CellFactory" type="Node" parent="CellManager" unique_id=6801978176]
+[node name="CellFactory" type="Node" parent="CellManager" unique_id=680687788]
 script = ExtResource("3_factory")
 cell_scene = ExtResource("4_cell")
 
