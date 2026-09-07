@@ -1,7 +1,12 @@
-[gd_scene format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://GPT/CellSystem/simulation_tools.gd" id="1_tools"]
+[ext_resource type="Script" path="res://GPT/CellSystem/simulation_ui_layout_guard.gd" id="2_layout"]
 
 [node name="SimulationTools" type="Node"]
 process_mode = 3
 script = ExtResource("1_tools")
+
+[node name="LayoutGuard" type="Node" parent="."]
+process_mode = 3
+script = ExtResource("2_layout")
