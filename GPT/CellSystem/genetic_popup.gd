@@ -123,6 +123,9 @@ func _refresh_data() -> void:
 		_data = {}
 	else:
 		_data = _cell.get_inspection_data()
+		var genetics: Node = _cell.get("genetics") as Node
+		if genetics != null and is_instance_valid(genetics):
+			_data["mutation_count"] = maxi(int(genetics.get("last_mutation_count")), 0)
 	_render()
 
 func _render() -> void:
@@ -159,30 +162,29 @@ func _render() -> void:
 			label.add_theme_font_size_override("font_size", 12)
 			row.add_child(label)
 
+			var current_data: Dictionary = _get_gene_data(_data, gene_name)
 			var phenotype_label := Label.new()
-			phenotype_label.text = _format_phenotype(_get_gene_data(_data, gene_name).get("phenotype", 0.0))
+			phenotype_label.text = _format_phenotype(current_data.get("phenotype", 0.0))
 			phenotype_label.custom_minimum_size = Vector2(70.0, 0.0)
 			phenotype_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 			phenotype_label.add_theme_font_size_override("font_size", 12)
 			row.add_child(phenotype_label)
 
 			var genotype_label := Label.new()
-			genotype_label.text = _format_genotype(_get_gene_data(_data, gene_name))
+			genotype_label.text = _format_genotype(current_data)
 			genotype_label.custom_minimum_size = Vector2(88.0, 0.0)
 			genotype_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 			genotype_label.add_theme_font_size_override("font_size", 11)
 			row.add_child(genotype_label)
 
-			if not _comparison_data.is_empty():
-				var differs: bool = _gene_differs(gene_name)
-				if differs:
-					label.text += "  ≠"
-					genotype_label.text += "  DIF."
+			if not _comparison_data.is_empty() and _gene_differs(gene_name):
+				label.text += "  ≠"
+				genotype_label.text += "  DIF."
 
-		var footer := Label.new()
-		footer.text = "Fenótipo   |   Genótipo (A / B)" if _comparison_data.is_empty() else "Fenótipo   |   Genótipo (A / B)   •   ≠ = diferença"
-		footer.add_theme_font_size_override("font_size", 10)
-		_body.add_child(footer)
+	var footer := Label.new()
+	footer.text = "Fenótipo   |   Genótipo (A / B)" if _comparison_data.is_empty() else "Fenótipo   |   Genótipo (A / B)   •   ≠ = diferença"
+	footer.add_theme_font_size_override("font_size", 10)
+	_body.add_child(footer)
 
 func _get_gene_data(data: Dictionary, gene_name: String) -> Dictionary:
 	var genes: Dictionary = data.get("genes", {})
