@@ -6,7 +6,6 @@ extends "res://GPT/CellSystem/simulation_cell_clean.gd"
 const SPATIAL_INDEX_GROUP := "CellSpatialIndexes"
 const RESOURCE_INDEX_GROUP := "ResourceSpatialIndexes"
 const SPATIAL_BEHAVIOR_SCRIPT := preload("res://GPT/CellSystem/cell_behavior_spatial.gd")
-const COMBAT_SCRIPT := preload("res://GPT/CellSystem/cell_combat.gd")
 
 var initial_species_id: String = ""
 var _spatial_index: Node = null
@@ -34,14 +33,8 @@ func _ready() -> void:
 
 	super._ready()
 
-	## simulation_cell_clean currently exposes the common behavior helpers but
-	## does not own the optimized runtime dependencies. Initialize them here.
-	if combat == null or not is_instance_valid(combat):
-		combat = COMBAT_SCRIPT.new()
-		combat.damage = cell_data.damage
-		combat.cooldown = randf_range(0.35, 0.65)
-		add_child(combat)
-
+	## simulation_cell_clean owns the common runtime dependencies, including combat.
+	## Keep only the optimized behavior replacement and spatial indexes here.
 	_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
 	_cell_manager = get_tree().get_first_node_in_group("CellManagers")
 	add_to_group("SimCells")
