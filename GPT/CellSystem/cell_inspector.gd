@@ -4,6 +4,8 @@ extends Node
 ## Right mouse button selects a cell and shows its data in a fixed top-right UI panel.
 ## Genetics are displayed directly in the primary panel, with genotype details on demand.
 
+const GENETIC_POPUP_SCRIPT := preload("res://GPT/CellSystem/genetic_popup.gd")
+
 @export var collision_mask: int = 1
 @export var panel_width: float = 360.0
 @export var panel_margin: float = 20.0
@@ -13,10 +15,12 @@ extends Node
 var _selected_cell: Node = null
 var _refresh_timer: float = 0.0
 var _presentation_mode: bool = false
+var _canvas: CanvasLayer
 var _panel: PanelContainer
 var _title_label: Label
 var _details_label: Label
 var _genetics_container: VBoxContainer
+var _mutation_badge: Label
 var _tail_details_label: Label
 var _health_bar: ProgressBar
 var _health_text: Label
@@ -28,11 +32,13 @@ var _hover_value_label: Label = null
 var _hover_elapsed: float = 0.0
 
 var _gene_value_labels: Dictionary = {}
+var _genetic_popups: Array[GeneticPopup] = []
 
 func _ready() -> void:
 	_create_ui()
 
 func _process(delta: float) -> void:
+	_cleanup_genetic_popups()
 	if _presentation_mode:
 		_hide_genotype_popup()
 		return
@@ -60,6 +66,9 @@ func set_presentation_mode(enabled: bool) -> void:
 	_presentation_mode = enabled
 	if enabled:
 		_hide_genotype_popup()
+	for popup in _genetic_popups:
+		if is_instance_valid(popup):
+			popup.visible = not enabled
 	_set_panel_visible(not enabled and is_instance_valid(_selected_cell))
 
 func get_selected_cell() -> Node:
@@ -100,9 +109,9 @@ func _select_cell(cell: Node) -> void:
 	_focus_camera(cell as Node2D)
 
 func _create_ui() -> void:
-	var canvas: CanvasLayer = CanvasLayer.new()
-	canvas.name = "InspectorUILayer"
-	add_child(canvas)
+	_canvas = CanvasLayer.new()
+	_canvas.name = "InspectorUILayer"
+	add_child(_canvas)
 
 	_panel = PanelContainer.new()
 	_panel.name = "InspectorPanel"
@@ -110,7 +119,7 @@ func _create_ui() -> void:
 	_panel.custom_minimum_size = Vector2(panel_width, 0.0)
 	_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_panel.position = Vector2(-panel_width - panel_margin, panel_margin)
-	canvas.add_child(_panel)
+	_canvas.add_child(_panel)
 
 	var margin: MarginContainer = MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 14)
@@ -146,10 +155,27 @@ func _create_ui() -> void:
 	_details_label.add_theme_font_size_override("font_size", 14)
 	column.add_child(_details_label)
 
+	var genetics_header: HBoxContainer = HBoxContainer.new()
+	genetics_header.add_theme_constant_override("separation", 8)
+	column.add_child(genetics_header)
+
 	var genetics_title: Label = Label.new()
-	genetics_title.text = "\nGENETICS"
+	genetics_title.text = "GENETICS"
 	genetics_title.add_theme_font_size_override("font_size", 14)
-	column.add_child(genetics_title)
+	genetics_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	genetics_header.add_child(genetics_title)
+
+	_mutation_badge = Label.new()
+	_mutation_badge.text = ""
+	_mutation_badge.add_theme_font_size_override("font_size", 11)
+	genetics_header.add_child(_mutation_badge)
+
+	var genetic_button: Button = Button.new()
+	genetic_button.text = "Abrir"
+	genetic_button.tooltip_text = "Abrir ficha genética persistente"
+	genetic_button.custom_minimum_size = Vector2(64.0, 28.0)
+	genetic_button.pressed.connect(_open_genetic_popup)
+	genetics_header.add_child(genetic_button)
 
 	_genetics_container = VBoxContainer.new()
 	_genetics_container.add_theme_constant_override("separation", 2)
@@ -166,7 +192,7 @@ func _create_ui() -> void:
 	_genotype_popup.visible = false
 	_genotype_popup.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_genotype_popup.custom_minimum_size = Vector2(180.0, 0.0)
-	canvas.add_child(_genotype_popup)
+	_canvas.add_child(_genotype_popup)
 
 	var popup_margin: MarginContainer = MarginContainer.new()
 	popup_margin.add_theme_constant_override("margin_left", 10)
@@ -254,6 +280,9 @@ func _update_ui_from_selected() -> void:
 
 	_update_genetics_ui(data)
 
+	var mutation_count: int = _get_current_mutation_count()
+	_mutation_badge.text = "MUT ×%d" % mutation_count if mutation_count > 0 else ""
+
 	_tail_details_label.text = (
 		"\nMITOSIS\n" +
 		"Mitoses: %d  |  Next cost: %.1f\n" % [int(data.get("mitosis_count", 0)), float(data.get("next_mitosis_cost", 0.0))] +
@@ -270,6 +299,14 @@ func _update_ui_from_selected() -> void:
 	else:
 		_health_bar.visible = false
 		_health_text.visible = false
+
+func _get_current_mutation_count() -> int:
+	if not is_instance_valid(_selected_cell):
+		return 0
+	var genetics: Node = _selected_cell.get("genetics") as Node
+	if genetics == null or not is_instance_valid(genetics):
+		return 0
+	return maxi(int(genetics.get("last_mutation_count")), 0)
 
 func _update_genetics_ui(data: Dictionary) -> void:
 	for gene_name in _gene_value_labels.keys():
@@ -395,6 +432,55 @@ func _format_allele(value: Variant) -> String:
 	if value is float or value is int:
 		return "%.3f" % float(value)
 	return String(value)
+
+func _open_genetic_popup() -> void:
+	if _presentation_mode or not is_instance_valid(_selected_cell):
+		return
+	if not _selected_cell.has_method("get_inspection_data"):
+		return
+
+	var popup: GeneticPopup = GENETIC_POPUP_SCRIPT.new()
+	_canvas.add_child(popup)
+	popup.set_cell(_selected_cell)
+	popup.close_requested.connect(_on_genetic_popup_close_requested)
+	_genetic_popups.append(popup)
+
+	var index: int = _genetic_popups.size() - 1
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var columns: int = maxi(1, floori((viewport_size.x - 40.0) / 408.0))
+	var column: int = index % columns
+	var row: int = index / columns
+	popup.position = Vector2(20.0 + column * 408.0, 70.0 + row * 440.0)
+	popup._clamp_to_viewport()
+	popup.visible = true
+	_refresh_genetic_comparisons()
+
+func _on_genetic_popup_close_requested(popup: GeneticPopup) -> void:
+	if not is_instance_valid(popup):
+		return
+	_genetic_popups.erase(popup)
+	popup.queue_free()
+	call_deferred("_refresh_genetic_comparisons")
+
+func _cleanup_genetic_popups() -> void:
+	var valid_popups: Array[GeneticPopup] = []
+	for popup in _genetic_popups:
+		if is_instance_valid(popup) and not popup.is_queued_for_deletion():
+			valid_popups.append(popup)
+	_genetic_popups = valid_popups
+
+func _refresh_genetic_comparisons() -> void:
+	var comparison: Dictionary = {}
+	var first_popup: GeneticPopup = null
+	for popup in _genetic_popups:
+		if not is_instance_valid(popup) or popup.is_queued_for_deletion():
+			continue
+		if first_popup == null:
+			first_popup = popup
+			comparison = popup.get_profile_data()
+			popup.clear_comparison()
+		else:
+			popup.set_comparison_data(comparison)
 
 func _set_panel_visible(visible: bool) -> void:
 	if _panel != null:
