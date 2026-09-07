@@ -4,7 +4,7 @@ extends Node
 ## Keeps the tools dock and contextual popup inside the viewport and
 ## allows the Inspector to keep updating while SceneTree is paused.
 
-@export var toolbar_bottom_margin: float = 14.0
+@export var toolbar_bottom_margin: float = 28.0
 @export var popup_margin: float = 14.0
 
 var tools: Node
@@ -44,8 +44,8 @@ func _sync_layout() -> void:
 		toolbar.position = Vector2(0.0, 0.0)
 		toolbar.offset_left = 12.0
 		toolbar.offset_right = -12.0
-		toolbar.offset_top = -70.0
-		toolbar.offset_bottom = -12.0
+		toolbar.offset_top = -96.0
+		toolbar.offset_bottom = -toolbar_bottom_margin
 
 	if popup != null and is_instance_valid(popup) and popup.visible:
 		popup.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -62,5 +62,5 @@ func _sync_layout() -> void:
 
 func toolbar_size_with_margin() -> float:
 	if toolbar == null or not is_instance_valid(toolbar):
-		return 78.0
+		return 92.0
 	return toolbar.size.y + toolbar_bottom_margin + 6.0
