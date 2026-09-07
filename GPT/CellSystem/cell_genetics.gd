@@ -39,6 +39,7 @@ const ATTRIBUTE_RANGES: Dictionary = {
 }
 
 func initialize_random() -> void:
+	_apply_simulation_config()
 	cell_id = _generate_id()
 	generation = 0
 	parent_id = ""
@@ -54,6 +55,7 @@ func initialize_random() -> void:
 		_create_boolean_gene(gene_name, false)
 
 func initialize_from_parent(parent_genetics: Node, inherited_genes: Dictionary) -> void:
+	_apply_simulation_config()
 	cell_id = _generate_id()
 	parent_id = ""
 	generation = 0
@@ -311,6 +313,13 @@ func _mutate_numeric_allele(value: float) -> float:
 func _mutate_normalized_allele(value: float) -> float:
 	var variation: float = randf_range(-mutation_strength, mutation_strength)
 	return clampf(value * (1.0 + variation), 0.0, 1.0)
+
+func _apply_simulation_config() -> void:
+	var config: Node = get_node_or_null("/root/SimulationConfig")
+	if config == null:
+		return
+	mutation_chance = clampf(float(config.get("mutation_chance")), 0.0, 1.0)
+	mutation_strength = clampf(float(config.get("mutation_strength")), 0.0, 1.0)
 
 func _generate_id() -> String:
 	var new_id: String = "cell_%08d" % _next_id
