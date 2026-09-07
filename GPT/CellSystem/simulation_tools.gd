@@ -7,6 +7,11 @@ class_name SimulationTools
 const TICK_DURATION: float = 0.1
 const TOOL_TOGGLE_KEY: Key = KEY_F4
 const DEFAULT_TIME_SCALE: float = 1.0
+const TOOLBAR_ANIMATION_DURATION: float = 0.22
+const TOOLBAR_VISIBLE_TOP: float = -96.0
+const TOOLBAR_VISIBLE_BOTTOM: float = -28.0
+const TOOLBAR_HIDDEN_TOP: float = 12.0
+const TOOLBAR_HIDDEN_BOTTOM: float = 80.0
 
 const SPAWN_MODE_NORMAL: int = 0
 const SPAWN_MODE_CELL: int = 1
@@ -44,6 +49,8 @@ var _spawn_resource_button: Button
 var _mode_label: Label
 
 var _visible: bool = false
+var _toolbar_animating: bool = false
+var _toolbar_tween: Tween
 var _feedback_timer: float = 0.0
 var _selected_cell: Node = null
 var _spawn_mode: int = SPAWN_MODE_NORMAL
@@ -56,7 +63,7 @@ func _ready() -> void:
 	_sync_selected_cell()
 	_sync_environment_controls()
 	_set_spawn_mode(SPAWN_MODE_NORMAL)
-	_set_visible(false)
+	_set_visible(false, false)
 	_set_time_scale(DEFAULT_TIME_SCALE)
 
 func _process(delta: float) -> void:
@@ -146,8 +153,12 @@ func _create_ui() -> void:
 	_toolbar.name = "SimulationToolsToolbar"
 	_toolbar.custom_minimum_size = Vector2(0.0, 56.0)
 	_toolbar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_toolbar.position = Vector2(16.0, -72.0)
-	_toolbar.size = Vector2(0.0, 56.0)
+	_toolbar.position = Vector2(0.0, 0.0)
+	_toolbar.offset_left = 12.0
+	_toolbar.offset_right = -12.0
+	_toolbar.offset_top = TOOLBAR_HIDDEN_TOP
+	_toolbar.offset_bottom = TOOLBAR_HIDDEN_BOTTOM
+	_toolbar.visible = false
 	_canvas.add_child(_toolbar)
 
 	var toolbar_margin: MarginContainer = MarginContainer.new()
@@ -338,13 +349,48 @@ func _last_value_label(column: VBoxContainer) -> Label:
 	var child_count: int = column.get_child_count()
 	return column.get_child(child_count - 1) as Label
 
-func _set_visible(enabled: bool) -> void:
+func _set_visible(enabled: bool, animate: bool = true) -> void:
 	_visible = enabled
 	if not enabled:
 		_set_spawn_mode(SPAWN_MODE_NORMAL)
 		_close_popup()
-	if _toolbar != null:
+
+	if _toolbar == null or not is_instance_valid(_toolbar):
+		return
+
+	if _toolbar_tween != null and _toolbar_tween.is_valid():
+		_toolbar_tween.kill()
+
+	if not animate:
+		_toolbar.set_meta("simulation_tools_animating", false)
+		_toolbar.offset_top = TOOLBAR_VISIBLE_TOP if enabled else TOOLBAR_HIDDEN_TOP
+		_toolbar.offset_bottom = TOOLBAR_VISIBLE_BOTTOM if enabled else TOOLBAR_HIDDEN_BOTTOM
 		_toolbar.visible = enabled
+		_toolbar_animating = false
+		return
+
+	_toolbar.visible = true
+	_toolbar.set_meta("simulation_tools_animating", true)
+	_toolbar_animating = true
+
+	var target_top: float = TOOLBAR_VISIBLE_TOP if enabled else TOOLBAR_HIDDEN_TOP
+	var target_bottom: float = TOOLBAR_VISIBLE_BOTTOM if enabled else TOOLBAR_HIDDEN_BOTTOM
+	if enabled:
+		_toolbar.offset_top = TOOLBAR_HIDDEN_TOP
+		_toolbar.offset_bottom = TOOLBAR_HIDDEN_BOTTOM
+
+	_toolbar_tween = create_tween()
+	_toolbar_tween.set_parallel(true)
+	_toolbar_tween.set_trans(Tween.TRANS_QUAD)
+	_toolbar_tween.set_ease(Tween.EASE_OUT if enabled else Tween.EASE_IN)
+	_toolbar_tween.tween_property(_toolbar, "offset_top", target_top, TOOLBAR_ANIMATION_DURATION)
+	_toolbar_tween.tween_property(_toolbar, "offset_bottom", target_bottom, TOOLBAR_ANIMATION_DURATION)
+	_toolbar_tween.finished.connect(func():
+		_toolbar_animating = false
+		if is_instance_valid(_toolbar):
+			_toolbar.set_meta("simulation_tools_animating", false)
+			_toolbar.visible = _visible
+	)
 
 func _set_spawn_mode(mode: int) -> void:
 	_spawn_mode = mode
