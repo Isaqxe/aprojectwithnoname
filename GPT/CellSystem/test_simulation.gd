@@ -37,6 +37,9 @@ func _ready() -> void:
 		fps_label.text = "FPS: --"
 		fps_label.visible = false
 
+	if config != null and bool(config.get("presentation_mode_on_start")):
+		_set_presentation_mode(true)
+
 func _process(delta: float) -> void:
 	simulation_elapsed += delta
 	if simulation_time_label != null:
@@ -118,14 +121,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		if fps_label != null:
 			fps_label.visible = fps_visible and not presentation_mode
 
-func _toggle_presentation_mode() -> void:
-	presentation_mode = not presentation_mode
+func _set_presentation_mode(enabled: bool) -> void:
+	presentation_mode = enabled
 	debug_layer.visible = not presentation_mode
 	if cell_inspector != null and is_instance_valid(cell_inspector) and cell_inspector.has_method("set_presentation_mode"):
 		cell_inspector.set_presentation_mode(presentation_mode)
+	_debug_timer = 0.0
+
+func _toggle_presentation_mode() -> void:
+	_set_presentation_mode(not presentation_mode)
 	if fps_label != null:
 		fps_label.visible = fps_visible and not presentation_mode
-	_debug_timer = 0.0
 
 func _apply_simulation_config() -> void:
 	var config: Node = get_node_or_null("/root/SimulationConfig")
@@ -137,3 +143,4 @@ func _apply_simulation_config() -> void:
 	resource_spawner.initial_resources = int(config.get("initial_resources"))
 	resource_spawner.max_resources = int(config.get("max_resources"))
 	experimental_domain.radius = float(config.get("domain_radius"))
+	Engine.time_scale = clampf(float(config.get("initial_time_scale", 1.0)), 0.25, 32.0)
