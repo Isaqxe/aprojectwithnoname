@@ -2,6 +2,7 @@ extends Control
 
 ## Compact, parser-safe simulation setup screen.
 ## The scene contains only the root Control; all UI is created here.
+## Presets configure the same controls as manual editing, so there is only one source of truth.
 
 const SIMULATION_SCENE := preload("res://GPT/CellSystem/CellSystemTest.tscn")
 const DEFAULT_MENU_TIME_SCALE: float = 1.0
@@ -29,6 +30,124 @@ var mutation_strength: SpinBox
 var presentation_mode: CheckBox
 var start_button: Button
 var back_button: Button
+
+const PRESETS: Dictionary = {
+	"Equilibrada": {
+		"auto_spawn": false,
+		"population": 500,
+		"max_population": 10000,
+		"resources": 1000,
+		"max_resources": 2302,
+		"radius": 3000.0,
+		"resource_spawn_interval": 0.75,
+		"resource_respawn_fraction": 60.0,
+		"resource_emergency_fraction": 25.0,
+		"resource_emergency_interval": 0.30,
+		"base_temperature": 50.0,
+		"base_humidity": 50.0,
+		"base_food_density": 100.0,
+		"temperature_variation": 35.0,
+		"humidity_variation": 30.0,
+		"food_edge_penalty": 45.0,
+		"mutation_chance": 10.0,
+		"mutation_strength": 5.0,
+		"initial_time_scale": 1.0,
+		"simulation_time_limit": 0.0,
+		"presentation_mode": true
+	},
+	"Crescimento": {
+		"auto_spawn": true,
+		"population": 800,
+		"max_population": 12000,
+		"resources": 5000,
+		"max_resources": 12000,
+		"radius": 4500.0,
+		"resource_spawn_interval": 0.45,
+		"resource_respawn_fraction": 70.0,
+		"resource_emergency_fraction": 35.0,
+		"resource_emergency_interval": 0.20,
+		"base_temperature": 50.0,
+		"base_humidity": 50.0,
+		"base_food_density": 100.0,
+		"temperature_variation": 25.0,
+		"humidity_variation": 25.0,
+		"food_edge_penalty": 25.0,
+		"mutation_chance": 8.0,
+		"mutation_strength": 4.0,
+		"initial_time_scale": 1.0,
+		"simulation_time_limit": 0.0,
+		"presentation_mode": true
+	},
+	"Evolução rápida": {
+		"auto_spawn": false,
+		"population": 300,
+		"max_population": 8000,
+		"resources": 3500,
+		"max_resources": 10000,
+		"radius": 3500.0,
+		"resource_spawn_interval": 0.70,
+		"resource_respawn_fraction": 60.0,
+		"resource_emergency_fraction": 20.0,
+		"resource_emergency_interval": 0.30,
+		"base_temperature": 50.0,
+		"base_humidity": 50.0,
+		"base_food_density": 90.0,
+		"temperature_variation": 40.0,
+		"humidity_variation": 35.0,
+		"food_edge_penalty": 45.0,
+		"mutation_chance": 35.0,
+		"mutation_strength": 12.0,
+		"initial_time_scale": 2.0,
+		"simulation_time_limit": 600.0,
+		"presentation_mode": false
+	},
+	"Ambiente extremo": {
+		"auto_spawn": false,
+		"population": 500,
+		"max_population": 10000,
+		"resources": 1200,
+		"max_resources": 5000,
+		"radius": 5000.0,
+		"resource_spawn_interval": 1.10,
+		"resource_respawn_fraction": 55.0,
+		"resource_emergency_fraction": 15.0,
+		"resource_emergency_interval": 0.50,
+		"base_temperature": 20.0,
+		"base_humidity": 80.0,
+		"base_food_density": 60.0,
+		"temperature_variation": 80.0,
+		"humidity_variation": 80.0,
+		"food_edge_penalty": 75.0,
+		"mutation_chance": 15.0,
+		"mutation_strength": 7.0,
+		"initial_time_scale": 1.0,
+		"simulation_time_limit": 0.0,
+		"presentation_mode": false
+	},
+	"Demonstração": {
+		"auto_spawn": false,
+		"population": 120,
+		"max_population": 2000,
+		"resources": 8000,
+		"max_resources": 12000,
+		"radius": 5000.0,
+		"resource_spawn_interval": 0.65,
+		"resource_respawn_fraction": 65.0,
+		"resource_emergency_fraction": 30.0,
+		"resource_emergency_interval": 0.25,
+		"base_temperature": 50.0,
+		"base_humidity": 50.0,
+		"base_food_density": 100.0,
+		"temperature_variation": 20.0,
+		"humidity_variation": 20.0,
+		"food_edge_penalty": 20.0,
+		"mutation_chance": 18.0,
+		"mutation_strength": 6.0,
+		"initial_time_scale": 1.0,
+		"simulation_time_limit": 0.0,
+		"presentation_mode": true
+	}
+}
 
 func _ready() -> void:
 	Engine.time_scale = DEFAULT_MENU_TIME_SCALE
@@ -72,6 +191,29 @@ func _build_ui() -> void:
 	column.add_child(title)
 
 	column.add_child(HSeparator.new())
+
+	var preset_title: Label = _section_label("Presets")
+	column.add_child(preset_title)
+
+	var preset_row: HBoxContainer = HBoxContainer.new()
+	preset_row.add_theme_constant_override("separation", 6)
+	preset_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_child(preset_row)
+
+	for preset_name in PRESETS.keys():
+		var preset_button: Button = Button.new()
+		preset_button.text = String(preset_name)
+		preset_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		preset_button.custom_minimum_size = Vector2(0.0, 36.0)
+		preset_button.tooltip_text = "Aplicar preset: %s" % String(preset_name)
+		preset_button.pressed.connect(_apply_preset.bind(String(preset_name)))
+		preset_row.add_child(preset_button)
+
+	var preset_hint: Label = Label.new()
+	preset_hint.text = "Um preset apenas preenche os mesmos controles abaixo; você pode ajustá-los manualmente depois."
+	preset_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	preset_hint.add_theme_font_size_override("font_size", 11)
+	column.add_child(preset_hint)
 
 	auto_spawn = CheckBox.new()
 	auto_spawn.text = "Gerar novas células automaticamente"
@@ -159,6 +301,37 @@ func _add_spin_row(column: VBoxContainer, label_text: String, default_value: flo
 	value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(value)
 	return value
+
+func _apply_preset(preset_name: String) -> void:
+	if not PRESETS.has(preset_name):
+		return
+	var preset: Dictionary = PRESETS[preset_name]
+
+	auto_spawn.button_pressed = bool(preset.get("auto_spawn"))
+	population.value = float(preset.get("population"))
+	max_population.value = float(preset.get("max_population"))
+	resources.value = float(preset.get("resources"))
+	max_resources.value = float(preset.get("max_resources"))
+	radius.value = float(preset.get("radius"))
+	resource_spawn_interval.value = float(preset.get("resource_spawn_interval"))
+	resource_respawn_fraction.value = float(preset.get("resource_respawn_fraction"))
+	resource_emergency_fraction.value = float(preset.get("resource_emergency_fraction"))
+	resource_emergency_interval.value = float(preset.get("resource_emergency_interval"))
+	base_temperature.value = float(preset.get("base_temperature"))
+	base_humidity.value = float(preset.get("base_humidity"))
+	base_food_density.value = float(preset.get("base_food_density"))
+	temperature_variation.value = float(preset.get("temperature_variation"))
+	humidity_variation.value = float(preset.get("humidity_variation"))
+	food_edge_penalty.value = float(preset.get("food_edge_penalty"))
+	mutation_chance.value = float(preset.get("mutation_chance"))
+	mutation_strength.value = float(preset.get("mutation_strength"))
+	initial_time_scale.value = float(preset.get("initial_time_scale"))
+	simulation_time_limit.value = float(preset.get("simulation_time_limit"))
+	presentation_mode.button_pressed = bool(preset.get("presentation_mode"))
+
+	population.value = minf(population.value, max_population.value)
+	resources.value = minf(resources.value, max_resources.value)
+	resource_emergency_fraction.value = minf(resource_emergency_fraction.value, resource_respawn_fraction.value)
 
 func _load_config() -> void:
 	var config: Node = _get_config()
