@@ -2,7 +2,6 @@ extends Node
 
 ## Small global history of organism deaths for scientific feedback.
 ## It stores only recent events; biology remains owned by each cell.
-class_name SimulationDeathLog
 
 @export var history_limit: int = 12
 
