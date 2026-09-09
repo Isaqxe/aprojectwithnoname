@@ -14,7 +14,7 @@ extends CanvasLayer
 # ============================================================
 # CONFIGURATION — SAFE TO EDIT
 # ============================================================
-const MUSIC_PATH := "res://Assets/its.mp3"
+const MUSIC_PATH := "res://assets/audio/its.mp3"
 const SCROLL_DURATION := 34.0
 const START_DELAY := 1.5
 const START_OFFSET_MULTIPLIER := 1.0
@@ -154,11 +154,9 @@ func _build_music() -> void:
 	_music.volume_db = 0.0
 	add_child(_music)
 
-	# The file is intentionally a hard dependency: the credits should play
-	# their soundtrack whenever the feature is present in the project.
-	if ResourceLoader.exists(MUSIC_PATH):
-		var stream: AudioStream = load(MUSIC_PATH)
-		_music.stream = stream
+	# The file is part of the project and is intentionally preloaded so
+	# a wrong path becomes an immediate Godot error instead of silent failure.
+	_music.stream = preload("res://assets/audio/its.mp3")
 
 func toggle_credits() -> void:
 	if _visible:
@@ -176,7 +174,7 @@ func _start_credits() -> void:
 
 	# Every activation starts from exactly the same state.
 	_music.stop()
-	_credits_container.position = Vector2(0.0, 0.0)
+	_credits_container.position = Vector2.ZERO
 
 	await get_tree().process_frame
 
@@ -186,8 +184,7 @@ func _start_credits() -> void:
 	var end_y := -total_height * END_OFFSET_MULTIPLIER
 	_credits_container.position = Vector2(0.0, start_y)
 
-	if _music.stream:
-		_music.play(0.0)
+	_music.play(0.0)
 
 	_scroll_tween = create_tween()
 	_scroll_tween.set_trans(Tween.TRANS_LINEAR)
