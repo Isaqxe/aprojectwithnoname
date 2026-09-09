@@ -14,7 +14,7 @@
 [ext_resource type="Script" uid="uid://53btr0hkguws" path="res://GPT/CellSystem/first_time_events.gd" id="13_first_events"]
 [ext_resource type="PackedScene" path="res://GPT/CellSystem/SimulationTools.tscn" id="14_tools_scene"]
 [ext_resource type="PackedScene" path="res://GPT/CellSystem/PauseMenu.tscn" id="15_pause"]
-[ext_resource type="Script" path="res://GPT/CellSystem/evolution_observer.gd" id="16_evolution"]
+[ext_resource type="Script" uid="uid://xvodytnh0dk1" path="res://GPT/CellSystem/evolution_observer.gd" id="16_evolution"]
 
 [node name="CellSystemTest" type="Node2D" unique_id=442408827]
 script = ExtResource("1_test")
@@ -69,7 +69,7 @@ script = ExtResource("16_evolution")
 
 [node name="PauseMenu" parent="." unique_id=2036286143 instance=ExtResource("15_pause")]
 
-[node name="DebugLayer" type="CanvasLayer" parent="."]
+[node name="DebugLayer" type="CanvasLayer" parent="." unique_id=479046279]
 
 [node name="Debug" type="Label" parent="DebugLayer" unique_id=1227030685]
 offset_left = 20.0

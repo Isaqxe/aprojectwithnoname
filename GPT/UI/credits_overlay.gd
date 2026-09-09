@@ -15,7 +15,7 @@ extends CanvasLayer
 # CONFIGURATION — SAFE TO EDIT
 # ============================================================
 const MUSIC_PATH := "res://assets/audio/its.mp3"
-const SCROLL_DURATION := 34.0
+const SCROLL_DURATION := 50.0
 const START_DELAY := 1.5
 const START_OFFSET_MULTIPLIER := 1.0
 const END_OFFSET_MULTIPLIER := 1.0
@@ -32,22 +32,22 @@ const CREDIT_BLOCKS: Array[Dictionary] = [
 	{"text": "Um projeto de pesquisa, simulação e desenvolvimento experimental", "size": 18, "space_after": 34.0},
 
 	{"text": "DIREÇÃO DE JOGO", "size": 25, "space_after": 4.0},
-	{"text": "DOM", "size": 22, "space_after": 22.0},
+	{"text": "ISAQUE", "size": 22, "space_after": 22.0},
 
 	{"text": "CONCEPÇÃO E DESENVOLVIMENTO", "size": 25, "space_after": 4.0},
-	{"text": "Isaque", "size": 22, "space_after": 22.0},
+	{"text": "ISAQUE + UM CARA QUE NÃO VOU CITAR O NOME", "size": 22, "space_after": 22.0},
 
 	{"text": "PROGRAMAÇÃO", "size": 25, "space_after": 4.0},
-	{"text": "GPT", "size": 22, "space_after": 22.0},
+	{"text": "CHATGPT", "size": 22, "space_after": 22.0},
 
 	{"text": "ARTE E IDENTIDADE VISUAL", "size": 25, "space_after": 4.0},
-	{"text": "Equipe Alive Cells", "size": 22, "space_after": 22.0},
+	{"text": "IS-EQUIPE ALIVE CELLS", "size": 22, "space_after": 22.0},
 
 	{"text": "PESQUISA E CONTEÚDO CIENTÍFICO", "size": 25, "space_after": 4.0},
-	{"text": "Equipe Alive Cells", "size": 22, "space_after": 22.0},
+	{"text": "EQUIPE ALIVE CELLS", "size": 22, "space_after": 22.0},
 
 	{"text": "APRESENTAÇÃO E DOCUMENTAÇÃO", "size": 25, "space_after": 4.0},
-	{"text": "Equipe Alive Cells", "size": 22, "space_after": 34.0},
+	{"text": "EQUIPE ALIVE CELLS", "size": 22, "space_after": 34.0},
 
 	{"text": "SISTEMAS", "size": 32, "space_after": 12.0},
 	{"text": "Simulação de População", "size": 19, "space_after": 3.0},
@@ -70,8 +70,8 @@ const CREDIT_BLOCKS: Array[Dictionary] = [
 
 	{"text": "UM AGRADECIMENTO ESPECIAL", "size": 30, "space_after": 18.0},
 	{"text": "À equipe que tornou este projeto possível.", "size": 20, "space_after": 15.0},
-	{"text": "Aos que programaram.\nAos que desenharam.\nAos que pesquisaram.\nAos que testaram.\nAos que apresentaram.", "size": 19, "space_after": 20.0},
-	{"text": "E aos que, em algum momento,\nperguntaram:\n\n\"Isso ainda está funcionando?\"", "size": 21, "space_after": 38.0},
+	{"text": "Aos que programaram (CHATGPT).\nAos que desenharam (MATEMÁTICA).\nAos que pesquisaram.\nAos que testaram.\nAos que apresentaram.", "size": 19, "space_after": 20.0},
+	{"text": "E aos que, em algum momento,\nperguntaram:\n\n\"Tá, mas e aí?\"", "size": 21, "space_after": 38.0},
 
 	{"text": "DESENVOLVIDO DURANTE 2026", "size": 30, "space_after": 18.0},
 	{"text": "Após inúmeras ideias,\nmudanças de escopo,\nbugs,\nrefatorações,\ntestes\ne algumas decisões questionáveis.", "size": 19, "space_after": 42.0},
