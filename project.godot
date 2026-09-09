@@ -20,6 +20,7 @@ config/icon="res://icon.svg"
 
 SimulationConfig="*res://GPT/UI/simulation_config.gd"
 SimulationDeathLog="*res://GPT/UI/simulation_death_log.gd"
+AliveCellsCredits="*res://GPT/UI/credits_overlay.gd"
 
 [display]
 
