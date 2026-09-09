@@ -94,7 +94,6 @@ var _credits_container: VBoxContainer
 var _music: AudioStreamPlayer
 var _visible := false
 var _scroll_tween: Tween
-var _viewport_size := Vector2.ZERO
 
 func _ready() -> void:
 	layer = 1000
@@ -127,22 +126,14 @@ func _build_overlay() -> void:
 	_credits_container.add_theme_constant_override("separation", 0)
 	_overlay.add_child(_credits_container)
 
-	_rebuild_credit_content()
-
-func _rebuild_credit_content() -> void:
-	for child in _credits_container.get_children():
-		child.queue_free()
-
-	await get_tree().process_frame
-	_viewport_size = get_viewport().get_visible_rect().size
-
+	var viewport_size := get_viewport().get_visible_rect().size
 	for block in CREDIT_BLOCKS:
-		_add_credit_block(block)
+		_add_credit_block(block, viewport_size.x)
 
-func _add_credit_block(block: Dictionary) -> void:
+func _add_credit_block(block: Dictionary, width: float) -> void:
 	var label := Label.new()
 	label.text = str(block.get("text", ""))
-	label.custom_minimum_size = Vector2(_viewport_size.x, 48.0)
+	label.custom_minimum_size = Vector2(width, 48.0)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -163,6 +154,8 @@ func _build_music() -> void:
 	_music.volume_db = 0.0
 	add_child(_music)
 
+	# The file is intentionally a hard dependency: the credits should play
+	# their soundtrack whenever the feature is present in the project.
 	if ResourceLoader.exists(MUSIC_PATH):
 		var stream: AudioStream = load(MUSIC_PATH)
 		_music.stream = stream
@@ -179,17 +172,18 @@ func _start_credits() -> void:
 
 	if _scroll_tween and _scroll_tween.is_valid():
 		_scroll_tween.kill()
+	_scroll_tween = null
 
+	# Every activation starts from exactly the same state.
 	_music.stop()
-	_music.seek(0.0) if _music.has_method("seek") else null
+	_credits_container.position = Vector2(0.0, 0.0)
 
 	await get_tree().process_frame
 
-	_viewport_size = get_viewport().get_visible_rect().size
+	var viewport_size := get_viewport().get_visible_rect().size
 	var total_height := _credits_container.get_combined_minimum_size().y
-	var start_y := _viewport_size.y * START_OFFSET_MULTIPLIER
+	var start_y := viewport_size.y * START_OFFSET_MULTIPLIER
 	var end_y := -total_height * END_OFFSET_MULTIPLIER
-
 	_credits_container.position = Vector2(0.0, start_y)
 
 	if _music.stream:
